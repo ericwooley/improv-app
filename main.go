@@ -20,7 +20,9 @@ var templates *template.Template
 var titleCaser = cases.Title(language.English)
 
 type PageData struct {
-	Title string
+	Title   string
+	Error   string
+	Success string
 }
 
 func initTemplates() {
