@@ -17,6 +17,24 @@
               <span class="font-semibold text-gray-500 text-lg">Improv App</span>
             </a>
           </div>
+          {{if .User}}
+          <div class="hidden md:flex items-center space-x-1">
+            <a href="/groups" class="py-4 px-2 text-gray-500 hover:text-gray-900">Groups</a>
+            <a href="/games" class="py-4 px-2 text-gray-500 hover:text-gray-900">Games</a>
+          </div>
+          {{end}}
+          </div>
+          <div class="flex items-center space-x-3">
+            {{if .User}}
+            <div class="flex items-center space-x-2">
+              <span class="text-gray-700">{{.User.FirstName}} {{.User.LastName}}</span>
+              <form action="/logout" method="POST">
+                <button type="submit" class="py-2 px-4 text-gray-500 hover:text-gray-900">Logout</button>
+              </form>
+            </div>
+            {{else}}
+            <a href="/login" class="py-2 px-4 text-gray-500 hover:text-gray-900">Login</a>
+            {{end}}
         </div>
       </div>
     </div>
