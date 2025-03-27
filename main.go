@@ -5,9 +5,11 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/smtp"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/joho/godotenv"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -133,9 +136,58 @@ func sendMagicLink(email string, firstName string, lastName string) error {
 		return err
 	}
 
-	// TODO: Send email with magic link
-	// For now, just log it
-	log.Printf("Magic link for %s: http://localhost:4080/auth/verify?token=%s", email, token)
+	// Send email with magic link
+	from := os.Getenv("SMTP_FROM")
+	fromName := os.Getenv("SMTP_FROM_NAME")
+	if fromName == "" {
+		fromName = "Improv App"
+	}
+
+	to := os.Getenv("SMTP_TO")
+	if to == "" {
+		to = email
+	}
+
+	subject := "Your Magic Link for Improv App"
+	body := fmt.Sprintf(`
+		Hello %s %s,
+
+		Click the link below to sign in to your Improv App account:
+
+		http://localhost:4080/auth/verify?token=%s
+
+		This link will expire in 24 hours.
+
+		Best regards,
+		%s
+	`, firstName, lastName, token, fromName)
+
+	// Set up email message
+	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+
+		"To: %s\r\n"+
+		"Subject: %s\r\n"+
+		"MIME-Version: 1.0\r\n"+
+		"Content-Type: text/plain; charset=UTF-8\r\n"+
+		"\r\n"+
+		"%s", fromName, from, to, subject, body))
+
+	// Connect to SMTP server
+	host := os.Getenv("SMTP_HOST")
+	port := os.Getenv("SMTP_PORT")
+	username := os.Getenv("SMTP_USERNAME")
+	password := os.Getenv("SMTP_PASSWORD")
+
+	fmt.Println(host, port, username, password)
+	addr := fmt.Sprintf("%s:%s", host, port)
+	auth := smtp.PlainAuth("", username, password, host)
+
+	err = smtp.SendMail(addr, auth, from, []string{to}, msg)
+	if err != nil {
+		log.Printf("Error sending email: %v", err)
+		return fmt.Errorf("failed to send email: %v", err)
+	}
+
+	log.Printf("Magic link email sent to %s", email)
 	return nil
 }
 
@@ -673,6 +725,11 @@ func gameHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	db = initDB()
 	defer db.Close()
 
