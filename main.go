@@ -5,30 +5,69 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var db *sql.DB
 var templates *template.Template
+var titleCaser = cases.Title(language.English)
 
 type PageData struct {
 	Title string
 }
 
 func initTemplates() {
-	templates = template.Must(template.ParseFiles(
-		"templates/layouts/base.html",
-		"templates/pages/home.html",
-	))
+	// Create a new template set
+	templates = template.New("")
+
+	// Load all template files from the templates directory
+	err := filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(path, ".html") {
+			_, err = templates.ParseFiles(path)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
-		Title: "Home",
+func pageHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the path from the URL
+	path := r.URL.Path
+	if path == "/" {
+		path = "/home"
 	}
-	err := templates.ExecuteTemplate(w, "base.html", data)
+
+	// Remove leading slash and add .html
+	templateName := strings.TrimPrefix(path, "/") + ".html"
+
+	// Check if the template exists
+	if templates.Lookup(templateName) == nil {
+		http.Error(w, "Page not found", http.StatusNotFound)
+		return
+	}
+
+	// Create page data
+	data := PageData{
+		Title: titleCaser.String(strings.TrimPrefix(path, "/")),
+	}
+
+	// Execute the template
+	err := templates.ExecuteTemplate(w, templateName, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -57,7 +96,12 @@ func main() {
 	initTemplates()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", homeHandler).Methods("GET")
+
+	// Handle all GET requests with the dynamic page handler
+	r.HandleFunc("/{page}", pageHandler).Methods("GET")
+	r.HandleFunc("/", pageHandler).Methods("GET")
+
+	// Handle POST requests
 	r.HandleFunc("/register", registerHandler).Methods("POST")
 
 	port := ":4080"
