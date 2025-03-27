@@ -24,7 +24,6 @@ func main() {
 	sqlDB := db.InitDB()
 	defer sqlDB.Close()
 
-	config.InitTemplates()
 
 	// Initialize services
 	emailService := services.NewEmailService(sqlDB)

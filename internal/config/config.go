@@ -1,19 +1,14 @@
 package config
 
 import (
-	"fmt"
-	"html/template"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/gorilla/sessions"
 )
 
 var (
 	Store     *sessions.CookieStore
-	Templates *template.Template
 )
 
 func InitStore() {
@@ -28,34 +23,6 @@ func InitStore() {
 		HttpOnly: true,
 		// Only set Secure: true in production
 		Secure: os.Getenv("ENV") == "production",
-	}
-}
-func InitTemplates() {
-	Templates = template.New("").Funcs(template.FuncMap{
-		"seq": func(start, end int) []int {
-			var result []int
-			for i := start; i <= end; i++ {
-				result = append(result, i)
-			}
-			return result
-		},
-	})
-	err := filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && info.Name() != "layouts" && strings.HasSuffix(path, ".html") {
-			fmt.Println("Parsing template:", path, "with base:", "templates/layouts/base.html")
-			_, err = Templates.ParseFiles("templates/layouts/base.html", path)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	fmt.Println("Templates parsed:", Templates.DefinedTemplates())
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 
