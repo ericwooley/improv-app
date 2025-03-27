@@ -30,10 +30,10 @@ func main() {
 	emailService := services.NewEmailService(sqlDB)
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(emailService, config.Templates)
-	groupHandler := handlers.NewGroupHandler(sqlDB, config.Templates)
-	eventHandler := handlers.NewEventHandler(sqlDB, config.Templates)
-	gameHandler := handlers.NewGameHandler(sqlDB, config.Templates)
+	authHandler := handlers.NewAuthHandler(emailService)
+	groupHandler := handlers.NewGroupHandler(sqlDB)
+	eventHandler := handlers.NewEventHandler(sqlDB)
+	gameHandler := handlers.NewGameHandler(sqlDB)
 	homeHandler := handlers.NewHomeHandler(sqlDB)
 
 	r := mux.NewRouter()

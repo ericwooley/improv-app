@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 
 	"improv-app/internal/config"
@@ -15,7 +14,7 @@ type AuthHandler struct {
 }
 
 
-func NewAuthHandler(emailService *services.EmailService, templates *template.Template) *AuthHandler {
+func NewAuthHandler(emailService *services.EmailService) *AuthHandler {
 	return &AuthHandler{
 		emailService: emailService,
 	}

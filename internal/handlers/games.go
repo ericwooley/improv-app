@@ -17,10 +17,9 @@ type GameHandler struct {
 	templates *template.Template
 }
 
-func NewGameHandler(db *sql.DB, templates *template.Template) *GameHandler {
+func NewGameHandler(db *sql.DB) *GameHandler {
 	return &GameHandler{
 		db:        db,
-		templates: templates,
 	}
 }
 
@@ -167,5 +166,5 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 			Rating: rating,
 		},
 	}
-	h.templates.ExecuteTemplate(w, "game.html", data)
+	RenderTemplate(w, "templates/game.html", &data)
 }

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
 	"time"
 
@@ -13,13 +12,11 @@ import (
 
 type EventHandler struct {
 	db        *sql.DB
-	templates *template.Template
 }
 
-func NewEventHandler(db *sql.DB, templates *template.Template) *EventHandler {
+func NewEventHandler(db *sql.DB) *EventHandler {
 	return &EventHandler{
 		db:        db,
-		templates: templates,
 	}
 }
 
@@ -87,7 +84,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  events,
 	}
-	h.templates.ExecuteTemplate(w, "events.html", data)
+	RenderTemplate(w, "templates/events.html", &data)
 }
 
 func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -176,5 +173,5 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 			Games: games,
 		},
 	}
-	h.templates.ExecuteTemplate(w, "event.html", data)
+	RenderTemplate(w, "templates/event.html", &data)
 }

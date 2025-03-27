@@ -15,10 +15,9 @@ type GroupHandler struct {
 	templates *template.Template
 }
 
-func NewGroupHandler(db *sql.DB, templates *template.Template) *GroupHandler {
+func NewGroupHandler(db *sql.DB) *GroupHandler {
 	return &GroupHandler{
 		db:        db,
-		templates: templates,
 	}
 }
 
@@ -120,5 +119,5 @@ func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  group,
 	}
-	h.templates.ExecuteTemplate(w, "group.html", data)
+	RenderTemplate(w, "templates/group.html", &data)
 }

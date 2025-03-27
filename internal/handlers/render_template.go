@@ -7,6 +7,10 @@ import (
 )
 
 func RenderTemplate(w http.ResponseWriter, templatePath string, data *models.PageData) {
-	t, _ := template.ParseFiles("templates/layouts/base.html", templatePath)
+	t, err := template.ParseFiles("templates/layouts/base.html", templatePath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	t.ExecuteTemplate(w, t.Name(), data)
 }
