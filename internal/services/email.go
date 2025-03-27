@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"improv-app/internal/models"
+
+	"github.com/google/uuid"
 )
 
 type EmailService struct {
@@ -29,7 +31,7 @@ func (s *EmailService) generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func (s *EmailService) SendMagicLink(email string, firstName string, lastName string) error {
+func (s *EmailService) SendMagicLink(email string) error {
 	token, err := s.generateToken()
 	if err != nil {
 		return err
@@ -37,21 +39,23 @@ func (s *EmailService) SendMagicLink(email string, firstName string, lastName st
 
 	// Create or update user
 	var userID string
+	newId := uuid.New().String()
 	err = s.db.QueryRow(`
-		INSERT INTO users (email, first_name, last_name)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (email) DO UPDATE SET first_name = $2, last_name = $3
+		INSERT INTO users (id, email)
+		VALUES ($1, $2)
+		ON CONFLICT (email) DO UPDATE SET email = $2
 		RETURNING id
-	`, email, firstName, lastName).Scan(&userID)
+	`, newId, email, ).Scan(&userID)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("Sending magic link to:", email, "User ID:", userID, newId)
 	// Create email token
 	_, err = s.db.Exec(`
-		INSERT INTO email_tokens (user_id, token, expires_at)
-		VALUES ($1, $2, $3)
-	`, userID, token, time.Now().Add(24*time.Hour))
+		INSERT INTO email_tokens (id, user_id, token, expires_at)
+		VALUES ($1, $2, $3, $4)
+	`, uuid.New().String(), userID, token, time.Now().Add(24*time.Hour))
 	if err != nil {
 		return err
 	}
@@ -70,7 +74,7 @@ func (s *EmailService) SendMagicLink(email string, firstName string, lastName st
 
 	subject := "Your Magic Link for Improv App"
 	body := fmt.Sprintf(`
-		Hello %s %s,
+		Hello,
 
 		Click the link below to sign in to your Improv App account:
 
@@ -80,7 +84,7 @@ func (s *EmailService) SendMagicLink(email string, firstName string, lastName st
 
 		Best regards,
 		%s
-	`, firstName, lastName, token, fromName)
+	`, token, fromName)
 
 	// Set up email message
 	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+
@@ -96,6 +100,7 @@ func (s *EmailService) SendMagicLink(email string, firstName string, lastName st
 	port := os.Getenv("SMTP_PORT")
 	username := os.Getenv("SMTP_USERNAME")
 	password := os.Getenv("SMTP_PASSWORD")
+	fmt.Println("Sending email to:", to, "from:", from, "host:", host, "port:", port, "username:", username, "password:", password)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	auth := smtp.PlainAuth("", username, password, host)
@@ -111,13 +116,14 @@ func (s *EmailService) SendMagicLink(email string, firstName string, lastName st
 }
 
 func (s *EmailService) VerifyToken(token string) (*models.User, error) {
+	fmt.Println("Verifying token:", token)
 	var user models.User
 	err := s.db.QueryRow(`
 		SELECT u.id, u.email, u.first_name, u.last_name
 		FROM users u
 		JOIN email_tokens t ON u.id = t.user_id
-		WHERE t.token = $1 AND t.used = false AND t.expires_at > NOW()
-	`, token).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
+		WHERE t.token = $1 AND t.used = false AND t.expires_at > $2
+	`, token, time.Now()).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
 	if err != nil {
 		return nil, err
 	}
@@ -129,4 +135,13 @@ func (s *EmailService) VerifyToken(token string) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (s *EmailService) UpdateUserProfile(userID string, firstName string, lastName string) error {
+	_, err := s.db.Exec(`
+		UPDATE users
+		SET first_name = $1, last_name = $2
+		WHERE id = $3
+	`, firstName, lastName, userID)
+	return err
 }

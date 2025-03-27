@@ -30,8 +30,8 @@ func InitDB() *sql.DB {
 		CREATE TABLE IF NOT EXISTS users (
 			id TEXT PRIMARY KEY,
 			email TEXT UNIQUE NOT NULL,
-			first_name TEXT NOT NULL,
-			last_name TEXT NOT NULL,
+			first_name TEXT DEFAULT '',
+			last_name TEXT DEFAULT '',
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 

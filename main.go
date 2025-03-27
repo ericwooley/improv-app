@@ -78,6 +78,7 @@ func main() {
 	// Auth routes
 	r.HandleFunc("/login", authHandler.Login).Methods("GET", "POST")
 	r.HandleFunc("/auth/verify", authHandler.Verify).Methods("GET")
+	r.HandleFunc("/complete-profile", authHandler.CompleteProfile).Methods("GET", "POST")
 	r.HandleFunc("/logout", authHandler.Logout).Methods("POST")
 
 	// Protected routes

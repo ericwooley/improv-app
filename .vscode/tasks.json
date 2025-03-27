@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "air",
+      "type": "shell",
+      "command": "air",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^building...",
+          "endsPattern": "^running..."
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "kill-air",
+      "type": "shell",
+      "command": "pkill -f 'air'",
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      }
+    }
+  ]
+}

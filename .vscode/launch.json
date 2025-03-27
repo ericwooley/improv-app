@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Go Program",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}",
+      "env": {},
+      "args": [],
+      "buildFlags": "-gcflags='all=-N -l'",
+      "showLog": true
+    },
+    {
+      "name": "Attach to Air Process",
+      "type": "go",
+      "request": "attach",
+      "mode": "local",
+      "processId": "${command:PickProcess}",
+      "apiVersion": 2,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "${workspaceFolder}"
+    }
+  ]
+}
