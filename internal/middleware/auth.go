@@ -9,6 +9,11 @@ import (
 	"improv-app/internal/models"
 )
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+const userContextKey contextKey = "user"
+
 func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := config.Store.Get(r, "session")
@@ -29,8 +34,22 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		// Check if profile is complete
+		if len(user.FirstName) < 2 || len(user.LastName) < 2 {
+			// Allow access to complete-profile page
+			if r.URL.Path == "/complete-profile" {
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, userContextKey, &user)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+			// Redirect to complete profile for all other pages
+			http.Redirect(w, r, "/complete-profile", http.StatusSeeOther)
+			return
+		}
+
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, "user", &user)
+		ctx = context.WithValue(ctx, userContextKey, &user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
