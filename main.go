@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
@@ -11,6 +11,28 @@ import (
 )
 
 var db *sql.DB
+var templates *template.Template
+
+type PageData struct {
+	Title string
+}
+
+func initTemplates() {
+	templates = template.Must(template.ParseFiles(
+		"templates/layouts/base.html",
+		"templates/pages/home.html",
+	))
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		Title: "Home",
+	}
+	err := templates.ExecuteTemplate(w, "base.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
@@ -25,16 +47,20 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error creating user", 500)
 		return
 	}
-	fmt.Fprintf(w, "Successfully Registered, %s", username)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func main() {
 	db = initDB()
 	defer db.Close()
+
+	initTemplates()
+
 	r := mux.NewRouter()
+	r.HandleFunc("/", homeHandler).Methods("GET")
 	r.HandleFunc("/register", registerHandler).Methods("POST")
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
-	port := ":8080"
+
+	port := ":4080"
 	log.Printf("Starting on port http://localhost%s", port)
 	log.Fatal(http.ListenAndServe(port, r))
 }
