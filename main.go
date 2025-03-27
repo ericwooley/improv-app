@@ -16,6 +16,13 @@ import (
 	"strings"
 	"time"
 
+	"improv-app/internal/config"
+	"improv-app/internal/db"
+	"improv-app/internal/handlers"
+	"improv-app/internal/middleware"
+	"improv-app/internal/models"
+	"improv-app/internal/services"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
@@ -23,7 +30,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-var db *sql.DB
 var templates *template.Template
 var titleCaser = cases.Title(language.English)
 var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
@@ -32,15 +38,8 @@ type PageData struct {
 	Title   string
 	Error   string
 	Success string
-	User    *User
+	User    *models.User
 	Data    interface{}
-}
-
-type User struct {
-	ID        string
-	Email     string
-	FirstName string
-	LastName  string
 }
 
 type ImprovGroup struct {
@@ -109,7 +108,7 @@ func generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func sendMagicLink(email string, firstName string, lastName string) error {
+func sendMagicLink(email string, firstName string, lastName string, db *sql.DB) error {
 	token, err := generateToken()
 	if err != nil {
 		return err
@@ -191,8 +190,8 @@ func sendMagicLink(email string, firstName string, lastName string) error {
 	return nil
 }
 
-func verifyToken(token string) (*User, error) {
-	var user User
+func verifyToken(token string, db *sql.DB) (*models.User, error) {
+	var user models.User
 	err := db.QueryRow(`
 		SELECT u.id, u.email, u.first_name, u.last_name
 		FROM users u
@@ -212,7 +211,7 @@ func verifyToken(token string) (*User, error) {
 	return &user, nil
 }
 
-func requireAuth(next http.HandlerFunc) http.HandlerFunc {
+func requireAuth(next http.HandlerFunc, db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := store.Get(r, "session")
 		userID, ok := session.Values["user_id"].(string)
@@ -221,7 +220,7 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		var user User
+		var user models.User
 		err := db.QueryRow(`
 			SELECT id, email, first_name, last_name
 			FROM users
@@ -254,7 +253,7 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 		Title: titleCaser.String(strings.TrimPrefix(path, "/")),
 	}
 
-	if user, ok := r.Context().Value("user").(*User); ok {
+	if user, ok := r.Context().Value("user").(*models.User); ok {
 		data.User = user
 	}
 
@@ -264,13 +263,13 @@ func pageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method == "POST" {
 		email := r.FormValue("email")
 		firstName := r.FormValue("first_name")
 		lastName := r.FormValue("last_name")
 
-		err := sendMagicLink(email, firstName, lastName)
+		err := sendMagicLink(email, firstName, lastName, db)
 		if err != nil {
 			data := PageData{
 				Title: "Login",
@@ -294,14 +293,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "login.html", data)
 }
 
-func verifyHandler(w http.ResponseWriter, r *http.Request) {
+func verifyHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		http.Error(w, "Invalid token", http.StatusBadRequest)
 		return
 	}
 
-	user, err := verifyToken(token)
+	user, err := verifyToken(token, db)
 	if err != nil {
 		http.Error(w, "Invalid token", http.StatusBadRequest)
 		return
@@ -321,8 +320,8 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func groupsHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*User)
+func groupsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	user := r.Context().Value("user").(*models.User)
 
 	if r.Method == "POST" {
 		name := r.FormValue("name")
@@ -386,8 +385,8 @@ func groupsHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "groups.html", data)
 }
 
-func groupHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*User)
+func groupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	user := r.Context().Value("user").(*models.User)
 	vars := mux.Vars(r)
 	groupID := vars["id"]
 
@@ -422,8 +421,8 @@ func groupHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "group.html", data)
 }
 
-func eventsHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*User)
+func eventsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	user := r.Context().Value("user").(*models.User)
 	vars := mux.Vars(r)
 	groupID := vars["id"]
 
@@ -489,8 +488,8 @@ func eventsHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "events.html", data)
 }
 
-func eventHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*User)
+func eventHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	user := r.Context().Value("user").(*models.User)
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
@@ -578,8 +577,8 @@ func eventHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "event.html", data)
 }
 
-func gamesHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*User)
+func gamesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	user := r.Context().Value("user").(*models.User)
 
 	if r.Method == "POST" {
 		name := r.FormValue("name")
@@ -678,8 +677,8 @@ func gamesHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "games.html", data)
 }
 
-func gameHandler(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*User)
+func gameHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	user := r.Context().Value("user").(*models.User)
 	vars := mux.Vars(r)
 	gameID := vars["id"]
 
@@ -730,25 +729,31 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	db = initDB()
-	defer db.Close()
+	sqlDB := db.InitDB()
+	defer sqlDB.Close()
 
-	initTemplates()
+	config.InitTemplates()
+
+	// Initialize services
+	emailService := services.NewEmailService(sqlDB)
+
+	// Initialize handlers
+	authHandler := handlers.NewAuthHandler(emailService, config.Templates)
 
 	r := mux.NewRouter()
 
 	// Auth routes
-	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
-	r.HandleFunc("/auth/verify", verifyHandler).Methods("GET")
-	r.HandleFunc("/logout", logoutHandler).Methods("POST")
+	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) { loginHandler(w, r, sqlDB) }).Methods("GET", "POST")
+	r.HandleFunc("/auth/verify", func(w http.ResponseWriter, r *http.Request) { verifyHandler(w, r, sqlDB) }).Methods("GET")
+	r.HandleFunc("/logout", authHandler.Logout).Methods("POST")
 
 	// Protected routes
-	r.HandleFunc("/groups", requireAuth(groupsHandler)).Methods("GET", "POST")
-	r.HandleFunc("/groups/{id}", requireAuth(groupHandler)).Methods("GET")
-	r.HandleFunc("/groups/{id}/events", requireAuth(eventsHandler)).Methods("GET", "POST")
-	r.HandleFunc("/events/{id}", requireAuth(eventHandler)).Methods("GET")
-	r.HandleFunc("/games", requireAuth(gamesHandler)).Methods("GET", "POST")
-	r.HandleFunc("/games/{id}", requireAuth(gameHandler)).Methods("GET")
+	r.HandleFunc("/groups", middleware.RequireAuth(sqlDB, func(w http.ResponseWriter, r *http.Request) { groupsHandler(w, r, sqlDB) })).Methods("GET", "POST")
+	r.HandleFunc("/groups/{id}", middleware.RequireAuth(sqlDB, func(w http.ResponseWriter, r *http.Request) { groupHandler(w, r, sqlDB) })).Methods("GET")
+	r.HandleFunc("/groups/{id}/events", middleware.RequireAuth(sqlDB, func(w http.ResponseWriter, r *http.Request) { eventsHandler(w, r, sqlDB) })).Methods("GET", "POST")
+	r.HandleFunc("/events/{id}", middleware.RequireAuth(sqlDB, func(w http.ResponseWriter, r *http.Request) { eventHandler(w, r, sqlDB) })).Methods("GET")
+	r.HandleFunc("/games", middleware.RequireAuth(sqlDB, func(w http.ResponseWriter, r *http.Request) { gamesHandler(w, r, sqlDB) })).Methods("GET", "POST")
+	r.HandleFunc("/games/{id}", middleware.RequireAuth(sqlDB, func(w http.ResponseWriter, r *http.Request) { gameHandler(w, r, sqlDB) })).Methods("GET")
 
 	// Public routes
 	r.HandleFunc("/{page}", pageHandler).Methods("GET")
@@ -758,42 +763,3 @@ func main() {
 	log.Printf("Starting on port http://localhost%s", port)
 	log.Fatal(http.ListenAndServe(port, r))
 }
-
-/*
-
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	username := r.FormValue("username")
-	password := r.FormValue("password")
-
-	var hashed string
-	err := db.QueryRow("SELECT password FROM users WHERE username = ?", username).Scan(&hashed)
-	if err != nil {
-		http.Error(w, "User not found", 404)
-		return
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password))
-	if err != nil {
-		http.Error(w, "Invalid password", 401)
-		return
-	}
-
-	fmt.Fprintf(w, "Welcome, %s!", username)
-}
-*/
-
-/*
-func main() {
-	db = initDB()
-	defer db.Close()
-
-	r := mux.NewRouter()
-	r.HandleFunc("/register", registerHandler).Methods("POST")
-	r.HandleFunc("/login", loginHandler).Methods("POST")
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
-
-	log.Println("Server running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
-}
-*/
