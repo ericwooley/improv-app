@@ -66,6 +66,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session, _ := config.Store.Get(r, "session")
+	fmt.Println("User ID:", session.Values)
 	session.Values["user_id"] = user.ID
 	session.Save(r, w)
 

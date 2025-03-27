@@ -41,7 +41,11 @@
   </nav>
 
   <main class="container mx-auto px-4 py-8 flex-grow">
-    {{template "content" .}}
+    {{if eq .Title "Complete Profile"}}
+    {{template "complete-profile-content" .}}
+    {{else}}
+      {{template "content" .}}
+    {{end}}
   </main>
 
   <footer class="bg-white shadow-lg mt-auto">

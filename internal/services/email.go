@@ -116,7 +116,6 @@ func (s *EmailService) SendMagicLink(email string) error {
 }
 
 func (s *EmailService) VerifyToken(token string) (*models.User, error) {
-	fmt.Println("Verifying token:", token)
 	var user models.User
 	err := s.db.QueryRow(`
 		SELECT u.id, u.email, u.first_name, u.last_name
