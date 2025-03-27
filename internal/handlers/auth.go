@@ -14,10 +14,6 @@ type AuthHandler struct {
 	emailService *services.EmailService
 }
 
-func renderTemplate(w http.ResponseWriter, templatePath string, data *models.PageData) {
-	t, _ := template.ParseFiles("templates/layouts/base.html", templatePath)
-	t.ExecuteTemplate(w, t.Name(), data)
-}
 
 func NewAuthHandler(emailService *services.EmailService, templates *template.Template) *AuthHandler {
 	return &AuthHandler{
@@ -37,7 +33,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 				Error:    "Error sending magic link",
 				Template: "login",
 			}
-			renderTemplate(w, "login.html", &data)
+			RenderTemplate(w, "templates/login.html", &data)
 			return
 		}
 
@@ -46,7 +42,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			Success:  "Magic link sent! Check your email.",
 			Template: "login",
 		}
-		renderTemplate(w, "login.html", &data)
+		RenderTemplate(w, "templates/login.html", &data)
 		return
 	}
 
@@ -54,7 +50,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Title:    "Login",
 		Template: "login",
 	}
-	renderTemplate(w, "login.html", &data)
+	RenderTemplate(w, "templates/login.html", &data)
 }
 
 func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +100,7 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 				Error:    "Error updating profile",
 				Template: "profile",
 			}
-			renderTemplate(w, "profile.html", &data)
+			RenderTemplate(w, "templates/profile.html", &data)
 			return
 		}
 
@@ -117,7 +113,7 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 		Template: "profile",
 	}
 
-	renderTemplate(w, "profile.html", &data)
+	RenderTemplate(w, "templates/profile.html", &data)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

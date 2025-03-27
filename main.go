@@ -34,6 +34,7 @@ func main() {
 	groupHandler := handlers.NewGroupHandler(sqlDB, config.Templates)
 	eventHandler := handlers.NewEventHandler(sqlDB, config.Templates)
 	gameHandler := handlers.NewGameHandler(sqlDB, config.Templates)
+	homeHandler := handlers.NewHomeHandler(sqlDB)
 
 	r := mux.NewRouter()
 
@@ -44,6 +45,7 @@ func main() {
 	r.HandleFunc("/logout", authHandler.Logout).Methods("POST", "GET")
 
 	// Protected routes
+	r.HandleFunc("/", middleware.RequireAuth(sqlDB, homeHandler.Home)).Methods("GET")
 	r.HandleFunc("/groups", middleware.RequireAuth(sqlDB, groupHandler.List)).Methods("GET", "POST")
 	r.HandleFunc("/groups/{id}", middleware.RequireAuth(sqlDB, groupHandler.Get)).Methods("GET")
 	r.HandleFunc("/groups/{id}/events", middleware.RequireAuth(sqlDB, eventHandler.List)).Methods("GET", "POST")
