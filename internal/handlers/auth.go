@@ -30,23 +30,26 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println("Error sending magic link:", err)
 			data := models.PageData{
-				Title: "Login",
-				Error: "Error sending magic link",
+				Title:    "Login",
+				Error:    "Error sending magic link",
+				Template: "login",
 			}
 			h.templates.ExecuteTemplate(w, "login.html", data)
 			return
 		}
 
 		data := models.PageData{
-			Title:   "Login",
-			Success: "Magic link sent! Check your email.",
+			Title:    "Login",
+			Success:  "Magic link sent! Check your email.",
+			Template: "login",
 		}
 		h.templates.ExecuteTemplate(w, "login.html", data)
 		return
 	}
 
 	data := models.PageData{
-		Title: "Login",
+		Title:    "Login",
+		Template: "login",
 	}
 	h.templates.ExecuteTemplate(w, "login.html", data)
 }
@@ -94,8 +97,9 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 		err := h.emailService.UpdateUserProfile(userID, firstName, lastName)
 		if err != nil {
 			data := models.PageData{
-				Title: "Complete Profile",
-				Error: "Error updating profile",
+				Title:    "Complete Profile",
+				Error:    "Error updating profile",
+				Template: "complete-profile",
 			}
 			h.templates.ExecuteTemplate(w, "complete-profile.html", data)
 			return
@@ -106,7 +110,8 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := models.PageData{
-		Title: "Complete Profile",
+		Title:    "Complete Profile",
+		Template: "complete-profile",
 	}
 	h.templates.ExecuteTemplate(w, "complete-profile.html", data)
 }

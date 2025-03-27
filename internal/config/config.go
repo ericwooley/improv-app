@@ -44,8 +44,8 @@ func InitTemplates() {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(path, ".html") {
-			_, err = Templates.ParseFiles(path)
+		if !info.IsDir() && info.Name() != "layouts" && strings.HasSuffix(path, ".html") {
+			_, err = Templates.ParseFiles("templates/layouts/base.html", path)
 			if err != nil {
 				return err
 			}

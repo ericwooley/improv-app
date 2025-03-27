@@ -6,4 +6,5 @@ type PageData struct {
 	Success string
 	User    *User
 	Data    interface{}
+	Template string
 }

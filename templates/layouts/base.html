@@ -41,10 +41,7 @@
   </nav>
 
   <main class="container mx-auto px-4 py-8 flex-grow">
-    {{if eq .Title "Complete Profile"}}
-    {{template "complete-profile-content" .}}
-    {{else}}
-      {{template "content" .}}
+    {{block "content" .}}
     {{end}}
   </main>
 
