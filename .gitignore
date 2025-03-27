@@ -26,3 +26,4 @@ go.work.sum
 app.db
 docker-data/mp
 tmp
+improv.db

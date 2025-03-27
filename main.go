@@ -34,15 +34,14 @@ func main() {
 	groupHandler := handlers.NewGroupHandler(sqlDB, config.Templates)
 	eventHandler := handlers.NewEventHandler(sqlDB, config.Templates)
 	gameHandler := handlers.NewGameHandler(sqlDB, config.Templates)
-	pageHandler := handlers.NewPageHandler(config.Templates)
 
 	r := mux.NewRouter()
 
 	// Auth routes
 	r.HandleFunc("/login", authHandler.Login).Methods("GET", "POST")
 	r.HandleFunc("/auth/verify", authHandler.Verify).Methods("GET")
-	r.HandleFunc("/complete-profile", middleware.RequireAuth(sqlDB, authHandler.CompleteProfile)).Methods("GET", "POST")
-	r.HandleFunc("/logout", authHandler.Logout).Methods("POST")
+	r.HandleFunc("/profile", middleware.RequireAuth(sqlDB, authHandler.CompleteProfile)).Methods("GET", "POST")
+	r.HandleFunc("/logout", authHandler.Logout).Methods("POST", "GET")
 
 	// Protected routes
 	r.HandleFunc("/groups", middleware.RequireAuth(sqlDB, groupHandler.List)).Methods("GET", "POST")
@@ -52,9 +51,6 @@ func main() {
 	r.HandleFunc("/games", middleware.RequireAuth(sqlDB, gameHandler.List)).Methods("GET", "POST")
 	r.HandleFunc("/games/{id}", middleware.RequireAuth(sqlDB, gameHandler.Get)).Methods("GET")
 
-	// Public routes
-	r.HandleFunc("/{page}", pageHandler.Handle).Methods("GET")
-	r.HandleFunc("/", pageHandler.Handle).Methods("GET")
 
 	port := ":4080"
 	log.Printf("Starting on port http://localhost%s", port)

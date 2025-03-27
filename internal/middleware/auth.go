@@ -12,7 +12,7 @@ import (
 // contextKey is a custom type for context keys to avoid collisions
 type contextKey string
 
-const userContextKey contextKey = "user"
+const UserContextKey contextKey = "user"
 
 func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -36,20 +36,20 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 
 		// Check if profile is complete
 		if len(user.FirstName) < 2 || len(user.LastName) < 2 {
-			// Allow access to complete-profile page
-			if r.URL.Path == "/complete-profile" {
+			// Allow access to profile page
+			if r.URL.Path == "/profile" {
 				ctx := r.Context()
-				ctx = context.WithValue(ctx, userContextKey, &user)
+				ctx = context.WithValue(ctx, UserContextKey, &user)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 			// Redirect to complete profile for all other pages
-			http.Redirect(w, r, "/complete-profile", http.StatusSeeOther)
+			http.Redirect(w, r, "/profile", http.StatusSeeOther)
 			return
 		}
 
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, userContextKey, &user)
+		ctx = context.WithValue(ctx, UserContextKey, &user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

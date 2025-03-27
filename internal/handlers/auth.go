@@ -12,13 +12,16 @@ import (
 
 type AuthHandler struct {
 	emailService *services.EmailService
-	templates    *template.Template
+}
+
+func renderTemplate(w http.ResponseWriter, templatePath string, data *models.PageData) {
+	t, _ := template.ParseFiles("templates/layouts/base.html", templatePath)
+	t.ExecuteTemplate(w, t.Name(), data)
 }
 
 func NewAuthHandler(emailService *services.EmailService, templates *template.Template) *AuthHandler {
 	return &AuthHandler{
 		emailService: emailService,
-		templates:    templates,
 	}
 }
 
@@ -34,7 +37,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 				Error:    "Error sending magic link",
 				Template: "login",
 			}
-			h.templates.ExecuteTemplate(w, "login.html", data)
+			renderTemplate(w, "login.html", &data)
 			return
 		}
 
@@ -43,7 +46,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			Success:  "Magic link sent! Check your email.",
 			Template: "login",
 		}
-		h.templates.ExecuteTemplate(w, "login.html", data)
+		renderTemplate(w, "login.html", &data)
 		return
 	}
 
@@ -51,7 +54,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Title:    "Login",
 		Template: "login",
 	}
-	h.templates.ExecuteTemplate(w, "login.html", data)
+	renderTemplate(w, "login.html", &data)
 }
 
 func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +78,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 
 	// If user doesn't have a name set, redirect to complete profile
 	if user.FirstName == "" || user.LastName == "" {
-		http.Redirect(w, r, "/complete-profile", http.StatusSeeOther)
+		http.Redirect(w, r, "/profile", http.StatusSeeOther)
 		return
 	}
 
@@ -99,9 +102,9 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 			data := models.PageData{
 				Title:    "Complete Profile",
 				Error:    "Error updating profile",
-				Template: "complete-profile",
+				Template: "profile",
 			}
-			h.templates.ExecuteTemplate(w, "complete-profile.html", data)
+			renderTemplate(w, "profile.html", &data)
 			return
 		}
 
@@ -111,9 +114,10 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 
 	data := models.PageData{
 		Title:    "Complete Profile",
-		Template: "complete-profile",
+		Template: "profile",
 	}
-	h.templates.ExecuteTemplate(w, "complete-profile.html", data)
+
+	renderTemplate(w, "profile.html", &data)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
