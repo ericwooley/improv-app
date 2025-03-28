@@ -97,6 +97,19 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Created new game: %s (ID: %s)", gameRequest.Name, gameID)
 
+		// Automatically add the game to the group's library
+		_, err = h.db.Exec(`
+			INSERT INTO group_games (group_id, game_id)
+			VALUES ($1, $2)
+			ON CONFLICT DO NOTHING
+		`, gameRequest.GroupID, gameID)
+		if err != nil {
+			log.Printf("Error adding game to group library: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error adding game to group library")
+			return
+		}
+		log.Printf("Added game %s to group %s library", gameID, gameRequest.GroupID)
+
 		// Handle tags
 		var tagIDs []string
 		for _, tag := range gameRequest.Tags {

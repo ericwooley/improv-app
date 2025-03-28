@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
-import { useGetGroupQuery } from '../store/api/groupsApi'
-import { PageHeader, Breadcrumb, ActionButton, InfoItem, formatDate } from '../components'
+import { useGetGroupQuery, useGetGroupLibraryGamesQuery, useGetGroupOwnedGamesQuery } from '../store/api/groupsApi'
+import { PageHeader, Breadcrumb, InfoItem, formatDate } from '../components'
 import {
   Box,
   Card,
@@ -17,12 +17,76 @@ import {
   Alert,
   Stack,
   Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Tabs,
+  Tab,
+  Typography,
+  Grid,
 } from '@mui/material'
-import { Info as InfoIcon, Group as GroupIcon, Settings as SettingsIcon } from '@mui/icons-material'
+import {
+  Info as InfoIcon,
+  Group as GroupIcon,
+  MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  CalendarMonth as CalendarIcon,
+  SportsEsports as GamepadIcon,
+  People as PeopleIcon,
+  Bookmarks as LibraryIcon,
+  Inventory as OwnedIcon,
+} from '@mui/icons-material'
+import { useState } from 'react'
+
+interface TabPanelProps {
+  children?: React.ReactNode
+  index: number
+  value: number
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`game-tabpanel-${index}`}
+      aria-labelledby={`game-tab-${index}`}
+      {...other}>
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+    </div>
+  )
+}
+
+function a11yProps(index: number) {
+  return {
+    id: `game-tab-${index}`,
+    'aria-controls': `game-tabpanel-${index}`,
+  }
+}
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>()
   const { data: groupResponse, isLoading, error } = useGetGroupQuery(groupId || '')
+  const { data: libraryGamesResponse, isLoading: libraryLoading } = useGetGroupLibraryGamesQuery(groupId || '')
+  const { data: ownedGamesResponse, isLoading: ownedLoading } = useGetGroupOwnedGamesQuery(groupId || '')
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [tabValue, setTabValue] = useState(0)
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
+  }
 
   if (isLoading) {
     return (
@@ -41,6 +105,8 @@ const GroupDetailsPage = () => {
   }
 
   const { group, members, userRole } = groupResponse.data
+  const libraryGames = libraryGamesResponse?.data || []
+  const ownedGames = ownedGamesResponse?.data || []
 
   return (
     <Box sx={{ p: 3 }}>
@@ -51,10 +117,49 @@ const GroupDetailsPage = () => {
         ]}
       />
 
-      <PageHeader title={group.Name} subtitle={group.Description} />
+      <PageHeader
+        title={group.Name}
+        subtitle={group.Description}
+        actions={
+          <IconButton onClick={handleMenuOpen} aria-label="group actions">
+            <MoreVertIcon />
+          </IconButton>
+        }
+      />
+
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
+          <ListItemIcon>
+            <CalendarIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Create Event</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
+          <ListItemIcon>
+            <GamepadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Create Game</ListItemText>
+        </MenuItem>
+        {userRole === 'admin' && (
+          <>
+            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
+              <ListItemIcon>
+                <EditIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Edit Group</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
+              <ListItemIcon>
+                <PeopleIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Manage Members</ListItemText>
+            </MenuItem>
+          </>
+        )}
+      </Menu>
 
       <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
-        <Box sx={{ flex: { md: 2 } }}>
+        <Box sx={{ flex: 1 }}>
           <Card sx={{ mb: 3 }}>
             <CardHeader avatar={<InfoIcon />} title="Group Information" />
             <CardContent>
@@ -65,7 +170,7 @@ const GroupDetailsPage = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card sx={{ mb: 3 }}>
             <CardHeader avatar={<GroupIcon />} title="Members" />
             <CardContent>
               <TableContainer component={Paper} elevation={0}>
@@ -92,44 +197,110 @@ const GroupDetailsPage = () => {
               </TableContainer>
             </CardContent>
           </Card>
-        </Box>
 
-        <Box sx={{ flex: { md: 1 } }}>
           <Card>
-            <CardHeader avatar={<SettingsIcon />} title="Actions" />
-            <CardContent>
-              <Stack spacing={2}>
-                <ActionButton
-                  text="Create Event"
-                  to={`/events/new?groupId=${group.ID}`}
-                  icon="fas fa-calendar-plus"
-                  fullWidth
-                />
-                <ActionButton
-                  text="Create Game"
-                  to={`/games/new?groupId=${group.ID}`}
-                  icon="fas fa-gamepad"
-                  fullWidth
-                />
-                {userRole === 'admin' && (
-                  <>
-                    <ActionButton
-                      text="Edit Group"
-                      to={`/groups/${group.ID}/edit`}
-                      icon="fas fa-edit"
-                      color="warning"
-                      fullWidth
-                    />
-                    <ActionButton
-                      text="Manage Members"
-                      to={`/groups/${group.ID}/members`}
-                      icon="fas fa-user-cog"
-                      color="info"
-                      fullWidth
-                    />
-                  </>
+            <CardHeader avatar={<GamepadIcon />} title="Games" />
+            <CardContent sx={{ pb: 0 }}>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={tabValue} onChange={handleTabChange} aria-label="game tabs" variant="fullWidth">
+                  <Tab icon={<LibraryIcon fontSize="small" />} label="Library" {...a11yProps(0)} iconPosition="start" />
+                  <Tab
+                    icon={<OwnedIcon fontSize="small" />}
+                    label="Owned Games"
+                    {...a11yProps(1)}
+                    iconPosition="start"
+                  />
+                </Tabs>
+              </Box>
+
+              <TabPanel value={tabValue} index={0}>
+                {libraryLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : libraryGames.length > 0 ? (
+                  <Grid container spacing={2}>
+                    {libraryGames.map((game) => (
+                      <Grid
+                        size={{
+                          xs: 12,
+                          sm: 6,
+                          md: 4,
+                        }}
+                        key={game.id}>
+                        <Card variant="outlined" sx={{ height: '100%' }}>
+                          <CardContent>
+                            <Typography variant="h6" component="div" gutterBottom>
+                              {game.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {game.description}
+                            </Typography>
+                            {game.ownedByGroup && (
+                              <Chip
+                                label="Owned"
+                                color="primary"
+                                size="small"
+                                icon={<OwnedIcon fontSize="small" />}
+                                sx={{ mt: 1 }}
+                              />
+                            )}
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {game.minPlayers}-{game.maxPlayers} players
+                              </Typography>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Box sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography color="text.secondary">No games in library. Add some games to get started!</Typography>
+                  </Box>
                 )}
-              </Stack>
+              </TabPanel>
+
+              <TabPanel value={tabValue} index={1}>
+                {ownedLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : ownedGames.length > 0 ? (
+                  <Grid container spacing={2}>
+                    {ownedGames.map((game) => (
+                      <Grid
+                        size={{
+                          xs: 12,
+                          sm: 6,
+                          md: 4,
+                        }}
+                        key={game.id}>
+                        <Card variant="outlined" sx={{ height: '100%' }}>
+                          <CardContent>
+                            <Typography variant="h6" component="div" gutterBottom>
+                              {game.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {game.description}
+                            </Typography>
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {game.minPlayers}-{game.maxPlayers} players
+                              </Typography>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Box sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography color="text.secondary">No owned games yet. Create a game for this group!</Typography>
+                  </Box>
+                )}
+              </TabPanel>
             </CardContent>
           </Card>
         </Box>

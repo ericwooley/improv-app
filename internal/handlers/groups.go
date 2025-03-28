@@ -315,3 +315,130 @@ func (h *GroupHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Data:    group,
 	})
 }
+
+// GetLibraryGames handles fetching all games in a group's library
+func (h *GroupHandler) GetLibraryGames(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user is a member of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	// Fetch games from the group's library
+	rows, err := h.db.Query(`
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.public, g.created_at, g.created_by,
+		       CASE WHEN g.created_by = $1 OR g.group_id = $2 THEN true ELSE false END as owned_by_group
+		FROM games g
+		LEFT JOIN group_games gg ON g.id = gg.game_id
+		WHERE gg.group_id = $2 OR g.public = true
+		ORDER BY g.name
+	`, user.ID, groupID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group library games")
+		return
+	}
+	defer rows.Close()
+
+	type LibraryGame struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		MinPlayers  int    `json:"minPlayers"`
+		MaxPlayers  int    `json:"maxPlayers"`
+		Public      bool   `json:"public"`
+		CreatedAt   string `json:"createdAt"`
+		CreatedBy   string `json:"createdBy"`
+		OwnedByGroup bool  `json:"ownedByGroup"`
+	}
+
+	games := []LibraryGame{}
+
+	for rows.Next() {
+		var game LibraryGame
+
+		if err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers,
+		                  &game.MaxPlayers, &game.Public, &game.CreatedAt, &game.CreatedBy, &game.OwnedByGroup); err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning game data")
+			return
+		}
+
+		games = append(games, game)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    games,
+	})
+}
+
+// GetOwnedGames handles fetching only games owned by the group
+func (h *GroupHandler) GetOwnedGames(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user is a member of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	// Fetch games owned by the group
+	rows, err := h.db.Query(`
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.public, g.created_at, g.created_by
+		FROM games g
+		WHERE g.group_id = $1
+		ORDER BY g.name
+	`, groupID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group owned games")
+		return
+	}
+	defer rows.Close()
+
+	type OwnedGame struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		MinPlayers  int    `json:"minPlayers"`
+		MaxPlayers  int    `json:"maxPlayers"`
+		Public      bool   `json:"public"`
+		CreatedAt   string `json:"createdAt"`
+		CreatedBy   string `json:"createdBy"`
+	}
+
+	games := []OwnedGame{}
+
+	for rows.Next() {
+		var game OwnedGame
+
+		if err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers,
+		                  &game.MaxPlayers, &game.Public, &game.CreatedAt, &game.CreatedBy); err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning game data")
+			return
+		}
+
+		games = append(games, game)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    games,
+	})
+}

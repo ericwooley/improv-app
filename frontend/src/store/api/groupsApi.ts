@@ -23,6 +23,18 @@ export interface GroupDetails {
   userRole: string
 }
 
+export interface GroupGame {
+  id: string
+  name: string
+  description: string
+  minPlayers: number
+  maxPlayers: number
+  public: boolean
+  createdAt: string
+  createdBy: string
+  ownedByGroup?: boolean
+}
+
 export interface CreateGroupRequest {
   name: string
   description: string
@@ -72,6 +84,16 @@ export const groupsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Group', id: 'LIST' }],
     }),
+
+    getGroupLibraryGames: builder.query<APIResponse<GroupGame[]>, string>({
+      query: (id) => `/groups/${id}/games/library`,
+      providesTags: (_, __, id) => [{ type: 'Game', id: `${id}-library` }],
+    }),
+
+    getGroupOwnedGames: builder.query<APIResponse<GroupGame[]>, string>({
+      query: (id) => `/groups/${id}/games/owned`,
+      providesTags: (_, __, id) => [{ type: 'Game', id: `${id}-owned` }],
+    }),
   }),
 })
 
@@ -81,4 +103,6 @@ export const {
   useCreateGroupMutation,
   useUpdateGroupMutation,
   useDeleteGroupMutation,
+  useGetGroupLibraryGamesQuery,
+  useGetGroupOwnedGamesQuery,
 } = groupsApi

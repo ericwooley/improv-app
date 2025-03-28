@@ -93,6 +93,8 @@ func main() {
 	api.HandleFunc("/groups", middleware.RequireAuth(sqlDB, groupHandler.Create)).Methods("POST")
 	api.HandleFunc("/groups/{id}", middleware.RequireAuthAPI(sqlDB, groupHandler.Get)).Methods("GET")
 	api.HandleFunc("/groups/{id}", middleware.RequireAuthAPI(sqlDB, groupHandler.Update)).Methods("PUT")
+	api.HandleFunc("/groups/{id}/games/library", middleware.RequireAuthAPI(sqlDB, groupHandler.GetLibraryGames)).Methods("GET")
+	api.HandleFunc("/groups/{id}/games/owned", middleware.RequireAuthAPI(sqlDB, groupHandler.GetOwnedGames)).Methods("GET")
 
 	// Event routes
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.ListAll)).Methods("GET")

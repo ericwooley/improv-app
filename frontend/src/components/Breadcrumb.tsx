@@ -19,19 +19,21 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, separator = 'arrow' }) =
       <Breadcrumbs
         aria-label="breadcrumb"
         separator={separator === 'arrow' ? '›' : separator === 'bullet' ? '•' : separator === 'dot' ? '.' : '≻'}>
-        {items.map((item, index) => (
-          <React.Fragment key={index}>
-            {item.active ? (
-              <Typography color="text.primary">{item.label}</Typography>
-            ) : item.to ? (
-              <MuiLink component={Link} to={item.to} color="inherit" underline="hover">
-                {item.label}
-              </MuiLink>
-            ) : (
-              <Typography color="text.secondary">{item.label}</Typography>
-            )}
-          </React.Fragment>
-        ))}
+        <>
+          {items.map((item, index) => (
+            <React.Fragment key={index}>
+              {item.active ? (
+                <Typography color="text.primary">{item.label}</Typography>
+              ) : item.to ? (
+                <MuiLink component={Link} to={item.to} color="inherit" underline="hover">
+                  {item.label}
+                </MuiLink>
+              ) : (
+                <Typography color="text.secondary">{item.label}</Typography>
+              )}
+            </React.Fragment>
+          ))}
+        </>
       </Breadcrumbs>
     </Box>
   )
