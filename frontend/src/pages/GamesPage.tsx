@@ -1,68 +1,91 @@
-import { useState } from 'react'
-import { Box, Typography, Grid, CardActions } from '@mui/material'
-import { PageHeader, ItemCard, EmptyState, ActionButton, TagList, InfoItem } from '../components'
+import {
+  Box,
+  Typography,
+  CardActions,
+  CircularProgress,
+  Grid,
+  Card,
+  CardContent,
+  CardHeader,
+  Button,
+} from '@mui/material'
+import { PageHeader, EmptyState, TagList, InfoItem } from '../components'
+import { useGetGamesQuery } from '../store/api/gamesApi'
+import { Link } from 'react-router-dom'
 
-interface Game {
-  id: string
-  name: string
-  description: string
-  minPlayers: number
-  maxPlayers: number
-  tags: string[]
-}
-
-interface GamesPageProps {
-  initialGames?: Game[]
-}
-
-const GamesPage = ({ initialGames = [] }: GamesPageProps) => {
-  const [games] = useState<Game[]>(initialGames)
+const GamesPage = () => {
+  const { data: gamesData, isLoading, error } = useGetGamesQuery()
+  const games = gamesData?.data || []
 
   return (
     <Box>
       <PageHeader title="Improv Games" subtitle="Browse and manage your collection of improv games" />
 
-      {games.length > 0 && (
-        <Box sx={{ mb: 5 }}>
-          <ActionButton text="Create Game" to="/games/new" icon="fas fa-plus" />
+      {isLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {error && (
+        <Box sx={{ my: 4 }}>
+          <Typography color="error">Failed to load games. Please try again later.</Typography>
         </Box>
       )}
 
       {/* Games Grid */}
-      {games.length > 0 ? (
+      {!isLoading && games.length > 0 ? (
         <Grid container spacing={3}>
           {games.map((game) => (
-            <Grid key={game.id} size={4}>
-              <ItemCard id={game.id} title={game.name} description={game.description} footerLink={`/games/${game.id}`}>
-                <InfoItem icon="fas fa-users">
-                  <Typography variant="body2">
-                    {game.minPlayers}-{game.maxPlayers} players
+            <Grid
+              size={{
+                xs: 12,
+                sm: 6,
+                md: 4,
+              }}
+              key={game.id}>
+              <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardHeader title={game.name} />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {game.description}
                   </Typography>
-                </InfoItem>
 
-                <TagList tags={game.tags} />
+                  <InfoItem icon="fas fa-users">
+                    <Typography variant="body2">
+                      {game.minPlayers}-{game.maxPlayers} players
+                    </Typography>
+                  </InfoItem>
 
-                <CardActions sx={{ pt: 2, justifyContent: 'space-between' }}>
-                  <ActionButton
-                    text="View"
-                    to={`/games/${game.id}`}
-                    variant="outlined"
-                    color="primary"
-                    icon="fas fa-eye"
-                  />
-                  <ActionButton text="Delete" variant="outlined" color="error" icon="fas fa-trash" />
+                  {game.public && (
+                    <InfoItem icon="fas fa-globe">
+                      <Typography variant="body2" color="primary.main">
+                        Public
+                      </Typography>
+                    </InfoItem>
+                  )}
+
+                  <TagList tags={game.tags} />
+                </CardContent>
+
+                <CardActions sx={{ pt: 2, justifyContent: 'flex-end' }}>
+                  <Button component={Link} to={`/games/${game.id}`} color="primary" size="small">
+                    View
+                  </Button>
                 </CardActions>
-              </ItemCard>
+              </Card>
             </Grid>
           ))}
         </Grid>
       ) : (
-        <EmptyState
-          message="No games have been added yet."
-          actionText="Add Your First Game"
-          actionLink="/games/new"
-          actionIcon="fas fa-plus"
-        />
+        !isLoading && (
+          <EmptyState
+            message="No games have been added yet."
+            actionText="Add Your First Game"
+            actionLink="/games/new"
+            actionIcon="fas fa-plus"
+          />
+        )
       )}
     </Box>
   )

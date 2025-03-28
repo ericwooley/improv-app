@@ -168,9 +168,11 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		WHERE g.public = TRUE
+		   OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?)
 		GROUP BY g.id
 		ORDER BY g.created_at DESC
-	`)
+	`, user.ID)
 	if err != nil {
 		log.Printf("Error fetching games: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching games")
