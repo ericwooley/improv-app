@@ -10,18 +10,17 @@ const ProfilePage = () => {
   }>({})
 
   // Get the user data using RTK Query
-  const { data: user, isLoading: isLoadingUser } = useGetMeQuery()
-
+  const { data: userResponse, isLoading: isLoadingUser } = useGetMeQuery()
+  const { data: user } = userResponse || {}
   // Update profile mutation
   const [updateProfile, { isLoading: isUpdating, error: updateError, isSuccess }] = useUpdateProfileMutation()
-
+  const { firstName: firstNameFromUser, lastName: lastNameFromUser } = user || {}
+  console.log(user)
   // Set form values when user data is loaded
   useEffect(() => {
-    if (user) {
-      setFirstName(user.firstName || '')
-      setLastName(user.lastName || '')
-    }
-  }, [user])
+    setFirstName(firstNameFromUser || '')
+    setLastName(lastNameFromUser || '')
+  }, [firstNameFromUser, lastNameFromUser])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

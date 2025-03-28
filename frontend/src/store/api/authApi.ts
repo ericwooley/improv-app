@@ -1,3 +1,4 @@
+import { APIResponse } from '../types'
 import { apiSlice } from './apiSlice'
 
 export interface LoginRequest {
@@ -53,12 +54,12 @@ export const authApi = apiSlice.injectEndpoints({
       invalidatesTags: ['User'],
     }),
 
-    getMe: builder.query<User, void>({
+    getMe: builder.query<APIResponse<User>, void>({
       query: () => '/auth/me',
       providesTags: ['User'],
     }),
 
-    updateProfile: builder.mutation<User, ProfileUpdateRequest>({
+    updateProfile: builder.mutation<APIResponse<User>, ProfileUpdateRequest>({
       query: (profileData) => ({
         url: '/profile',
         method: 'PUT',

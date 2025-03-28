@@ -6,11 +6,12 @@ interface ActionButtonProps {
   to?: string
   onClick?: () => void
   icon?: string
-  variant?: 'primary' | 'info' | 'danger' | 'link' | 'success'
+  variant?: 'primary' | 'info' | 'danger' | 'link' | 'success' | 'light'
   outlined?: boolean
   fullWidth?: boolean
   size?: 'small' | 'normal' | 'medium' | 'large'
   className?: string
+  type?: 'button' | 'submit' | 'reset'
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({
@@ -23,6 +24,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   fullWidth = false,
   size,
   className = '',
+  type = 'button',
 }) => {
   const buttonClassName = [
     'button',
@@ -55,7 +57,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   }
 
   return (
-    <button className={buttonClassName} onClick={onClick}>
+    <button className={buttonClassName} onClick={onClick} type={type}>
       {content}
     </button>
   )

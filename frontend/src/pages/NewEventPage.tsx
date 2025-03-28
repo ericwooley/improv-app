@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import {
+  PageHeader,
+  Breadcrumb,
+  FormContainer,
+  InputField,
+  TextareaField,
+  SelectField,
+  FormActions,
+  ActionButton,
+} from '../components'
 
 interface Group {
   id: string
@@ -57,169 +67,93 @@ const NewEventPage = ({ groups = [], onCreateEvent }: NewEventPageProps) => {
     navigate('/events')
   }
 
+  // Convert groups to options for SelectField
+  const groupOptions = groups.map((group) => ({
+    value: group.id,
+    label: group.name,
+  }))
+
   return (
     <div className="content-wrapper">
-      <nav className="breadcrumb has-arrow-separator mb-5" aria-label="breadcrumbs">
-        <ul>
-          <li>
-            <Link to="/events">Events</Link>
-          </li>
-          <li className="is-active">
-            <a href="#" aria-current="page">
-              Create New Event
-            </a>
-          </li>
-        </ul>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: 'Events', to: '/events' },
+          { label: 'Create New Event', active: true },
+        ]}
+      />
 
-      <div className="is-flex is-justify-content-space-between is-align-items-center mb-5">
-        <div>
-          <h1 className="title is-2">Create New Event</h1>
-          <p className="subtitle is-5">Schedule a new improv event</p>
+      <PageHeader title="Create New Event" subtitle="Schedule a new improv event" />
+
+      <FormContainer onSubmit={handleCreateEvent}>
+        <InputField
+          id="title"
+          label="Event Title"
+          value={newEvent.title}
+          placeholder="Weekly Practice"
+          required
+          icon="fas fa-heading"
+          onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+        />
+
+        <SelectField
+          id="group_id"
+          label="Group"
+          value={newEvent.groupId}
+          options={groupOptions}
+          required
+          icon="fas fa-users"
+          placeholder="Select a group..."
+          onChange={(e) => setNewEvent({ ...newEvent, groupId: e.target.value })}
+        />
+
+        <TextareaField
+          id="description"
+          label="Description"
+          value={newEvent.description}
+          placeholder="Details about the event..."
+          onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+        />
+
+        <InputField
+          id="location"
+          label="Location"
+          value={newEvent.location}
+          placeholder="123 Main St, Suite 101"
+          required
+          icon="fas fa-map-marker-alt"
+          onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+        />
+
+        <div className="columns">
+          <div className="column">
+            <InputField
+              id="start_time"
+              label="Start Time"
+              type="datetime-local"
+              value={newEvent.startTime}
+              required
+              icon="fas fa-clock"
+              onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
+            />
+          </div>
+          <div className="column">
+            <InputField
+              id="end_time"
+              label="End Time"
+              type="datetime-local"
+              value={newEvent.endTime}
+              required
+              icon="fas fa-clock"
+              onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="box">
-        <form onSubmit={handleCreateEvent}>
-          <div className="field">
-            <label htmlFor="title" className="label">
-              Event Title
-            </label>
-            <div className="control has-icons-left">
-              <input
-                type="text"
-                id="title"
-                required
-                className="input"
-                placeholder="Weekly Practice"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-              />
-              <span className="icon is-small is-left">
-                <i className="fas fa-heading"></i>
-              </span>
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="group_id" className="label">
-              Group
-            </label>
-            <div className="control has-icons-left">
-              <div className="select is-fullwidth">
-                <select
-                  id="group_id"
-                  required
-                  value={newEvent.groupId}
-                  onChange={(e) => setNewEvent({ ...newEvent, groupId: e.target.value })}>
-                  <option value="">Select a group...</option>
-                  {groups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <span className="icon is-small is-left">
-                <i className="fas fa-users"></i>
-              </span>
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="description" className="label">
-              Description
-            </label>
-            <div className="control">
-              <textarea
-                id="description"
-                className="textarea"
-                placeholder="Details about the event..."
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}></textarea>
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="location" className="label">
-              Location
-            </label>
-            <div className="control has-icons-left">
-              <input
-                type="text"
-                id="location"
-                required
-                className="input"
-                placeholder="123 Main St, Suite 101"
-                value={newEvent.location}
-                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-              />
-              <span className="icon is-small is-left">
-                <i className="fas fa-map-marker-alt"></i>
-              </span>
-            </div>
-          </div>
-
-          <div className="columns">
-            <div className="column">
-              <div className="field">
-                <label htmlFor="start_time" className="label">
-                  Start Time
-                </label>
-                <div className="control has-icons-left">
-                  <input
-                    type="datetime-local"
-                    id="start_time"
-                    required
-                    className="input"
-                    value={newEvent.startTime}
-                    onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
-                  />
-                  <span className="icon is-small is-left">
-                    <i className="fas fa-clock"></i>
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="column">
-              <div className="field">
-                <label htmlFor="end_time" className="label">
-                  End Time
-                </label>
-                <div className="control has-icons-left">
-                  <input
-                    type="datetime-local"
-                    id="end_time"
-                    required
-                    className="input"
-                    value={newEvent.endTime}
-                    onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
-                  />
-                  <span className="icon is-small is-left">
-                    <i className="fas fa-clock"></i>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="field is-grouped mt-5">
-            <p className="control">
-              <Link to="/events" className="button is-light">
-                Cancel
-              </Link>
-            </p>
-            <p className="control">
-              <button type="submit" className="button is-primary">
-                <span className="icon">
-                  <i className="fas fa-check"></i>
-                </span>
-                <span>Create Event</span>
-              </button>
-            </p>
-          </div>
-        </form>
-      </div>
+        <FormActions>
+          <ActionButton text="Cancel" to="/events" variant="light" />
+          <ActionButton text="Create Event" icon="fas fa-check" type="submit" />
+        </FormActions>
+      </FormContainer>
     </div>
   )
 }
