@@ -99,7 +99,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 		// Automatically add the game to the group's library
 		_, err = h.db.Exec(`
-			INSERT INTO group_games (group_id, game_id)
+			INSERT INTO group_game_libraries (group_id, game_id)
 			VALUES ($1, $2)
 			ON CONFLICT DO NOTHING
 		`, gameRequest.GroupID, gameID)

@@ -2,7 +2,18 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useCreateGameMutation } from '../store/api/gamesApi'
 import { PageHeader, Breadcrumb } from '../components'
-import { Box, Card, CardContent, TextField, Button, Stack, Alert, CircularProgress } from '@mui/material'
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Stack,
+  Alert,
+  CircularProgress,
+  Switch,
+  FormControlLabel,
+} from '@mui/material'
 
 const NewGamePage = () => {
   const navigate = useNavigate()
@@ -17,7 +28,7 @@ const NewGamePage = () => {
     maxPlayers: 8,
     groupId: groupId || '',
     tags: '',
-    public: false,
+    public: true,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,10 +42,10 @@ const NewGamePage = () => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
-    const { name, value } = e.target
+    const { name, value, checked } = e.target as HTMLInputElement
     setFormData((prev) => ({
       ...prev,
-      [name as string]: value,
+      [name as string]: name === 'public' ? checked : value,
     }))
   }
 
@@ -108,21 +119,23 @@ const NewGamePage = () => {
                 fullWidth
               />
 
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Button
-                  variant={formData.public ? 'contained' : 'outlined'}
-                  color={formData.public ? 'primary' : 'inherit'}
-                  onClick={() => setFormData((prev) => ({ ...prev, public: true }))}
-                  sx={{ mr: 1 }}>
-                  Public
-                </Button>
-                <Button
-                  variant={!formData.public ? 'contained' : 'outlined'}
-                  color={!formData.public ? 'primary' : 'inherit'}
-                  onClick={() => setFormData((prev) => ({ ...prev, public: false }))}>
-                  Private
-                </Button>
-              </Box>
+              <FormControlLabel
+                control={<Switch checked={formData.public} onChange={handleChange} name="public" color="primary" />}
+                label={
+                  <Box>
+                    <Box component="span" sx={{ fontWeight: 'medium' }}>
+                      {formData.public ? 'Public' : 'Private'}
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{ display: 'block', fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+                      {formData.public
+                        ? 'Game will appear in search results for all users'
+                        : 'Game will only be visible to your group members'}
+                    </Box>
+                  </Box>
+                }
+              />
 
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button variant="outlined" onClick={() => navigate(`/groups/${groupId}`)} disabled={isLoading}>
