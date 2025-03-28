@@ -52,7 +52,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
+    <Box>
       <Typography variant="h4" sx={{ mb: 1 }}>
         My Profile
       </Typography>
@@ -72,7 +72,7 @@ const ProfilePage = () => {
         </Alert>
       )}
 
-      <Paper component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
+      <Paper elevation={0} component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
         <Stack spacing={3}>
           <TextField
             id="firstName"

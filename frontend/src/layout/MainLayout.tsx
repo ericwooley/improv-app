@@ -112,26 +112,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
-          bgcolor: 'secondary.main',
-        }}>
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            sx={{ mr: 2, display: { md: 'none' } }}>
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            ImprovHQ
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      {isMobile && (
+        <AppBar
+          position="fixed"
+          sx={{
+            width: { md: `calc(100% - ${drawerWidth}px)` },
+            ml: { md: `${drawerWidth}px` },
+            bgcolor: 'secondary.main',
+          }}>
+          <Toolbar>
+            <IconButton color="inherit" edge="start" onClick={() => setIsSidebarOpen(!isSidebarOpen)} sx={{ mr: 2 }}>
+              <MenuIcon />
+            </IconButton>
+            <Box sx={{ flexGrow: 1 }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <img src="/logo.png" alt="ImprovHQ" style={{ width: 32, height: 32 }} />
+              <Typography variant="h6" noWrap component="div">
+                ImprovHQ
+              </Typography>
+            </Box>
+          </Toolbar>
+        </AppBar>
+      )}
 
       <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
         {isMobile ? (
@@ -175,7 +177,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           flexGrow: 1,
           p: 3,
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px',
+          mt: { xs: '64px', md: 0 },
           bgcolor: 'background.default',
         }}>
         {children}
