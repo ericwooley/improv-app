@@ -32,12 +32,12 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		// Parse JSON request
 		var gameRequest struct {
-			Name        string `json:"name"`
-			Description string `json:"description"`
-			MinPlayers  int    `json:"minPlayers"`
-			MaxPlayers  int    `json:"maxPlayers"`
-			Tags        string `json:"tags"`
-			GroupID     string `json:"groupId"`
+			Name        string   `json:"name"`
+			Description string   `json:"description"`
+			MinPlayers  int      `json:"minPlayers"`
+			MaxPlayers  int      `json:"maxPlayers"`
+			Tags        []string `json:"tags"`
+			GroupID     string   `json:"groupId"`
 		}
 
 		decoder := json.NewDecoder(r.Body)

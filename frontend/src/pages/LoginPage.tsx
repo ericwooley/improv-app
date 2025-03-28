@@ -3,6 +3,19 @@ import { Link } from 'react-router-dom'
 import { useLoginMutation } from '../store/api/authApi'
 import { useAppDispatch } from '../store/hooks'
 import { setCredentials } from '../store/slices/authSlice'
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  IconButton,
+  Stack,
+} from '@mui/material'
+import { Email as EmailIcon, Send as SendIcon, Key as KeyIcon } from '@mui/icons-material'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
@@ -29,74 +42,83 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="columns is-centered is-vcentered" style={{ minHeight: '100vh' }}>
-      <div className="column is-12-mobile is-8-tablet is-6-desktop">
-        <div className="box has-background-white p-5 mx-3 my-3">
-          <div className="has-text-centered mb-5">
-            <span className="icon is-large has-text-primary">
-              <i className="fas fa-key fa-3x"></i>
-            </span>
-            <h1 className="title is-2 is-size-3-mobile mt-3">Sign In</h1>
-          </div>
+    <Container maxWidth="sm">
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 4,
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}>
+          <IconButton color="primary" size="large" sx={{ mb: 2 }}>
+            <KeyIcon sx={{ fontSize: 48 }} />
+          </IconButton>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Sign In
+          </Typography>
 
-          <div className="notification is-light">
-            <h2 className="title is-4">Enter Your Email</h2>
-            <p className="subtitle is-6">Enter your email address and we'll send you a magic link to sign in.</p>
+          <Paper variant="outlined" sx={{ p: 3, width: '100%', mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Enter Your Email
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Enter your email address and we'll send you a magic link to sign in.
+            </Typography>
 
             <form onSubmit={handleSubmit}>
-              <div className="field">
-                <label htmlFor="email" className="label">
-                  Email Address
-                </label>
-                <div className="control has-icons-left">
-                  <input
-                    type="email"
-                    id="email"
-                    required
-                    className="input is-medium"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                  />
-                  <span className="icon is-small is-left">
-                    <i className="fas fa-envelope"></i>
-                  </span>
-                </div>
-              </div>
-              <div className="field mt-5">
-                <div className="control">
-                  <button
-                    type="submit"
-                    className={`button is-primary is-fullwidth is-medium ${isLoading ? 'is-loading' : ''}`}
-                    disabled={isLoading}>
-                    <span className="icon">
-                      <i className="fas fa-paper-plane"></i>
-                    </span>
-                    <span>Send Magic Link</span>
-                  </button>
-                </div>
-              </div>
+              <TextField
+                fullWidth
+                id="email"
+                label="Email Address"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                sx={{ mt: 2 }}
+                InputProps={{
+                  startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                }}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                fullWidth
+                size="large"
+                disabled={isLoading}
+                sx={{ mt: 3 }}
+                startIcon={isLoading ? <CircularProgress size={20} /> : <SendIcon />}>
+                Send Magic Link
+              </Button>
             </form>
 
             {error && (
-              <div className="notification is-danger mt-4">
-                <p>{JSON.stringify(error)}</p>
-              </div>
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {JSON.stringify(error)}
+              </Alert>
             )}
-          </div>
+          </Paper>
 
-          <div className="has-text-centered mt-5">
-            <p className="is-size-6">
-              Don't have an account?{' '}
-              <Link to="/register" className="has-text-primary">
+          <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
+            <Typography variant="body2">Don't have an account?</Typography>
+            <Link to="/register" style={{ textDecoration: 'none' }}>
+              <Typography variant="body2" color="primary">
                 Register now
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+              </Typography>
+            </Link>
+          </Stack>
+        </Paper>
+      </Box>
+    </Container>
   )
 }
 

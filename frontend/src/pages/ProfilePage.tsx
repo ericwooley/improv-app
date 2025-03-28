@@ -78,7 +78,7 @@ const ProfilePage = () => {
             id="firstName"
             label="First Name"
             value={profile.firstName}
-            placeholder="Enter your first name"
+            placeholder="Enter your first name, or something people can recognize you by"
             required
             fullWidth
             InputProps={{
@@ -91,7 +91,7 @@ const ProfilePage = () => {
             id="lastName"
             label="Last Name"
             value={profile.lastName}
-            placeholder="Enter your last name"
+            placeholder="Enter your last name, or something people can recognize you by"
             required
             fullWidth
             InputProps={{

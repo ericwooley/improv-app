@@ -4,7 +4,6 @@ import { useGetMeQuery } from './store/api/authApi'
 // Pages
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import GamesPage from './pages/GamesPage'
 import GroupsPage from './pages/GroupsPage'
@@ -42,7 +41,6 @@ const AppRoutes = () => {
       <Route path="/events/new" element={<NewEventPage />} />
       <Route path="/games/new" element={<NewGamePage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

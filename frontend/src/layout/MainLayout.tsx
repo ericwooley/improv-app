@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../store'
@@ -22,8 +22,6 @@ import {
 import {
   Menu as MenuIcon,
   Home as HomeIcon,
-  Login as LoginIcon,
-  PersonAdd as PersonAddIcon,
   Logout as LogoutIcon,
   Person as PersonIcon,
   SportsEsports as GamesIcon,
@@ -39,12 +37,28 @@ const drawerWidth = 250
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth)
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const previousUserState = useRef({ firstName: user?.firstName, lastName: user?.lastName })
+
+  // Define explicit variables for profile status
+  const needsToCompleteProfile = !user?.firstName || !user?.lastName
+  const hadIncompleteProfile = !previousUserState.current.firstName || !previousUserState.current.lastName
+  const profileCompleted = hadIncompleteProfile && !needsToCompleteProfile
+
+  useEffect(() => {
+    // Navigate to dashboard when profile is newly completed
+    if (profileCompleted) {
+      navigate('/')
+    }
+
+    // Keep track of previous state for comparison on next render
+    previousUserState.current = { firstName: user?.firstName, lastName: user?.lastName }
+  }, [user?.firstName, user?.lastName, navigate, profileCompleted])
 
   const handleLogout = async () => {
     try {
@@ -55,19 +69,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   }
 
-  const menuItems = isAuthenticated
-    ? [
-        { text: 'Home', icon: <HomeIcon />, path: '/' },
-        { text: 'Games', icon: <GamesIcon />, path: '/games' },
-        { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
-        { text: 'Events', icon: <EventIcon />, path: '/events' },
-        { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
-      ]
-    : [
-        { text: 'Home', icon: <HomeIcon />, path: '/' },
-        { text: 'Login', icon: <LoginIcon />, path: '/login' },
-        { text: 'Register', icon: <PersonAddIcon />, path: '/register' },
-      ]
+  const menuItems = [
+    { text: 'Home', icon: <HomeIcon />, path: '/' },
+    { text: 'Groups', icon: <GroupIcon />, path: '/groups' },
+    { text: 'Games', icon: <GamesIcon />, path: '/games' },
+    { text: 'Events', icon: <EventIcon />, path: '/events' },
+    { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
+  ]
 
   const drawer = (
     <Box sx={{ width: drawerWidth }}>
@@ -97,18 +105,37 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </ListItemButton>
         ))}
       </List>
-      {isAuthenticated && (
-        <>
-          <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
-          <Box sx={{ p: 2 }}>
-            <Button variant="outlined" color="error" fullWidth startIcon={<LogoutIcon />} onClick={handleLogout}>
-              Logout
-            </Button>
-          </Box>
-        </>
-      )}
+      <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
+      <Box sx={{ p: 2 }}>
+        <Button variant="outlined" color="error" fullWidth startIcon={<LogoutIcon />} onClick={handleLogout}>
+          Logout
+        </Button>
+      </Box>
     </Box>
   )
+
+  // If not authenticated, only render the children without navigation
+  if (!isAuthenticated) {
+    return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>{children}</Box>
+  }
+
+  // If user needs to complete profile, show profile page
+  if (needsToCompleteProfile) {
+    // If we're not already on the profile page, redirect them there
+    if (location.pathname !== '/profile') {
+      navigate('/profile')
+    }
+
+    // Simplified layout for incomplete profile
+    return (
+      <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Typography variant="body1" sx={{ mb: 3 }}>
+          We need your first and last name to continue. Please update your profile.
+        </Typography>
+        {children}
+      </Box>
+    )
+  }
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
