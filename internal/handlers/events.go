@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
 	"github.com/gorilla/mux"
@@ -21,7 +22,7 @@ func NewEventHandler(db *sql.DB) *EventHandler {
 }
 
 func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*models.User)
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	groupID := vars["id"]
 
@@ -84,11 +85,45 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  events,
 	}
-	RenderTemplate(w, "templates/events.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/events.html")
+}
+
+
+func (h *EventHandler) ListGames(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+  events := []Event{}
+	rows, err := h.db.Query(`
+		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by
+		FROM events e
+		JOIN group_members m ON e.group_id = m.group_id
+		WHERE m.user_id = $1
+	`, user.ID)
+	if err != nil {
+		http.Error(w, "Error fetching events", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var event Event
+		err := rows.Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+		if err != nil {
+			http.Error(w, "Error scanning events", http.StatusInternalServerError)
+			return
+		}
+		events = append(events, event)
+	}
+
+	data := models.PageData{
+		Title: "Events",
+		User:  user,
+		Data:  events,
+	}
+	RenderTemplateWithLayout(w, &data, "templates/events.html")
 }
 
 func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*models.User)
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
@@ -173,5 +208,5 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 			Games: games,
 		},
 	}
-	RenderTemplate(w, "templates/event.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/event.html")
 }

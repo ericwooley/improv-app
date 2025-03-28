@@ -4,53 +4,140 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{.Title}} - Improv App</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+  <style>
+    body,
+    html {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+  
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+  
+    .sidebar {
+      width: 250px;
+      background-color: #2d3e50;
+      color: #ecf0f1;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+  
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  
+    .sidebar-menu {
+      padding: 1.5rem 0;
+      flex-grow: 1;
+    }
+  
+    .sidebar-menu a {
+      color: #ecf0f1;
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1.5rem;
+      transition: background-color 0.2s;
+    }
+  
+    .sidebar-menu a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  
+    .sidebar-menu a i {
+      margin-right: 10px;
+      width: 20px;
+      text-align: center;
+    }
+  
+    .sidebar-user {
+      padding: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  
+    .main-content {
+      flex-grow: 1;
+      overflow-y: auto;
+      background-color: #f5f7fa;
+      padding: 2rem;
+    }
+  
+    .active-link {
+      background-color: rgba(255, 255, 255, 0.15);
+      border-left: 4px solid #3498db;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-  <nav class="bg-white shadow-lg">
-    <div class="max-w-6xl mx-auto px-4">
-      <div class="flex justify-between">
-        <div class="flex space-x-7">
-          <div>
-            <a href="/" class="flex items-center py-4">
-              <span class="font-semibold text-gray-500 text-lg">Improv App</span>
-            </a>
-          </div>
-          {{if .User}}
-            <nav>
-              <ul>
-                <li><a href="/groups">Groups</a></li>
-                <li><a href="/games">Games</a></li>
-                <li><a href="/profile">Profile</a></li>
-                <li><a href="/logout">Logout</a></li>
-              </ul>
-            </nav>
-          {{end}}
-        </div>
-        <div class="flex items-center space-x-3">
-          {{if .User}}
-          <div class="flex items-center space-x-2">
-            <span class="text-gray-700">{{.User.FirstName}} {{.User.LastName}}</span>
-            <form action="/logout" method="POST">
-              <button type="submit" class="py-2 px-4 text-gray-500 hover:text-gray-900">Logout</button>
-            </form>
-          </div>
-          {{else}}
-          <a href="/login" class="py-2 px-4 text-gray-500 hover:text-gray-900">Login</a>
-          {{end}}
-        </div>
+<body>
+  <div class="app-container">
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="title is-5 has-text-white">Improv App</h1>
       </div>
+<div class="sidebar-menu">
+        {{if .User}}
+          <a href="/" class="mb-2"><i class="fas fa-home"></i> Dashboard</a>
+          <a href="/groups" class="mb-2"><i class="fas fa-users"></i> Groups</a>
+          <a href="/games" class="mb-2"><i class="fas fa-dice"></i> Games</a>
+          <a href="/events" class="mb-2"><i class="fas fa-calendar-alt"></i> Events</a>
+          <a href="/profile" class="mb-2"><i class="fas fa-user-circle"></i> Profile</a>
+          {{else}}
+          <a href="/" class="mb-2"><i class="fas fa-home"></i> Home</a>
+          <a href="/login" class="mb-2"><i class="fas fa-sign-in-alt"></i> Login</a>
+          <a href="/register" class="mb-2"><i class="fas fa-user-plus"></i> Register</a>
+          {{end}}
+          </div>
+<div class="sidebar-user">
+  {{if .User}}
+          <div class="is-flex is-align-items-center">
+            <div class="is-flex-shrink-0 mr-3">
+              <span class="icon is-medium has-text-light">
+                <i class="fas fa-user-circle fa-2x"></i>
+              </span>
+            </div>
+            <div>
+              <p class="has-text-weight-medium">{{.User.FirstName}} {{.User.LastName}}</p>
+              <form action="/logout" method="POST" class="mt-2">
+                <button type="submit" class="button is-small is-danger is-outlined is-fullwidth">
+                  <span class="icon is-small">
+                    <i class="fas fa-sign-out-alt"></i>
+                  </span>
+                  <span>Logout</span>
+                </button>
+              </form>
+            </div>
+          </div>
+          {{end}}
+          </div>
+          </div>
+<!-- Main Content -->
+<div class="main-content">
+  {{template "body" .}}
     </div>
-  </nav>
+  </div>
 
-  <main class="container mx-auto px-4 py-8 flex-grow">
-    {{template "body" .}}
-  </main>
+  <!-- Script to highlight active page -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const currentPath = window.location.pathname;
+      const navLinks = document.querySelectorAll('.sidebar-menu a');
 
-  <footer class="bg-white shadow-lg mt-auto">
-    <div class="container mx-auto px-4 py-6">
-      <p class="text-center text-gray-600">&copy; 2024 Improv App. All rights reserved.</p>
-    </div>
-  </footer>
+      navLinks.forEach(link => {
+        if (link.getAttribute('href') === currentPath ||
+          (currentPath !== '/' && link.getAttribute('href') !== '/' && currentPath.startsWith(link.getAttribute('href')))) {
+          link.classList.add('active-link');
+        }
+      });
+    });
+      </script>
 </body>
 </html>

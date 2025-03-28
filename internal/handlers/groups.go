@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
 
+	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
 	"github.com/gorilla/mux"
@@ -12,7 +12,6 @@ import (
 
 type GroupHandler struct {
 	db        *sql.DB
-	templates *template.Template
 }
 
 func NewGroupHandler(db *sql.DB) *GroupHandler {
@@ -22,7 +21,7 @@ func NewGroupHandler(db *sql.DB) *GroupHandler {
 }
 
 func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*models.User)
+		user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	if r.Method == "POST" {
 		name := r.FormValue("name")
@@ -83,11 +82,11 @@ func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  groups,
 	}
-	h.templates.ExecuteTemplate(w, "groups.html", data)
+	RenderTemplateWithLayout(w, &data, "templates/groups.html")
 }
 
 func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*models.User)
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	groupID := vars["id"]
 
@@ -119,5 +118,5 @@ func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  group,
 	}
-	RenderTemplate(w, "templates/group.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/group.html")
 }

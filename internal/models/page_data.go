@@ -7,4 +7,5 @@ type PageData struct {
 	User    *User
 	Data    interface{}
 	Template string
+	Errors   map[string]string
 }

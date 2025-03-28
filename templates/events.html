@@ -1,0 +1,165 @@
+{{define "body"}}
+<div class="content-wrapper">
+  <div class="is-flex is-justify-content-space-between is-align-items-center mb-5">
+    <div>
+      <h1 class="title is-2">Events</h1>
+      <p class="subtitle is-5">Browse and manage your upcoming improv events</p>
+    </div>
+  </div>
+
+  <!-- Events Grid -->
+  {{if .Data}}
+  <div class="columns is-multiline">
+    {{range .Data}}
+    <div class="column is-6">
+      <div class="card h-100">
+        <div class="card-content">
+          <h2 class="title">{{.Title}}</h2>
+          <p class="subtitle is-6 has-text-grey mb-4">{{.Description}}</p>
+
+          <div class="is-flex is-align-items-center mb-3">
+            <span class="icon has-text-info mr-2">
+              <i class="fas fa-map-marker-alt"></i>
+            </span>
+            <span>{{.Location}}</span>
+          </div>
+
+          <div class="is-flex is-align-items-center mb-3">
+            <span class="icon has-text-info mr-2">
+              <i class="fas fa-calendar-alt"></i>
+            </span>
+            <span>{{.StartTime.Format "Jan 2, 2006"}}</span>
+          </div>
+
+          <div class="is-flex is-align-items-center mb-4">
+            <span class="icon has-text-info mr-2">
+              <i class="fas fa-clock"></i>
+            </span>
+            <span>{{.StartTime.Format "3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}</span>
+          </div>
+
+          <div class="is-flex is-justify-content-space-between is-align-items-center mt-4">
+            <span class="is-size-7 has-text-grey">
+              <i class="fas fa-history mr-1"></i>
+              Created {{.CreatedAt.Format "Jan 2, 2006"}}
+            </span>
+
+            <a href="/events/{{.ID}}" class="button is-link is-light">
+              <span class="icon">
+                <i class="fas fa-info-circle"></i>
+              </span>
+              <span>Details</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="box has-text-centered p-6 mt-5">
+    <span class="icon is-large has-text-grey mb-4">
+      <i class="fas fa-calendar-alt fa-3x"></i>
+    </span>
+    <h3 class="title is-4">No Events Found</h3>
+    <p class="subtitle is-6 mb-5">You don't have any upcoming events.</p>
+
+    <div class="buttons is-centered">
+      <a href="/groups" class="button is-primary">
+        <span class="icon">
+          <i class="fas fa-users"></i>
+        </span>
+        <span>Go to Groups</span>
+      </a>
+      <a href="/games" class="button is-link is-light">
+        <span class="icon">
+          <i class="fas fa-dice"></i>
+        </span>
+        <span>Browse Games</span>
+      </a>
+    </div>
+  </div>
+  {{end}}
+
+  <!-- Calendar View Toggle -->
+  <div class="card mt-5">
+    <header class="card-header">
+      <p class="card-header-title">
+        <span class="icon mr-2"><i class="fas fa-calendar-week"></i></span>
+        Upcoming Schedule
+      </p>
+    </header>
+    <div class="card-content">
+      {{if .Data}}
+      <div class="calendar-view">
+        <!-- Calendar visualization could be added here -->
+        <div class="notification is-info is-light">
+          <p class="has-text-centered">Calendar view coming soon!</p>
+        </div>
+
+        <!-- Timeline View -->
+        <div class="timeline mt-5">
+          {{range .Data}}
+          <div class="timeline-item">
+            <div class="timeline-marker is-icon">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="timeline-content">
+              <p class="heading">{{.StartTime.Format "Jan 2, 2006 - 3:04 PM"}}</p>
+              <div class="box has-background-white-ter p-3 mt-2">
+                <p class="is-size-5 has-text-weight-semibold">{{.Title}}</p>
+                <p class="is-size-7 has-text-grey mt-1">
+                  <i class="fas fa-map-marker-alt mr-1"></i> {{.Location}}
+                </p>
+              </div>
+            </div>
+          </div>
+          {{end}}
+        </div>
+      </div>
+      {{else}}
+      <div class="notification is-light has-text-centered">
+        <p>No events to display on the calendar.</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Timeline styling */
+  .timeline {
+    position: relative;
+    margin-left: 1rem;
+    border-left: 2px solid #dbdbdb;
+  }
+
+  .timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .timeline-marker {
+    position: absolute;
+    left: -15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: white;
+    border: 2px solid #3e8ed0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3e8ed0;
+  }
+
+  .timeline-content {
+    padding-left: 0.5rem;
+  }
+
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+</style>
+{{end}}

@@ -1,103 +1,190 @@
 {{define "body"}}
-<div class="max-w-4xl mx-auto">
-  <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-    <div class="flex justify-between items-start mb-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-800">{{.Data.Name}}</h1>
-        <p class="text-gray-600 mt-2">{{.Data.Description}}</p>
+<div class="content-wrapper">
+  <!-- Group Header -->
+  <div class="card mb-6">
+    <div class="card-content">
+      <div class="is-flex is-justify-content-space-between is-align-items-center">
+        <div>
+          <h1 class="title is-2">{{.Data.Name}}</h1>
+          <p class="subtitle is-5">{{.Data.Description}}</p>
+          <div class="is-flex is-align-items-center mt-3">
+            <span class="icon has-text-info mr-2">
+              <i class="fas fa-calendar-alt"></i>
+            </span>
+            <span class="is-size-7">Created {{.Data.CreatedAt.Format "Jan 2, 2006"}}</span>
+          </div>
+        </div>
+        <div>
+          <button onclick="document.getElementById('createEventModal').classList.remove('is-hidden')" class="button is-primary">
+            <span class="icon">
+              <i class="fas fa-calendar-plus"></i>
+            </span>
+            <span>Create Event</span>
+          </button>
+        </div>
       </div>
-      <button onclick="document.getElementById('createEventModal').classList.remove('hidden')"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-        Create Event
-      </button>
-    </div>
-    <div class="text-sm text-gray-500">
-      Created {{.Data.CreatedAt.Format "Jan 2, 2006"}}
     </div>
   </div>
 
-  <div class="bg-white shadow-md rounded-lg p-6">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Upcoming Events</h2>
-    <div class="space-y-4">
-      {{range .Data.Events}}
-      <div class="border rounded-lg p-4 hover:bg-gray-50">
-        <div class="flex justify-between items-start">
-          <div>
-            <h3 class="text-lg font-medium text-gray-900">{{.Title}}</h3>
-            <p class="text-gray-600 mt-1">{{.Description}}</p>
-            <div class="mt-2 text-sm text-gray-500">
-              <span class="flex items-center">
-                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                {{.Location}}
-              </span>
-              <span class="flex items-center mt-1">
-                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-                {{.StartTime.Format "Jan 2, 2006 3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}
-              </span>
-            </div>
-          </div>
-          <a href="/events/{{.ID}}" class="text-blue-600 hover:text-blue-800">View Details →</a>
-        </div>
+  <!-- Events Section -->
+  <div class="card">
+    <header class="card-header">
+      <p class="card-header-title">
+        <span class="icon mr-2"><i class="fas fa-calendar-alt"></i></span>
+        Upcoming Events
+      </p>
+    </header>
+    <div class="card-content">
+      {{if .Data.Events}}
+      <div class="columns is-multiline">
+        {{range .Data.Events}}
+          <div class="column is-6">
+            <div class="box has-background-white-ter">
+              <h3 class="title is-4">{{.Title}}</h3>
+              <p class="subtitle is-6 has-text-grey mb-3">{{.Description}}</p>
+              <div class="is-flex is-align-items-center mb-3">
+                <span class="icon has-text-info mr-2">
+                  <i class="fas fa-map-marker-alt"></i>
+                </span>
+                <span>{{.Location}}</span>
+                </div>
+                <div class="is-flex is-align-items-center mb-3">
+                  <span class="icon has-text-info mr-2">
+                    <i class="fas fa-calendar"></i>
+                  </span>
+                <span>{{.StartTime.Format "Jan 2, 2006"}}</span>
+              </div>
+              <div class="is-flex is-align-items-center mb-3">
+                <span class="icon has-text-info mr-2">
+                  <i class="fas fa-clock"></i>
+                </span>
+                <span>{{.StartTime.Format "3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}</span>
+              </div>
+              <a href="/events/{{.ID}}" class="button is-link is-outlined is-fullwidth">
+                View Details
+                <span class="icon ml-1">
+                  <i class="fas fa-arrow-right"></i>
+                </span>
+              </a>
+              </div>
+              </div>
+              {{end}}
+              </div>
+      {{else}}
+      <div class="notification is-light has-text-centered">
+        <p>No upcoming events scheduled for this group.</p>
+        <button onclick="document.getElementById('createEventModal').classList.remove('is-hidden')"
+          class="button is-primary is-small mt-3">
+          <span class="icon">
+            <i class="fas fa-calendar-plus"></i>
+          </span>
+          <span>Create First Event</span>
+        </button>
       </div>
       {{end}}
-    </div>
+      </div>
   </div>
 </div>
 
 <!-- Create Event Modal -->
-<div id="createEventModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-    <div class="mt-3">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Create New Event</h3>
-      <form action="/groups/{{.Data.ID}}/events" method="POST" class="space-y-4">
-        <div>
-          <label for="title" class="block text-sm font-medium text-gray-700">Event Title</label>
-          <input type="text" name="title" id="title" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="Weekly Practice">
+<div id="createEventModal" class="modal is-hidden">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">
+        <span class="icon mr-2">
+          <i class="fas fa-calendar-plus"></i>
+        </span>
+        Create New Event
+      </p>
+      <button class="delete" aria-label="close"
+        onclick="document.getElementById('createEventModal').classList.add('is-hidden')"></button>
+    </header>
+    <section class="modal-card-body">
+      <form action="/groups/{{.Data.ID}}/events" method="POST">
+        <div class="field">
+          <label for="title" class="label">Event Title</label>
+          <div class="control has-icons-left">
+            <input type="text" name="title" id="title" required
+              class="input"
+              placeholder="Weekly Practice">
+            <span class="icon is-small is-left">
+              <i class="fas fa-heading"></i>
+            </span>
+          </div>
         </div>
-        <div>
-          <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-          <textarea name="description" id="description" rows="3"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="Tell us about this event..."></textarea>
+        <div class="field">
+          <label for="description" class="label">Description</label>
+          <div class="control">
+            <textarea name="description" id="description" rows="3"
+              class="textarea"
+              placeholder="Tell us about this event..."></textarea>
+          </div>
         </div>
-        <div>
-          <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
-          <input type="text" name="location" id="location" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="123 Main St, City, State">
+        <div class="field">
+          <label for="location" class="label">Location</label>
+          <div class="control has-icons-left">
+            <input type="text" name="location" id="location" required
+              class="input"
+              placeholder="123 Main St, City, State">
+            <span class="icon is-small is-left">
+              <i class="fas fa-map-marker-alt"></i>
+            </span>
+          </div>
         </div>
-        <div>
-          <label for="start_time" class="block text-sm font-medium text-gray-700">Start Time</label>
-          <input type="datetime-local" name="start_time" id="start_time" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-        </div>
-        <div>
-          <label for="end_time" class="block text-sm font-medium text-gray-700">End Time</label>
-          <input type="datetime-local" name="end_time" id="end_time" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="document.getElementById('createEventModal').classList.add('hidden')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-            Cancel
-          </button>
-          <button type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Create Event
-          </button>
+        <div class="columns">
+          <div class="column">
+            <div class="field">
+              <label for="start_time" class="label">Start Time</label>
+              <div class="control has-icons-left">
+                <input type="datetime-local" name="start_time" id="start_time" required
+                  class="input">
+                <span class="icon is-small is-left">
+                  <i class="fas fa-clock"></i>
+                </span>
+              </div>
+            </div>
+            </div>
+            <div class="column">
+              <div class="field">
+                <label for="end_time" class="label">End Time</label>
+                <div class="control has-icons-left">
+                  <input type="datetime-local" name="end_time" id="end_time" required
+                  class="input">
+                <span class="icon is-small is-left">
+                  <i class="fas fa-clock"></i>
+                </span>
+              </div>
+            </div>
+            </div>
+            </div>
+            <div class="field is-grouped is-grouped-right mt-5">
+              <p class="control">
+                <button type="button" onclick="document.getElementById('createEventModal').classList.add('is-hidden')"
+                  class="button is-light">
+                  Cancel
+                </button>
+          </p>
+          <p class="control">
+            <button type="submit" class="button is-primary">
+              <span class="icon">
+                <i class="fas fa-check"></i>
+              </span>
+              <span>Create Event</span>
+            </button>
+          </p>
         </div>
       </form>
-    </div>
+    </section>
   </div>
-</div>
+  </div>
+<script>
+  // Close modal when clicking outside
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('createEventModal');
+    modal.querySelector('.modal-background').addEventListener('click', () => {
+      modal.classList.add('is-hidden');
+    });
+  });
+</script>
 {{end}}

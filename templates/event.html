@@ -1,162 +1,290 @@
-
-
 {{define "body"}}
-<div class="max-w-4xl mx-auto">
-  <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-    <div class="flex justify-between items-start mb-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-800">{{.Data.Event.Title}}</h1>
-        <p class="text-gray-600 mt-2">{{.Data.Event.Description}}</p>
-      </div>
-      <div class="flex space-x-2">
-        <button onclick="document.getElementById('addGameModal').classList.remove('hidden')"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          Add Game
-        </button>
-        <button onclick="document.getElementById('rsvpModal').classList.remove('hidden')"
-          class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-          RSVP
-        </button>
-      </div>
-    </div>
-    <div class="text-sm text-gray-500 space-y-2">
-      <div class="flex items-center">
-        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-          </path>
-        </svg>
-        {{.Data.Event.Location}}
-      </div>
-      <div class="flex items-center">
-        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-        </svg>
-        {{.Data.Event.StartTime.Format "Jan 2, 2006 3:04 PM"}} - {{.Data.Event.EndTime.Format "3:04 PM"}}
+<div class="content-wrapper">
+  <!-- Event Header -->
+  <div class="card mb-6">
+    <div class="card-content">
+      <div class="is-flex is-justify-content-space-between is-align-items-center">
+        <div>
+          <h1 class="title is-2">{{.Data.Event.Title}}</h1>
+          <p class="subtitle is-5">{{.Data.Event.Description}}</p>
+          </div>
+        <div class="buttons">
+          <button onclick="document.getElementById('addGameModal').classList.remove('is-hidden')" class="button is-primary">
+            <span class="icon">
+              <i class="fas fa-dice"></i>
+            </span>
+            <span>Add Game</span>
+          </button>
+          <button onclick="document.getElementById('rsvpModal').classList.remove('is-hidden')" class="button is-success">
+            <span class="icon">
+              <i class="fas fa-check-circle"></i>
+            </span>
+            <span>RSVP</span>
+          </button>
+          </div>
+          </div>
+<div class="mt-4">
+  <div class="is-flex is-align-items-center mb-3">
+    <span class="icon has-text-info mr-2">
+      <i class="fas fa-map-marker-alt"></i>
+    </span>
+    <span>{{.Data.Event.Location}}</span>
+  </div>
+        <div class="is-flex is-align-items-center">
+          <span class="icon has-text-info mr-2">
+            <i class="fas fa-calendar-alt"></i>
+          </span>
+          <span>{{.Data.Event.StartTime.Format "Jan 2, 2006"}}</span>
+        </div>
+        <div class="is-flex is-align-items-center mt-2">
+          <span class="icon has-text-info mr-2">
+            <i class="fas fa-clock"></i>
+          </span>
+          <span>{{.Data.Event.StartTime.Format "3:04 PM"}} - {{.Data.Event.EndTime.Format "3:04 PM"}}</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="columns">
     <!-- RSVPs -->
-    <div class="bg-white shadow-md rounded-lg p-6">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">RSVPs</h2>
-      <div class="space-y-2">
-        {{range .Data.RSVPs}}
-        <div class="flex items-center justify-between py-2 border-b">
-          <span class="text-gray-900">{{.FirstName}} {{.LastName}}</span>
-          <span class="px-2 py-1 text-sm rounded-full
-            {{if eq .Status " yes"}}bg-green-100 text-green-800 {{else if eq .Status "maybe" }}bg-yellow-100
-            text-yellow-800 {{else}}bg-red-100 text-red-800{{end}}">
-            {{.Status}}
-          </span>
+    <div class="column is-5">
+      <div class="card h-100">
+        <header class="card-header">
+          <p class="card-header-title">
+            <span class="icon mr-2"><i class="fas fa-users"></i></span>
+            RSVPs
+          </p>
+        </header>
+        <div class="card-content">
+          {{if .Data.RSVPs}}
+          <table class="table is-fullwidth">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Data.RSVPs}}
+                <tr>
+                  <td>
+                    <span class="has-text-weight-medium">{{.FirstName}} {{.LastName}}</span>
+                  </td>
+                  <td>
+                    <span class="tag {{if eq .Status " yes"}}is-success{{else if eq .Status "maybe"
+                      }}is-warning{{else}}is-danger{{end}}">
+                      {{.Status}}
+                    </span>
+                  </td>
+                  </tr>
+                  {{end}}
+                  </tbody>
+                  </table>
+                  {{else}}
+                  <div class="notification is-light has-text-centered">
+                    <p>No RSVPs yet.</p>
+                    <button onclick="document.getElementById('rsvpModal').classList.remove('is-hidden')"
+                      class="button is-success is-small mt-3">
+                      <span class="icon">
+                        <i class="fas fa-check-circle"></i>
+                      </span>
+                      <span>Add Your RSVP</span>
+                    </button>
+            </div>
+            {{end}}
         </div>
-        {{end}}
       </div>
     </div>
 
     <!-- Games -->
-    <div class="bg-white shadow-md rounded-lg p-6">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Games</h2>
-      <div class="space-y-4">
-        {{range .Data.Games}}
-        <div class="border rounded-lg p-4">
-          <h3 class="text-lg font-medium text-gray-900">{{.Name}}</h3>
-          <p class="text-gray-600 mt-1">{{.Description}}</p>
-          <div class="mt-2 text-sm text-gray-500">
-            <span>Players: {{.MinPlayers}}-{{.MaxPlayers}}</span>
-            {{if .Tags}}
-            <div class="mt-1 flex flex-wrap gap-1">
-              {{range .Tags}}
-              <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">{{.}}</span>
+    <div class="column is-7">
+      <div class="card h-100">
+        <header class="card-header">
+          <p class="card-header-title">
+            <span class="icon mr-2"><i class="fas fa-dice"></i></span>
+            Games
+          </p>
+        </header>
+        <div class="card-content">
+          {{if .Data.Games}}
+          <div class="columns is-multiline">
+            {{range .Data.Games}}
+              <div class="column is-12">
+                <div class="box has-background-white-ter">
+                  <div class="is-flex is-justify-content-space-between is-align-items-center">
+                    <div>
+                      <h3 class="title is-5 mb-1">{{.Name}}</h3>
+                      <p class="subtitle is-6 has-text-grey mb-3">{{.Description}}</p>
+                      <div class="is-flex is-align-items-center mb-2">
+                        <span class="icon has-text-info mr-2 is-small">
+                          <i class="fas fa-users"></i>
+                        </span>
+                        <span class="is-size-7">{{.MinPlayers}}-{{.MaxPlayers}} players</span>
+                      </div>
+                      {{if .Tags}}
+                      <div class="tags mt-2">
+                        {{range .Tags}}
+                        <span class="tag is-info is-light">{{.}}</span>
+                        {{end}}
+                        </div>
+                      {{end}}
+                      </div>
+                      <a href="/games/{{.ID}}" class="button is-small is-link is-light">
+                        <span class="icon">
+                          <i class="fas fa-info-circle"></i>
+                        </span>
+                        <span>Details</span>
+                      </a>
+                      </div>
+                      </div>
+                      </div>
               {{end}}
+              </div>
+          {{else}}
+          <div class="notification is-light has-text-centered">
+            <p>No games added to this event yet.</p>
+            <button onclick="document.getElementById('addGameModal').classList.remove('is-hidden')"
+              class="button is-primary is-small mt-3">
+              <span class="icon">
+                <i class="fas fa-dice"></i>
+              </span>
+              <span>Add First Game</span>
+            </button>
             </div>
             {{end}}
-          </div>
-        </div>
-        {{end}}
-      </div>
-    </div>
-  </div>
+            </div>
+            </div>
+            </div>
+            </div>
 </div>
 
 <!-- RSVP Modal -->
-<div id="rsvpModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-    <div class="mt-3">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">RSVP to Event</h3>
-      <form action="/events/{{.Data.Event.ID}}/rsvp" method="POST" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Your Response</label>
-          <div class="mt-2 space-y-2">
-            <label class="flex items-center">
-              <input type="radio" name="status" value="yes"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-              <span class="ml-2 text-gray-700">Yes, I'll be there</span>
-            </label>
-            <label class="flex items-center">
-              <input type="radio" name="status" value="maybe"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-              <span class="ml-2 text-gray-700">Maybe</span>
-            </label>
-            <label class="flex items-center">
-              <input type="radio" name="status" value="no"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-              <span class="ml-2 text-gray-700">No, I can't make it</span>
-            </label>
-          </div>
+<div id="rsvpModal" class="modal is-hidden">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">
+        <span class="icon mr-2">
+          <i class="fas fa-check-circle"></i>
+        </span>
+        RSVP to Event
+      </p>
+      <button class="delete" aria-label="close"
+        onclick="document.getElementById('rsvpModal').classList.add('is-hidden')"></button>
+    </header>
+    <section class="modal-card-body">
+      <form action="/events/{{.Data.Event.ID}}/rsvp" method="POST">
+        <div class="field">
+          <label class="label">Your Response</label>
+          <div class="control">
+            <div class="is-flex is-flex-direction-column">
+              <label class="radio is-flex is-align-items-center mb-3 p-3 has-background-success-light"
+                style="border-radius: 6px;">
+                <input type="radio" name="status" value="yes">
+                <span class="ml-2 has-text-weight-semibold">Yes, I'll be there</span>
+              </label>
+              <label class="radio is-flex is-align-items-center mb-3 p-3 has-background-warning-light" style="border-radius: 6px;">
+                <input type="radio" name="status" value="maybe">
+                <span class="ml-2 has-text-weight-semibold">Maybe</span>
+              </label>
+              <label class="radio is-flex is-align-items-center p-3 has-background-danger-light" style="border-radius: 6px;">
+                <input type="radio" name="status" value="no">
+                <span class="ml-2 has-text-weight-semibold">No, I can't make it</span>
+              </label>
+              </div>
+              </div>
         </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="document.getElementById('rsvpModal').classList.add('hidden')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-            Cancel
-          </button>
-          <button type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Submit RSVP
-          </button>
+        <div class="field is-grouped is-grouped-right mt-5">
+          <p class="control">
+            <button type="button" onclick="document.getElementById('rsvpModal').classList.add('is-hidden')"
+              class="button is-light">
+              Cancel
+            </button>
+          </p>
+          <p class="control">
+            <button type="submit" class="button is-primary">
+              <span class="icon">
+                <i class="fas fa-paper-plane"></i>
+              </span>
+              <span>Submit RSVP</span>
+            </button>
+          </p>
         </div>
       </form>
-    </div>
+    </section>
   </div>
 </div>
 
 <!-- Add Game Modal -->
-<div id="addGameModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-    <div class="mt-3">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Add Game to Event</h3>
-      <form action="/events/{{.Data.Event.ID}}/games" method="POST" class="space-y-4">
-        <div>
-          <label for="game_id" class="block text-sm font-medium text-gray-700">Select Game</label>
-          <select name="game_id" id="game_id" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-            <option value="">Choose a game...</option>
-            {{range .Data.AvailableGames}}
-            <option value="{{.ID}}">{{.Name}}</option>
-            {{end}}
-          </select>
+<div id="addGameModal" class="modal is-hidden">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">
+        <span class="icon mr-2">
+          <i class="fas fa-dice"></i>
+        </span>
+        Add Game to Event
+      </p>
+      <button class="delete" aria-label="close"
+        onclick="document.getElementById('addGameModal').classList.add('is-hidden')"></button>
+    </header>
+    <section class="modal-card-body">
+      <form action="/events/{{.Data.Event.ID}}/games" method="POST">
+        <div class="field">
+          <label for="game_id" class="label">Select Game</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select name="game_id" id="game_id" required>
+                <option value="">Choose a game...</option>
+                {{range .Data.AvailableGames}}
+                <option value="{{.ID}}">{{.Name}}</option>
+                {{end}}
+              </select>
+            </div>
+          </div>
+          </div>
+          <div class="field">
+            <label for="order_index" class="label">Order in Lineup</label>
+            <div class="control has-icons-left">
+              <input type="number" name="order_index" id="order_index" required min="1"
+              class="input"
+              placeholder="1">
+            <span class="icon is-small is-left">
+              <i class="fas fa-list-ol"></i>
+            </span>
+          </div>
         </div>
-        <div>
-          <label for="order_index" class="block text-sm font-medium text-gray-700">Order in Lineup</label>
-          <input type="number" name="order_index" id="order_index" required min="1"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="1">
-        </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="document.getElementById('addGameModal').classList.add('hidden')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-            Cancel
-          </button>
-          <button type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Add Game
-          </button>
+        <div class="field is-grouped is-grouped-right mt-5">
+          <p class="control">
+            <button type="button" onclick="document.getElementById('addGameModal').classList.add('is-hidden')"
+              class="button is-light">
+              Cancel
+            </button>
+          </p>
+          <p class="control">
+            <button type="submit" class="button is-primary">
+              <span class="icon">
+                <i class="fas fa-plus"></i>
+              </span>
+              <span>Add Game</span>
+            </button>
+          </p>
         </div>
       </form>
-    </div>
+    </section>
   </div>
-</div>
+  </div>
+<script>
+  // Close modals when clicking outside
+  document.addEventListener('DOMContentLoaded', () => {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+      modal.querySelector('.modal-background').addEventListener('click', () => {
+        modal.classList.add('is-hidden');
+      });
+    });
+  });
+</script>
 {{end}}

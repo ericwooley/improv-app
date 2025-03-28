@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
 	"github.com/gorilla/mux"
@@ -14,7 +15,6 @@ import (
 
 type GameHandler struct {
 	db        *sql.DB
-	templates *template.Template
 }
 
 func NewGameHandler(db *sql.DB) *GameHandler {
@@ -24,18 +24,20 @@ func NewGameHandler(db *sql.DB) *GameHandler {
 }
 
 func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*models.User)
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	if r.Method == "POST" {
 		name := r.FormValue("name")
 		description := r.FormValue("description")
 		minPlayers, err := strconv.Atoi(r.FormValue("min_players"))
 		if err != nil {
+			log.Printf("Error parsing min_players: %v", err)
 			http.Error(w, "Invalid min players", http.StatusBadRequest)
 			return
 		}
 		maxPlayers, err := strconv.Atoi(r.FormValue("max_players"))
 		if err != nil {
+			log.Printf("Error parsing max_players: %v", err)
 			http.Error(w, "Invalid max players", http.StatusBadRequest)
 			return
 		}
@@ -47,9 +49,11 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			RETURNING id
 		`, name, description, minPlayers, maxPlayers, user.ID).Scan(&gameID)
 		if err != nil {
+			log.Printf("Error creating game: %v", err)
 			http.Error(w, "Error creating game", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("Created new game: %s (ID: %s)", name, gameID)
 
 		// Handle tags
 		tags := strings.Split(r.FormValue("tags"), ",")
@@ -67,6 +71,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 				RETURNING id
 			`, tag).Scan(&tagID)
 			if err != nil {
+				log.Printf("Error creating tag '%s': %v", tag, err)
 				http.Error(w, "Error creating tag", http.StatusInternalServerError)
 				return
 			}
@@ -77,6 +82,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 				ON CONFLICT DO NOTHING
 			`, gameID, tagID)
 			if err != nil {
+				log.Printf("Error associating tag '%s' with game '%s': %v", tag, gameID, err)
 				http.Error(w, "Error associating tag", http.StatusInternalServerError)
 				return
 			}
@@ -89,7 +95,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	// GET: List games
 	rows, err := h.db.Query(`
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by,
-		       array_agg(DISTINCT t.name) as tags
+		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 		LEFT JOIN game_tags t ON gta.tag_id = t.id
@@ -97,6 +103,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		ORDER BY g.created_at DESC
 	`)
 	if err != nil {
+		log.Printf("Error fetching games: %v", err)
 		http.Error(w, "Error fetching games", http.StatusInternalServerError)
 		return
 	}
@@ -105,13 +112,18 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	var games []Game
 	for rows.Next() {
 		var game Game
-		var tags []string
-		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &tags)
+		var tagsStr sql.NullString
+		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &tagsStr)
 		if err != nil {
+			log.Printf("Error scanning game row: %v", err)
 			http.Error(w, "Error scanning games", http.StatusInternalServerError)
 			return
 		}
-		game.Tags = tags
+		if tagsStr.Valid {
+			game.Tags = strings.Split(tagsStr.String, ",")
+		} else {
+			game.Tags = []string{}
+		}
 		games = append(games, game)
 	}
 
@@ -120,27 +132,39 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Data:  games,
 	}
-	h.templates.ExecuteTemplate(w, "games.html", data)
+	RenderTemplateWithLayout(w, &data, "templates/games.html")
 }
 
 func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value("user").(*models.User)
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	gameID := vars["id"]
 
 	var game Game
+	var tagsStr sql.NullString
 	err := h.db.QueryRow(`
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by,
-		       array_agg(DISTINCT t.name) as tags
+		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 		LEFT JOIN game_tags t ON gta.tag_id = t.id
 		WHERE g.id = $1
 		GROUP BY g.id
-	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.Tags)
+	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &tagsStr)
 	if err != nil {
-		http.Error(w, "Game not found", http.StatusNotFound)
+		if err == sql.ErrNoRows {
+			log.Printf("Game not found: %s", gameID)
+			http.Error(w, "Game not found", http.StatusNotFound)
+			return
+		}
+		log.Printf("Error fetching game %s: %v", gameID, err)
+		http.Error(w, "Error fetching game", http.StatusInternalServerError)
 		return
+	}
+	if tagsStr.Valid {
+		game.Tags = strings.Split(tagsStr.String, ",")
+	} else {
+		game.Tags = []string{}
 	}
 
 	// Get user's rating
@@ -151,6 +175,7 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WHERE user_id = $1 AND game_id = $2
 	`, user.ID, gameID).Scan(&rating)
 	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error fetching rating for game %s and user %s: %v", gameID, user.ID, err)
 		http.Error(w, "Error fetching rating", http.StatusInternalServerError)
 		return
 	}
@@ -166,5 +191,5 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 			Rating: rating,
 		},
 	}
-	RenderTemplate(w, "templates/game.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/game.html")
 }

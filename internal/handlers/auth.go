@@ -32,7 +32,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 				Error:    "Error sending magic link",
 				Template: "login",
 			}
-			RenderTemplate(w, "templates/login.html", &data)
+			RenderTemplateWithLayout(w, &data, "templates/login.html")
 			return
 		}
 
@@ -41,7 +41,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			Success:  "Magic link sent! Check your email.",
 			Template: "login",
 		}
-		RenderTemplate(w, "templates/login.html", &data)
+		RenderTemplateWithLayout(w, &data, "templates/login.html")
 		return
 	}
 
@@ -49,7 +49,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Title:    "Login",
 		Template: "login",
 	}
-	RenderTemplate(w, "templates/login.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/login.html")
 }
 
 func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +80,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
 	session, _ := config.Store.Get(r, "session")
 	userID, ok := session.Values["user_id"].(string)
 	if !ok {
@@ -99,7 +99,7 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 				Error:    "Error updating profile",
 				Template: "profile",
 			}
-			RenderTemplate(w, "templates/profile.html", &data)
+			RenderTemplateWithLayout(w, &data, "templates/profile.html")
 			return
 		}
 
@@ -112,7 +112,7 @@ func (h *AuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 		Template: "profile",
 	}
 
-	RenderTemplate(w, "templates/profile.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/profile.html")
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

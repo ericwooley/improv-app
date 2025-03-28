@@ -1,77 +1,98 @@
 {{define "body"}}
-<div class="max-w-4xl mx-auto">
-  <div class="bg-white shadow-md rounded-lg p-6">
-    <div class="flex justify-between items-start mb-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-800">{{.Data.Game.Name}}</h1>
-        <p class="text-gray-600 mt-2">{{.Data.Game.Description}}</p>
-      </div>
-      <div class="flex items-center">
-        <span class="text-sm text-gray-500 mr-2">Your Rating:</span>
-        <div class="flex">
-          {{range $i := seq 1 5}}
-          <button onclick="rateGame('{{.Data.Game.ID}}', {{$i}})"
-            class="star {{if lt $i .Data.Rating}}text-yellow-400{{else}}text-gray-300{{end}} hover:text-yellow-500 focus:outline-none">
-            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
-              </path>
-            </svg>
-          </button>
+<div class="content-wrapper">
+  <!-- Game Details -->
+  <div class="card mb-6">
+    <div class="card-content">
+      <div class="is-flex is-justify-content-space-between is-align-items-start">
+        <div>
+          <h1 class="title is-2">{{.Data.Game.Name}}</h1>
+          <p class="subtitle is-5 mb-5">{{.Data.Game.Description}}</p>
+          
+          <div class="is-flex is-align-items-center mb-3">
+            <span class="icon has-text-info mr-2">
+              <i class="fas fa-users"></i>
+            </span>
+            <span>{{.Data.Game.MinPlayers}}-{{.Data.Game.MaxPlayers}} players</span>
+          </div>
+{{if .Data.Game.Tags}}
+<div class="tags mt-4">
+  {{range .Data.Game.Tags}}
+  <span class="tag is-info is-light">{{.}}</span>
+  {{end}}
+</div>
           {{end}}
         </div>
+<div class="box p-4 has-background-white-ter">
+  <p class="has-text-grey mb-2">Your Rating:</p>
+  <div class="buttons has-addons">
+    {{range $i := slice 1 2 3 4 5}}
+    <button onclick="rateGame('{{$.Data.Game.ID}}', {{$i}})"
+      class="button is-small rating-star {{if le $i $.Data.Rating}}is-warning{{else}}is-light{{end}}">
+      <span class="icon is-small">
+        <i class="fas fa-star"></i>
+      </span>
+    </button>
+    {{end}}
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="text-sm text-gray-500 space-y-2">
-      <div class="flex items-center">
-        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-          </path>
-        </svg>
-        Players: {{.Data.Game.MinPlayers}}-{{.Data.Game.MaxPlayers}}
-      </div>
-      {{if .Data.Game.Tags}}
-      <div class="flex flex-wrap gap-1">
-        {{range .Data.Game.Tags}}
-        <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">{{.}}</span>
-        {{end}}
-      </div>
-      {{end}}
     </div>
   </div>
 
-  <div class="mt-6 bg-white shadow-md rounded-lg p-6">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Upcoming Events</h2>
-    <div class="space-y-4">
-      {{range .Data.Game.Events}}
-      <div class="border rounded-lg p-4">
-        <div class="flex justify-between items-start">
-          <div>
-            <h3 class="text-lg font-medium text-gray-900">{{.Title}}</h3>
-            <p class="text-gray-600 mt-1">{{.Description}}</p>
-            <div class="mt-2 text-sm text-gray-500">
-              <span class="flex items-center">
-                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                {{.Location}}
-              </span>
-              <span class="flex items-center mt-1">
-                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-                {{.StartTime.Format "Jan 2, 2006 3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}
-              </span>
+  <!-- Upcoming Events -->
+  <div class="card">
+    <header class="card-header">
+      <p class="card-header-title">
+        <span class="icon mr-2"><i class="fas fa-calendar-alt"></i></span>
+        Upcoming Events with this Game
+      </p>
+    </header>
+    <div class="card-content">
+      {{if .Data.Game.Events}}
+      <div class="columns is-multiline">
+        {{range .Data.Game.Events}}
+          <div class="column is-6">
+            <div class="box has-background-white-ter">
+              <h3 class="title is-5">{{.Title}}</h3>
+              <p class="subtitle is-6 has-text-grey mb-3">{{.Description}}</p>
+              <div class="is-flex is-align-items-center mb-3">
+                <span class="icon has-text-info mr-2">
+                  <i class="fas fa-map-marker-alt"></i>
+                </span>
+                <span>{{.Location}}</span>
+              </div>
+              <div class="is-flex is-align-items-center mb-3">
+                <span class="icon has-text-info mr-2">
+                  <i class="fas fa-calendar"></i>
+                </span>
+                <span>{{.StartTime.Format "Jan 2, 2006"}}</span>
+              </div>
+              <div class="is-flex is-align-items-center mb-3">
+                <span class="icon has-text-info mr-2">
+                  <i class="fas fa-clock"></i>
+                </span>
+                <span>{{.StartTime.Format "3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}</span>
+                </div>
+                <a href="/events/{{.ID}}" class="button is-link is-outlined is-fullwidth">
+                  View Event
+                  <span class="icon ml-1">
+                    <i class="fas fa-arrow-right"></i>
+                  </span>
+              </a>
             </div>
           </div>
-          <a href="/events/{{.ID}}" class="text-blue-600 hover:text-blue-800">View Details →</a>
+          {{end}}
         </div>
-      </div>
+      {{else}}
+      <div class="notification is-light has-text-centered">
+        <p>There are no upcoming events featuring this game.</p>
+        <a href="/events/new" class="button is-primary is-small mt-3">
+          <span class="icon">
+            <i class="fas fa-calendar-plus"></i>
+          </span>
+          <span>Create Event</span>
+        </a>
+        </div>
       {{end}}
     </div>
   </div>
@@ -89,10 +110,10 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          const stars = document.querySelectorAll('.star');
+          const stars = document.querySelectorAll('.rating-star');
           stars.forEach((star, index) => {
-            star.classList.toggle('text-yellow-400', index < rating);
-            star.classList.toggle('text-gray-300', index >= rating);
+            star.classList.toggle('is-warning', index < rating);
+            star.classList.toggle('is-light', index >= rating);
           });
         }
       })

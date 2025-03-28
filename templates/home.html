@@ -1,71 +1,178 @@
 {{define "body"}}
-<div class="max-w-4xl mx-auto">
-  <div class="text-center mb-12">
-    <h1 class="text-4xl font-bold text-gray-900 mb-4">Welcome to Improv App</h1>
-    <p class="text-xl text-gray-600">Organize your improv groups, events, and games all in one place.</p>
+<div class="content-wrapper">
+  {{if .User}}
+  <div class="mb-5">
+    <h1 class="title is-2">Dashboard</h1>
+    <p class="subtitle is-5">Welcome back, {{.User.FirstName}}!</p>
   </div>
 
-  {{if .User}}
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <!-- Your Groups -->
-    <div class="bg-white shadow-md rounded-lg p-6">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Groups</h2>
-      <div class="space-y-4">
-        {{range .Data.Groups}}
-        <div class="border rounded-lg p-4">
-          <h3 class="text-lg font-medium text-gray-900">{{.Name}}</h3>
-          <p class="text-gray-600 mt-1">{{.Description}}</p>
-          <div class="mt-2">
-            <a href="/groups/{{.ID}}" class="text-blue-600 hover:text-blue-800">View Details →</a>
+    <div class="columns">
+      <!-- Quick Actions -->
+      <div class="column is-3">
+        <div class="card">
+          <header class="card-header">
+            <p class="card-header-title">
+              <span class="icon mr-2"><i class="fas fa-bolt"></i></span>
+              Quick Actions
+            </p>
+          </header>
+          <div class="card-content">
+            <div class="buttons are-medium">
+              <a href="/groups/new" class="button is-primary is-fullwidth mb-3">
+                <span class="icon"><i class="fas fa-users"></i></span>
+                <span>New Group</span>
+              </a>
+              <a href="/events/new" class="button is-info is-fullwidth mb-3">
+                <span class="icon"><i class="fas fa-calendar-plus"></i></span>
+                <span>New Event</span>
+              </a>
+              <a href="/games/play" class="button is-success is-fullwidth">
+                <span class="icon"><i class="fas fa-play-circle"></i></span>
+                <span>Start Game</span>
+              </a>
+            </div>
           </div>
         </div>
-        {{end}}
       </div>
-      </div>
+    
+      <!-- Your Groups -->
+      <div class="column">
+        <div class="card">
+          <header class="card-header">
+            <p class="card-header-title">
+              <span class="icon mr-2"><i class="fas fa-users"></i></span>
+              Your Groups
+            </p>
+            <a href="/groups" class="card-header-icon">
+              <span class="icon">
+                <i class="fas fa-angle-right"></i>
+              </span>
+            </a>
+          </header>
+          <div class="card-content">
+            {{if .Data.Groups}}
+            <div class="groups-grid">
+              {{range .Data.Groups}}
+                <div class="box has-background-white-ter mb-3">
+                  <div class="is-flex is-justify-content-space-between is-align-items-center">
+                    <div>
+                      <h3 class="title is-5 mb-2">{{.Name}}</h3>
+                      <p class="subtitle is-6 has-text-grey">{{.Description}}</p>
+                    </div>
+                    <a href="/groups/{{.ID}}" class="button is-link is-light">
+                      <span class="icon"><i class="fas fa-chevron-right"></i></span>
+                    </a>
+                  </div>
+                </div>
+                {{end}}
+                </div>
+            {{else}}
+            <div class="notification is-light has-text-centered">
+              <p>You haven't joined any groups yet.</p>
+              <a href="/groups/new" class="button is-primary is-small mt-3">Create Group</a>
+            </div>
+            {{end}}
+            </div>
+            </div>
+            </div>
+    </div>
 
     <!-- Upcoming Events -->
-    <div class="bg-white shadow-md rounded-lg p-6">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Upcoming Events</h2>
-      <div class="space-y-4">
-        {{range .Data.Events}}
-        <div class="border rounded-lg p-4">
-          <h3 class="text-lg font-medium text-gray-900">{{.Title}}</h3>
-          <p class="text-gray-600 mt-1">{{.Description}}</p>
-          <div class="mt-2 text-sm text-gray-500">
-            <span class="flex items-center">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                </path>
-              </svg>
-              {{.Location}}
-            </span>
-            <span class="flex items-center mt-1">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              {{.StartTime.Format "Jan 2, 2006 3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}
-            </span>
-          </div>
-          <div class="mt-2">
-            <a href="/events/{{.ID}}" class="text-blue-600 hover:text-blue-800">View Details →</a>
-          </div>
+    <div class="card mt-5">
+      <header class="card-header">
+        <p class="card-header-title">
+          <span class="icon mr-2"><i class="fas fa-calendar-alt"></i></span>
+          Upcoming Events
+        </p>
+        <a href="/events" class="card-header-icon">
+          <span class="icon">
+            <i class="fas fa-angle-right"></i>
+          </span>
+        </a>
+      </header>
+      <div class="card-content">
+        {{if .Data.Events}}
+        <div class="columns is-multiline">
+          {{range .Data.Events}}
+            <div class="column is-6">
+              <div class="box has-background-white-ter">
+                <h3 class="title is-5">{{.Title}}</h3>
+                <p class="subtitle is-6 has-text-grey mb-3">{{.Description}}</p>
+                <div class="is-flex is-align-items-center mb-3">
+                  <span class="icon has-text-info mr-2">
+                    <i class="fas fa-map-marker-alt"></i>
+                  </span>
+                  <span>{{.Location}}</span>
+                  </div>
+                  <div class="is-flex is-align-items-center mb-3">
+                    <span class="icon has-text-info mr-2">
+                      <i class="fas fa-calendar"></i>
+                    </span>
+                  <span>{{.StartTime.Format "Jan 2, 2006"}}</span>
+                </div>
+                <div class="is-flex is-align-items-center mb-3">
+                  <span class="icon has-text-info mr-2">
+                    <i class="fas fa-clock"></i>
+                  </span>
+                  <span>{{.StartTime.Format "3:04 PM"}} - {{.EndTime.Format "3:04 PM"}}</span>
+                </div>
+                <a href="/events/{{.ID}}" class="button is-link is-outlined is-fullwidth">
+                  View Details
+                  <span class="icon ml-1">
+                    <i class="fas fa-arrow-right"></i>
+                  </span>
+                </a>
+                </div>
+                </div>
+                {{end}}
+                </div>
+        {{else}}
+        <div class="notification is-light has-text-centered">
+          <p>No upcoming events scheduled.</p>
+          <a href="/events/new" class="button is-primary is-small mt-3">Create Event</a>
         </div>
         {{end}}
       </div>
     </div>
-    </div>
   {{else}}
-  <div class="bg-white shadow-md rounded-lg p-6 text-center">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Get Started</h2>
-    <p class="text-gray-600 mb-6">Sign in to start organizing your improv activities.</p>
-    <a href="/login"
-      class="inline-block bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-      Sign In
-    </a>
-  </div>
+    <!-- Welcome Page for Non-logged in Users -->
+    <div class="hero is-medium">
+      <div class="hero-body">
+        <div class="container has-text-centered">
+          <h1 class="title is-1">Welcome to Improv App</h1>
+          <p class="subtitle is-4 mb-6">Organize your improv groups, events, and games all in one place.</p>
+    
+          <div class="columns is-centered">
+            <div class="column is-8">
+              <div class="box has-background-white p-6">
+                <div class="mb-6">
+                  <span class="icon is-large has-text-primary">
+                    <i class="fas fa-theater-masks fa-3x"></i>
+                  </span>
+                </div>
+                <h2 class="title is-3 mb-4">Get Started Today</h2>
+                <p class="subtitle is-5 mb-5">Join our community of improvisers to organize groups, schedule events, and
+                  discover new games.</p>
+                <div class="buttons is-centered">
+                  <a href="/login" class="button is-primary is-large">
+                    <span class="icon">
+                      <i class="fas fa-sign-in-alt"></i>
+                    </span>
+                    <span>Sign In</span>
+                  </a>
+                  <a href="/register" class="button is-link is-large">
+                    <span class="icon">
+                      <i class="fas fa-user-plus"></i>
+                    </span>
+                    <span>Register</span>
+                  </a>
+                </div>
+              </div>
+              </div>
+              </div>
+              </div>
+              </div>
+              </div>
   {{end}}
 </div>
 {{end}}

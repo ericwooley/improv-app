@@ -22,5 +22,5 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		Data:  nil,
 		Title: "Home",
 	}
-	RenderTemplate(w, "templates/home.html", &data)
+	RenderTemplateWithLayout(w, &data, "templates/home.html")
 }

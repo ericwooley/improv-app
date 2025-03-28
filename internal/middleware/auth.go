@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"improv-app/internal/config"
 	"improv-app/internal/models"
@@ -37,7 +38,7 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 		// Check if profile is complete
 		if len(user.FirstName) < 2 || len(user.LastName) < 2 {
 			// Allow access to profile page
-			if r.URL.Path == "/profile" {
+			if strings.HasPrefix(r.URL.Path, "/profile") {
 				ctx := r.Context()
 				ctx = context.WithValue(ctx, UserContextKey, &user)
 				next.ServeHTTP(w, r.WithContext(ctx))
