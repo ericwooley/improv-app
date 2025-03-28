@@ -144,3 +144,17 @@ func (s *EmailService) UpdateUserProfile(userID string, firstName string, lastNa
 	`, firstName, lastName, userID)
 	return err
 }
+
+// GetUserByID retrieves a user by their ID
+func (s *EmailService) GetUserByID(userID string) (*models.User, error) {
+	var user models.User
+	err := s.db.QueryRow(`
+		SELECT id, email, first_name, last_name
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
