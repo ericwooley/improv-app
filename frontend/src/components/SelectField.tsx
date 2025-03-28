@@ -1,5 +1,5 @@
 import React from 'react'
-import FormField from './FormField'
+import { Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material'
 
 interface SelectOption {
   value: string
@@ -14,7 +14,7 @@ interface SelectFieldProps {
   required?: boolean
   icon?: string
   placeholder?: string
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
+  onChange: (e: SelectChangeEvent<string>) => void
 }
 
 const SelectField: React.FC<SelectFieldProps> = ({
@@ -28,18 +28,26 @@ const SelectField: React.FC<SelectFieldProps> = ({
   onChange,
 }) => {
   return (
-    <FormField label={label} htmlFor={id} icon={icon}>
-      <div className="select is-fullwidth">
-        <select id={id} value={value} required={required} onChange={onChange}>
-          <option value="">{placeholder}</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    </FormField>
+    <FormControl fullWidth>
+      <InputLabel id={`${id}-label`}>{label}</InputLabel>
+      <Select
+        labelId={`${id}-label`}
+        id={id}
+        value={value}
+        label={label}
+        required={required}
+        onChange={onChange}
+        startAdornment={icon ? <i className={icon} style={{ marginRight: 8, color: 'rgba(0, 0, 0, 0.54)' }} /> : null}>
+        <MenuItem value="">
+          <em>{placeholder}</em>
+        </MenuItem>
+        {options.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   )
 }
 

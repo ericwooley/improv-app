@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react'
+import { Paper } from '@mui/material'
 
 interface FormContainerProps {
   children: ReactNode
@@ -7,9 +8,9 @@ interface FormContainerProps {
 
 const FormContainer: React.FC<FormContainerProps> = ({ children, onSubmit }) => {
   return (
-    <div className="box">
+    <Paper elevation={1} sx={{ p: 3 }}>
       <form onSubmit={onSubmit}>{children}</form>
-    </div>
+    </Paper>
   )
 }
 

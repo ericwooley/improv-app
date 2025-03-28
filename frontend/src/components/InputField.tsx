@@ -1,5 +1,5 @@
 import React from 'react'
-import FormField from './FormField'
+import { TextField } from '@mui/material'
 
 interface InputFieldProps {
   id: string
@@ -25,18 +25,20 @@ const InputField: React.FC<InputFieldProps> = ({
   onChange,
 }) => {
   return (
-    <FormField label={label} htmlFor={id} icon={icon}>
-      <input
-        type={type}
-        id={id}
-        className="input"
-        placeholder={placeholder}
-        value={value}
-        required={required}
-        disabled={disabled}
-        onChange={onChange}
-      />
-    </FormField>
+    <TextField
+      id={id}
+      label={label}
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      required={required}
+      disabled={disabled}
+      onChange={onChange}
+      fullWidth
+      InputProps={{
+        startAdornment: icon ? <i className={icon} style={{ marginRight: 8, color: 'rgba(0, 0, 0, 0.54)' }} /> : null,
+      }}
+    />
   )
 }
 

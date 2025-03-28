@@ -121,7 +121,7 @@ const GroupDetailsPage = () => {
                       text="Edit Group"
                       to={`/groups/${group.ID}/edit`}
                       icon="fas fa-edit"
-                      variant="danger"
+                      color="warning"
                       fullWidth
                       className="mb-3"
                     />
@@ -129,7 +129,7 @@ const GroupDetailsPage = () => {
                       text="Manage Members"
                       to={`/groups/${group.ID}/members`}
                       icon="fas fa-user-cog"
-                      variant="info"
+                      color="info"
                       fullWidth
                     />
                   </>

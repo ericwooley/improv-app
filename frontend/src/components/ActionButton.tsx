@@ -1,68 +1,62 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { Button, ButtonProps } from '@mui/material'
+import { styled } from '@mui/material/styles'
 
 interface ActionButtonProps {
   text: string
   to?: string
   onClick?: () => void
   icon?: string
-  variant?: 'primary' | 'info' | 'danger' | 'link' | 'success' | 'light'
-  outlined?: boolean
+  variant?: 'contained' | 'outlined' | 'text'
+  color?: 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'
   fullWidth?: boolean
-  size?: 'small' | 'normal' | 'medium' | 'large'
+  size?: 'small' | 'medium' | 'large'
   className?: string
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
 }
+
+const StyledLink = styled(Link)({
+  textDecoration: 'none',
+  display: 'inline-flex',
+  alignItems: 'center',
+})
 
 const ActionButton: React.FC<ActionButtonProps> = ({
   text,
   to,
   onClick,
   icon,
-  variant = 'primary',
-  outlined = false,
+  variant = 'contained',
+  color = 'primary',
   fullWidth = false,
-  size,
+  size = 'medium',
   className = '',
   type = 'button',
   disabled = false,
 }) => {
-  const buttonClassName = [
-    'button',
-    `is-${variant}`,
-    outlined ? 'is-outlined' : '',
-    fullWidth ? 'is-fullwidth' : '',
-    size ? `is-${size}` : '',
-    disabled ? 'is-disabled' : '',
+  const buttonProps: ButtonProps = {
+    variant,
+    color,
+    fullWidth,
+    size,
+    type,
+    disabled,
     className,
-  ]
-    .filter(Boolean)
-    .join(' ')
+    startIcon: icon ? <i className={icon} /> : undefined,
+  }
 
-  const content = (
-    <>
-      {icon && (
-        <span className="icon">
-          <i className={icon}></i>
-        </span>
-      )}
-      <span>{text}</span>
-    </>
-  )
+  const content = <Button {...buttonProps}>{text}</Button>
 
   if (to) {
-    return (
-      <Link to={to} className={buttonClassName}>
-        {content}
-      </Link>
-    )
+    return <StyledLink to={to}>{content}</StyledLink>
   }
 
   return (
-    <button className={buttonClassName} onClick={onClick} type={type} disabled={disabled}>
-      {content}
-    </button>
+    <Button {...buttonProps} onClick={onClick}>
+      {text}
+    </Button>
   )
 }
 

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useGetMeQuery, useUpdateProfileMutation } from '../store/api/authApi'
-import { PageHeader, FormContainer, InputField, FormActions, ActionButton } from '../components'
+import { Box, Typography, TextField, Button, Paper, CircularProgress, Alert, Stack } from '@mui/material'
+import { Save as SaveIcon, Person as PersonIcon } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
   })
+  const navigate = useNavigate()
 
   // Get the user data using RTK Query
   const { data: userResponse, isLoading: isLoadingUser } = useGetMeQuery()
@@ -39,64 +42,75 @@ const ProfilePage = () => {
 
   if (isLoadingUser) {
     return (
-      <div className="content-wrapper has-text-centered">
-        <p className="is-size-4">Loading profile...</p>
-        <progress className="progress is-primary mt-4" max="100" />
-      </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Loading profile...
+        </Typography>
+        <CircularProgress />
+      </Box>
     )
   }
 
   return (
-    <div className="content-wrapper">
-      <PageHeader title="My Profile" subtitle="Manage your personal information" />
+    <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
+      <Typography variant="h4" sx={{ mb: 1 }}>
+        My Profile
+      </Typography>
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
+        Manage your personal information
+      </Typography>
 
       {isSuccess && (
-        <div className="notification is-success mb-4">
-          <button className="delete" onClick={() => null}></button>
-          <p>
-            <strong>Success!</strong> Profile updated successfully!
-          </p>
-        </div>
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Profile updated successfully!
+        </Alert>
       )}
 
       {updateError && (
-        <div className="notification is-danger mb-4">
-          <p>{JSON.stringify(updateError)}</p>
-        </div>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {JSON.stringify(updateError)}
+        </Alert>
       )}
 
-      <FormContainer onSubmit={handleSubmit}>
-        <InputField
-          id="firstName"
-          label="First Name"
-          value={profile.firstName}
-          placeholder="Enter your first name"
-          required
-          icon="fas fa-user"
-          onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-        />
-
-        <InputField
-          id="lastName"
-          label="Last Name"
-          value={profile.lastName}
-          placeholder="Enter your last name"
-          required
-          icon="fas fa-user"
-          onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-        />
-
-        <FormActions>
-          <ActionButton text="Cancel" to="/dashboard" variant="light" />
-          <ActionButton
-            text="Update Profile"
-            icon="fas fa-save"
-            type="submit"
-            className={isUpdating ? 'is-loading' : ''}
+      <Paper component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
+        <Stack spacing={3}>
+          <TextField
+            id="firstName"
+            label="First Name"
+            value={profile.firstName}
+            placeholder="Enter your first name"
+            required
+            fullWidth
+            InputProps={{
+              startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+            }}
+            onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
           />
-        </FormActions>
-      </FormContainer>
-    </div>
+
+          <TextField
+            id="lastName"
+            label="Last Name"
+            value={profile.lastName}
+            placeholder="Enter your last name"
+            required
+            fullWidth
+            InputProps={{
+              startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+            }}
+            onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+          />
+
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button variant="outlined" onClick={() => navigate('/dashboard')} disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button variant="contained" type="submit" startIcon={<SaveIcon />} disabled={isUpdating}>
+              {isUpdating ? 'Updating...' : 'Update Profile'}
+            </Button>
+          </Box>
+        </Stack>
+      </Paper>
+    </Box>
   )
 }
 

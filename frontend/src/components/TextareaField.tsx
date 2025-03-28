@@ -1,5 +1,5 @@
 import React from 'react'
-import FormField from './FormField'
+import { TextField } from '@mui/material'
 
 interface TextareaFieldProps {
   id: string
@@ -23,18 +23,18 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
   onChange,
 }) => {
   return (
-    <FormField label={label} htmlFor={id}>
-      <textarea
-        id={id}
-        className="textarea"
-        placeholder={placeholder}
-        rows={rows}
-        value={value}
-        required={required}
-        disabled={disabled}
-        onChange={onChange}
-      />
-    </FormField>
+    <TextField
+      id={id}
+      label={label}
+      multiline
+      rows={rows}
+      placeholder={placeholder}
+      value={value}
+      required={required}
+      disabled={disabled}
+      onChange={onChange}
+      fullWidth
+    />
   )
 }
 

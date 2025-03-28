@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { Breadcrumbs, Link as MuiLink, Typography, Box } from '@mui/material'
 
 interface BreadcrumbItem {
   label: string
@@ -14,23 +15,25 @@ interface BreadcrumbProps {
 
 const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, separator = 'arrow' }) => {
   return (
-    <nav className={`breadcrumb has-${separator}-separator mb-5`} aria-label="breadcrumbs">
-      <ul>
+    <Box sx={{ mb: 5 }}>
+      <Breadcrumbs
+        aria-label="breadcrumb"
+        separator={separator === 'arrow' ? '›' : separator === 'bullet' ? '•' : separator === 'dot' ? '.' : '≻'}>
         {items.map((item, index) => (
-          <li key={index} className={item.active ? 'is-active' : ''}>
+          <React.Fragment key={index}>
             {item.active ? (
-              <a href="#" aria-current="page">
-                {item.label}
-              </a>
+              <Typography color="text.primary">{item.label}</Typography>
             ) : item.to ? (
-              <Link to={item.to}>{item.label}</Link>
+              <MuiLink component={Link} to={item.to} color="inherit" underline="hover">
+                {item.label}
+              </MuiLink>
             ) : (
-              <span>{item.label}</span>
+              <Typography color="text.secondary">{item.label}</Typography>
             )}
-          </li>
+          </React.Fragment>
         ))}
-      </ul>
-    </nav>
+      </Breadcrumbs>
+    </Box>
   )
 }
 

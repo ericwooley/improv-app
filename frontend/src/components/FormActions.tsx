@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react'
+import { Stack } from '@mui/material'
 
 interface FormActionsProps {
   children: ReactNode
@@ -6,11 +7,11 @@ interface FormActionsProps {
 
 const FormActions: React.FC<FormActionsProps> = ({ children }) => {
   return (
-    <div className="field is-grouped mt-5">
+    <Stack direction="row" spacing={2} sx={{ mt: 5 }}>
       {React.Children.map(children, (child) => (
-        <p className="control">{child}</p>
+        <div>{child}</div>
       ))}
-    </div>
+    </Stack>
   )
 }
 

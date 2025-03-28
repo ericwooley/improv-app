@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { Paper, Typography, Button } from '@mui/material'
 
 interface EmptyStateProps {
   message: string
@@ -19,23 +20,34 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   secondaryAction,
 }) => {
   return (
-    <div className="notification is-light has-text-centered p-6">
-      <p className="mb-4">{message}</p>
+    <Paper
+      elevation={0}
+      sx={{
+        p: 6,
+        textAlign: 'center',
+        bgcolor: 'grey.50',
+      }}>
+      <Typography variant="body1" sx={{ mb: 4 }}>
+        {message}
+      </Typography>
 
       {actionLink && actionText && (
-        <Link to={actionLink} className="button is-primary">
-          {actionIcon && (
-            <span className="icon">
-              <i className={actionIcon}></i>
-            </span>
-          )}
-          <span>{actionText}</span>
-        </Link>
+        <Button
+          component={Link}
+          to={actionLink}
+          variant="contained"
+          startIcon={actionIcon ? <i className={actionIcon} /> : null}>
+          {actionText}
+        </Button>
       )}
 
-      {secondaryMessage && <p className="mt-4 mb-4">{secondaryMessage}</p>}
+      {secondaryMessage && (
+        <Typography variant="body2" sx={{ mt: 4, mb: 4 }}>
+          {secondaryMessage}
+        </Typography>
+      )}
       {secondaryAction}
-    </div>
+    </Paper>
   )
 }
 

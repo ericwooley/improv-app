@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react'
+import { FormControl, InputLabel, Box } from '@mui/material'
 
 interface FormFieldProps {
   label: string
@@ -9,19 +10,24 @@ interface FormFieldProps {
 
 const FormField: React.FC<FormFieldProps> = ({ label, htmlFor, children, icon }) => {
   return (
-    <div className="field">
-      <label htmlFor={htmlFor} className="label">
-        {label}
-      </label>
-      <div className={`control ${icon ? 'has-icons-left' : ''}`}>
+    <FormControl fullWidth>
+      <InputLabel htmlFor={htmlFor}>{label}</InputLabel>
+      <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         {children}
         {icon && (
-          <span className="icon is-small is-left">
-            <i className={icon}></i>
-          </span>
+          <Box
+            component="i"
+            className={icon}
+            sx={{
+              position: 'absolute',
+              left: 12,
+              color: 'text.secondary',
+              pointerEvents: 'none',
+            }}
+          />
         )}
-      </div>
-    </div>
+      </Box>
+    </FormControl>
   )
 }
 

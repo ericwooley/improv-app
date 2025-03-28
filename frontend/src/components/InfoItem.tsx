@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react'
+import { Box, Typography } from '@mui/material'
 
 interface InfoItemProps {
   icon: string
@@ -6,14 +7,25 @@ interface InfoItemProps {
   className?: string
 }
 
-const InfoItem: React.FC<InfoItemProps> = ({ icon, children, className = 'mb-3' }) => {
+const InfoItem: React.FC<InfoItemProps> = ({ icon, children, className }) => {
   return (
-    <div className={`is-flex is-align-items-center ${className}`}>
-      <span className="icon has-text-info mr-2">
-        <i className={icon}></i>
-      </span>
-      <span>{children}</span>
-    </div>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        mb: 3,
+        ...(className && { className }),
+      }}>
+      <Box
+        component="i"
+        className={icon}
+        sx={{
+          color: 'info.main',
+          mr: 2,
+        }}
+      />
+      <Typography>{children}</Typography>
+    </Box>
   )
 }
 
