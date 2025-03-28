@@ -11,7 +11,9 @@ import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import GamesPage from './pages/GamesPage'
 import GroupsPage from './pages/GroupsPage'
+import NewGroupPage from './pages/NewGroupPage'
 import EventsPage from './pages/EventsPage'
+import NewEventPage from './pages/NewEventPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 // Create routes
@@ -37,8 +39,16 @@ const router = createBrowserRouter([
         element: <GroupsPage />,
       },
       {
+        path: 'groups/new',
+        element: <NewGroupPage />,
+      },
+      {
         path: 'events',
         element: <EventsPage />,
+      },
+      {
+        path: 'events/new',
+        element: <NewEventPage />,
       },
       {
         path: '*',

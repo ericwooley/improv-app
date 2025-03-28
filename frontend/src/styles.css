@@ -32,11 +32,33 @@ html {
 }
 
 .sidebar-header {
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
-  justify-content: space-between;
   align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+      justify-content: center;
+      }
+      
+      .logo img {
+        max-width: 100%;
+        max-height: 100%;
+      }
+      
+      .sidebar-header .title {
+        margin-bottom: 0 !important;
+        flex-grow: 1;
+      }
+      
+      .sidebar-header .menu-toggle {
+        margin-left: auto;
 }
 
 .sidebar-menu {
@@ -100,6 +122,7 @@ html {
   cursor: pointer;
   font-size: 1.5rem;
   color: white;
+  padding: 0.25rem;
 }
 
 .mobile-header {
@@ -109,9 +132,25 @@ html {
   left: 0;
   right: 0;
   background-color: #2d3e50;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   z-index: 900;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  align-items: center;
+    justify-content: space-between;
+  }
+  
+  .mobile-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  
+  .mobile-header .logo {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .mobile-header-title {
@@ -161,7 +200,7 @@ html {
   }
 
   .main-content {
-    padding-top: 4rem;
+    padding-top: 4.5rem;
     width: 100%;
     margin-left: 0;
   }
@@ -172,8 +211,6 @@ html {
 
   .mobile-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
 
   .content-wrapper {

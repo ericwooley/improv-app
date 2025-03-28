@@ -41,20 +41,21 @@ const MainLayout = () => {
         <div className="menu-toggle" onClick={toggleSidebar}>
           <i className="fas fa-bars"></i>
         </div>
-        <div className="mobile-header-title">Improv App</div>
-        {isAuthenticated && user && (
-          <div>
-            <span className="icon has-text-light">
-              <i className="fas fa-user-circle"></i>
-            </span>
+        <div className="mobile-header-right">
+          <div className="mobile-header-title">ImprovHQ</div>
+          <div className="logo">
+            <img src="/logo.png" alt="ImprovHQ" />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Left Sidebar */}
       <div className={`sidebar ${isSidebarOpen ? 'is-active' : ''}`}>
         <div className="sidebar-header">
-          <h1 className="title is-5 has-text-white">Improv App</h1>
+          <div className="logo" style={{ width: '32px', height: '32px' }}>
+            <img src="/logo.png" alt="ImprovHQ" />
+          </div>
+          <h1 className="title is-5 has-text-white">ImprovHQ</h1>
           <div className="menu-toggle" onClick={toggleSidebar}>
             <i className="fas fa-times"></i>
           </div>
