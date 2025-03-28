@@ -1,6 +1,24 @@
 import { useParams } from 'react-router-dom'
 import { useGetGroupQuery } from '../store/api/groupsApi'
 import { PageHeader, Breadcrumb, ActionButton, InfoItem, formatDate } from '../components'
+import {
+  Box,
+  Card,
+  CardHeader,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Alert,
+  Stack,
+  Chip,
+} from '@mui/material'
+import { Info as InfoIcon, Group as GroupIcon, Settings as SettingsIcon } from '@mui/icons-material'
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>()
@@ -8,30 +26,24 @@ const GroupDetailsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="content-wrapper">
-        <div className="has-text-centered">
-          <span className="icon is-large">
-            <i className="fas fa-spinner fa-pulse"></i>
-          </span>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <CircularProgress />
+      </Box>
     )
   }
 
   if (error || !groupResponse?.data) {
     return (
-      <div className="content-wrapper">
-        <div className="notification is-danger">
-          <p>Error loading group details. Please try again later.</p>
-        </div>
-      </div>
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">Error loading group details. Please try again later.</Alert>
+      </Box>
     )
   }
 
   const { group, members, userRole } = groupResponse.data
 
   return (
-    <div className="content-wrapper">
+    <Box sx={{ p: 3 }}>
       <Breadcrumb
         items={[
           { label: 'Groups', to: '/groups' },
@@ -41,79 +53,57 @@ const GroupDetailsPage = () => {
 
       <PageHeader title={group.Name} subtitle={group.Description} />
 
-      <div className="columns">
-        <div className="column is-8">
-          <div className="card">
-            <header className="card-header">
-              <p className="card-header-title">
-                <span className="icon mr-2">
-                  <i className="fas fa-info-circle"></i>
-                </span>
-                Group Information
-              </p>
-            </header>
-            <div className="card-content">
-              <InfoItem icon="fas fa-calendar-alt">Created {formatDate(new Date(group.CreatedAt))}</InfoItem>
-              <InfoItem icon="fas fa-user-shield">Your Role: {userRole}</InfoItem>
-            </div>
-          </div>
+      <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+        <Box sx={{ flex: { md: 2 } }}>
+          <Card sx={{ mb: 3 }}>
+            <CardHeader avatar={<InfoIcon />} title="Group Information" />
+            <CardContent>
+              <Stack spacing={2}>
+                <InfoItem icon="fas fa-calendar-alt">Created {formatDate(new Date(group.CreatedAt))}</InfoItem>
+                <InfoItem icon="fas fa-user-shield">Your Role: {userRole}</InfoItem>
+              </Stack>
+            </CardContent>
+          </Card>
 
-          <div className="card mt-5">
-            <header className="card-header">
-              <p className="card-header-title">
-                <span className="icon mr-2">
-                  <i className="fas fa-users"></i>
-                </span>
-                Members
-              </p>
-            </header>
-            <div className="card-content">
-              <div className="table-container">
-                <table className="table is-fullwidth">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+          <Card>
+            <CardHeader avatar={<GroupIcon />} title="Members" />
+            <CardContent>
+              <TableContainer component={Paper} elevation={0}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Role</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {members.map((member) => (
-                      <tr key={member.id}>
-                        <td>{`${member.firstName} ${member.lastName}`}</td>
-                        <td>{member.email}</td>
-                        <td>
-                          <span className={`tag ${member.role === 'admin' ? 'is-danger' : 'is-info'}`}>
-                            {member.role}
-                          </span>
-                        </td>
-                      </tr>
+                      <TableRow key={member.id}>
+                        <TableCell>{`${member.firstName} ${member.lastName}`}</TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>
+                          <Chip label={member.role} color={member.role === 'admin' ? 'error' : 'info'} size="small" />
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Box>
 
-        <div className="column is-4">
-          <div className="card">
-            <header className="card-header">
-              <p className="card-header-title">
-                <span className="icon mr-2">
-                  <i className="fas fa-cog"></i>
-                </span>
-                Actions
-              </p>
-            </header>
-            <div className="card-content">
-              <div className="buttons is-flex is-flex-direction-column">
+        <Box sx={{ flex: { md: 1 } }}>
+          <Card>
+            <CardHeader avatar={<SettingsIcon />} title="Actions" />
+            <CardContent>
+              <Stack spacing={2}>
                 <ActionButton
                   text="Create Event"
                   to={`/events/new?groupId=${group.ID}`}
                   icon="fas fa-calendar-plus"
                   fullWidth
-                  className="mb-3"
                 />
                 {userRole === 'admin' && (
                   <>
@@ -123,7 +113,6 @@ const GroupDetailsPage = () => {
                       icon="fas fa-edit"
                       color="warning"
                       fullWidth
-                      className="mb-3"
                     />
                     <ActionButton
                       text="Manage Members"
@@ -134,12 +123,12 @@ const GroupDetailsPage = () => {
                     />
                   </>
                 )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+    </Box>
   )
 }
 

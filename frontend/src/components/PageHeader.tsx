@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react'
+import { Box, Typography } from '@mui/material'
 
 interface PageHeaderProps {
   title: string
@@ -8,13 +9,24 @@ interface PageHeaderProps {
 
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => {
   return (
-    <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-start-mobile mb-5">
-      <div className="mb-4-mobile">
-        <h1 className="title is-2">{title}</h1>
-        {subtitle && <p className="subtitle is-5">{subtitle}</p>}
-      </div>
-      {actions && <div className="mt-4 mt-0-tablet">{actions}</div>}
-    </div>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between',
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        mb: 5,
+      }}>
+      <Box sx={{ mb: { xs: 2, sm: 0 } }}>
+        <Typography variant="h2">{title}</Typography>
+        {subtitle && (
+          <Typography variant="h5" color="text.secondary">
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
+      {actions && <Box sx={{ mt: { xs: 2, sm: 0 } }}>{actions}</Box>}
+    </Box>
   )
 }
 

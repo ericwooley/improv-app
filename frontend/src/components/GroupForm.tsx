@@ -55,6 +55,7 @@ export const GroupForm = ({
         value={formData.description}
         placeholder="Tell us about your group..."
         rows={3}
+        last
         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
         disabled={isLoading}
       />
@@ -63,7 +64,7 @@ export const GroupForm = ({
         <ActionButton
           text={cancelButtonText}
           to={cancelButtonTo}
-          variant="light"
+          variant="outlined"
           disabled={isLoading}
           onClick={onCancel}
         />

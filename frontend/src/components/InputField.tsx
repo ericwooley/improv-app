@@ -10,6 +10,7 @@ interface InputFieldProps {
   required?: boolean
   icon?: string
   disabled?: boolean
+  last?: boolean
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
@@ -22,6 +23,7 @@ const InputField: React.FC<InputFieldProps> = ({
   required = false,
   icon,
   disabled = false,
+  last = false,
   onChange,
 }) => {
   return (
@@ -35,6 +37,7 @@ const InputField: React.FC<InputFieldProps> = ({
       disabled={disabled}
       onChange={onChange}
       fullWidth
+      sx={{ mb: last ? 0 : 2 }}
       InputProps={{
         startAdornment: icon ? <i className={icon} style={{ marginRight: 8, color: 'rgba(0, 0, 0, 0.54)' }} /> : null,
       }}

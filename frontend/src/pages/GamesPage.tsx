@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { PageHeader, CardGrid, ItemCard, EmptyState, ActionButton, TagList, InfoItem } from '../components'
+import { Box, Typography, Grid, CardActions } from '@mui/material'
+import { PageHeader, ItemCard, EmptyState, ActionButton, TagList, InfoItem } from '../components'
 
 interface Game {
   id: string
@@ -18,37 +19,43 @@ const GamesPage = ({ initialGames = [] }: GamesPageProps) => {
   const [games] = useState<Game[]>(initialGames)
 
   return (
-    <div className="content-wrapper">
+    <Box>
       <PageHeader title="Improv Games" subtitle="Browse and manage your collection of improv games" />
 
       {games.length > 0 && (
-        <div className="mb-5">
+        <Box sx={{ mb: 5 }}>
           <ActionButton text="Create Game" to="/games/new" icon="fas fa-plus" />
-        </div>
+        </Box>
       )}
 
       {/* Games Grid */}
       {games.length > 0 ? (
-        <CardGrid>
+        <Grid container spacing={3}>
           {games.map((game) => (
-            <div key={game.id} className="column is-4">
+            <Grid key={game.id} size={4}>
               <ItemCard id={game.id} title={game.name} description={game.description} footerLink={`/games/${game.id}`}>
-                <InfoItem icon="fas fa-users" className="mb-3">
-                  <span className="is-size-7">
+                <InfoItem icon="fas fa-users">
+                  <Typography variant="body2">
                     {game.minPlayers}-{game.maxPlayers} players
-                  </span>
+                  </Typography>
                 </InfoItem>
 
                 <TagList tags={game.tags} />
 
-                <div className="card-footer pt-3 is-flex is-justify-content-space-between">
-                  <ActionButton text="View" to={`/games/${game.id}`} variant="info" outlined icon="fas fa-eye" />
-                  <ActionButton text="Delete" variant="danger" outlined icon="fas fa-trash" />
-                </div>
+                <CardActions sx={{ pt: 2, justifyContent: 'space-between' }}>
+                  <ActionButton
+                    text="View"
+                    to={`/games/${game.id}`}
+                    variant="outlined"
+                    color="primary"
+                    icon="fas fa-eye"
+                  />
+                  <ActionButton text="Delete" variant="outlined" color="error" icon="fas fa-trash" />
+                </CardActions>
               </ItemCard>
-            </div>
+            </Grid>
           ))}
-        </CardGrid>
+        </Grid>
       ) : (
         <EmptyState
           message="No games have been added yet."
@@ -57,7 +64,7 @@ const GamesPage = ({ initialGames = [] }: GamesPageProps) => {
           actionIcon="fas fa-plus"
         />
       )}
-    </div>
+    </Box>
   )
 }
 

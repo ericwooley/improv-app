@@ -1,6 +1,7 @@
-import { PageHeader, CardGrid, EmptyState, ActionButton } from '../components'
+import { PageHeader, EmptyState, ActionButton } from '../components'
 import { GroupCard } from '../components/GroupCard'
 import { useGetGroupsQuery } from '../store/api/groupsApi'
+import { Box, CircularProgress, Alert } from '@mui/material'
 
 const GroupsPage = () => {
   const {
@@ -13,31 +14,25 @@ const GroupsPage = () => {
   const groups = groupsResponse?.data || []
 
   return (
-    <div className="content-wrapper">
+    <Box sx={{ p: 3 }}>
       <PageHeader title="Improv Groups" subtitle="Manage and explore your improv groups" />
 
       {groups.length > 0 && (
-        <div className="mb-5">
+        <Box sx={{ mb: 5 }}>
           <ActionButton text="Create Group" to="/groups/new" icon="fas fa-plus" />
-        </div>
+        </Box>
       )}
 
       {isLoading ? (
-        <div className="has-text-centered">
-          <span className="icon is-large">
-            <i className="fas fa-spinner fa-pulse"></i>
-          </span>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
       ) : error ? (
-        <div className="notification is-danger">
-          <p>Error loading groups. Please try again later.</p>
-        </div>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Error loading groups. Please try again later.
+        </Alert>
       ) : groups.length > 0 ? (
-        <CardGrid>
-          {groups.map((group) => (
-            <GroupCard key={group.ID} group={group} />
-          ))}
-        </CardGrid>
+        groups.map((group) => <GroupCard key={group.ID} group={group} />)
       ) : (
         <EmptyState
           message="You haven't created any groups yet."
@@ -46,7 +41,7 @@ const GroupsPage = () => {
           actionIcon="fas fa-plus"
         />
       )}
-    </div>
+    </Box>
   )
 }
 

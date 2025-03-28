@@ -1,34 +1,53 @@
-import { ActionButton, InfoItem, formatDate, ItemCard } from './index'
+import { ActionButton, InfoItem, formatDate } from './index'
 import { Group } from '../store/api/groupsApi'
+import { Box, Typography, Card, CardContent, CardActions } from '@mui/material'
 
 interface GroupCardProps {
   group: Group
   variant?: 'default' | 'compact'
-  className?: string
 }
 
-export const GroupCard = ({ group, variant = 'default', className = '' }: GroupCardProps) => {
+export const GroupCard = ({ group, variant = 'default' }: GroupCardProps) => {
   if (variant === 'compact') {
     return (
-      <div className={`box has-background-white-ter mb-3 ${className}`}>
-        <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-center">
-          <div className="mb-3-mobile">
-            <h3 className="title">{group.Name}</h3>
-            <p className="subtitle has-text-grey">{group.Description}</p>
-          </div>
-          <ActionButton text="" to={`/groups/${group.ID}`} icon="fas fa-chevron-right" variant="link" outlined />
-        </div>
-      </div>
+      <Card elevation={0} sx={{}}>
+        <CardContent>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+            }}>
+            <Box sx={{ mb: { xs: 2, sm: 0 } }}>
+              <Typography variant="h6">{group.Name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {group.Description}
+              </Typography>
+            </Box>
+            <ActionButton text="" to={`/groups/${group.ID}`} icon="fas fa-chevron-right" variant="text" />
+          </Box>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className={`column is-12 ${className}`}>
-      <ItemCard id={group.ID} title={group.Name} description={group.Description} footerLink={`/groups/${group.ID}`}>
+    <Card elevation={0}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          {group.Name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          {group.Description}
+        </Typography>
         <InfoItem icon="fas fa-calendar-alt">
-          <span className="is-size-7">Created {formatDate(new Date(group.CreatedAt))}</span>
+          <Typography variant="caption">Created {formatDate(new Date(group.CreatedAt))}</Typography>
         </InfoItem>
-      </ItemCard>
-    </div>
+      </CardContent>
+      <CardActions>
+        <ActionButton text="View Group" to={`/groups/${group.ID}`} variant="text" />
+      </CardActions>
+    </Card>
   )
 }

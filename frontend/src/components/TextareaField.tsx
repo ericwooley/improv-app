@@ -8,6 +8,7 @@ interface TextareaFieldProps {
   placeholder?: string
   rows?: number
   required?: boolean
+  last?: boolean
   disabled?: boolean
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
 }
@@ -20,6 +21,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
   rows = 3,
   required = false,
   disabled = false,
+  last = false,
   onChange,
 }) => {
   return (
@@ -34,6 +36,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
       disabled={disabled}
       onChange={onChange}
       fullWidth
+      sx={{ mb: last ? 0 : 2 }}
     />
   )
 }
