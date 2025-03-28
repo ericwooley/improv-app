@@ -1,22 +1,30 @@
 import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { useLoginMutation } from '../store/api/authApi'
+import { useAppDispatch } from '../store/hooks'
+import { setCredentials } from '../store/slices/authSlice'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const dispatch = useAppDispatch()
+
+  // RTK Query hook for login mutation
+  const [login, { isLoading, error }] = useLoginMutation()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
 
     try {
-      // TODO: Replace with actual API call when backend is updated
-      console.log('Sending magic link to:', email)
-      setSuccess('Magic link has been sent to your email. Please check your inbox.')
-    } catch {
-      setError('Failed to send magic link. Please try again.')
+      const response = await login({ email }).unwrap()
+      // Update Redux state with the user info
+      dispatch(setCredentials(response.user))
+
+      // Show success message - in a real app you might want to redirect
+      // or handle this differently depending on your authentication flow
+      alert('Magic link has been sent to your email. Please check your inbox.')
+    } catch (err) {
+      // Error is handled by RTK Query and available in the error variable
+      console.error('Failed to send magic link:', err)
     }
   }
 
@@ -49,6 +57,7 @@ const LoginPage = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                   <span className="icon is-small is-left">
                     <i className="fas fa-envelope"></i>
@@ -57,7 +66,10 @@ const LoginPage = () => {
               </div>
               <div className="field mt-5">
                 <div className="control">
-                  <button type="submit" className="button is-primary is-fullwidth is-medium">
+                  <button
+                    type="submit"
+                    className={`button is-primary is-fullwidth is-medium ${isLoading ? 'is-loading' : ''}`}
+                    disabled={isLoading}>
                     <span className="icon">
                       <i className="fas fa-paper-plane"></i>
                     </span>
@@ -69,13 +81,7 @@ const LoginPage = () => {
 
             {error && (
               <div className="notification is-danger mt-4">
-                <p>{error}</p>
-              </div>
-            )}
-
-            {success && (
-              <div className="notification is-success mt-4">
-                <p>{success}</p>
+                <p>{JSON.stringify(error)}</p>
               </div>
             )}
           </div>

@@ -1,29 +1,31 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
+import { useGetMeQuery, useUpdateProfileMutation } from '../store/api/authApi'
 
-interface User {
-  firstName: string
-  lastName: string
-}
-
-interface ProfilePageProps {
-  user?: User
-}
-
-const ProfilePage = ({ user }: ProfilePageProps) => {
-  const [firstName, setFirstName] = useState(user?.firstName || '')
-  const [lastName, setLastName] = useState(user?.lastName || '')
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [errors, setErrors] = useState<{
+const ProfilePage = () => {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [formErrors, setFormErrors] = useState<{
     firstName?: string
     lastName?: string
   }>({})
 
+  // Get the user data using RTK Query
+  const { data: user, isLoading: isLoadingUser } = useGetMeQuery()
+
+  // Update profile mutation
+  const [updateProfile, { isLoading: isUpdating, error: updateError, isSuccess }] = useUpdateProfileMutation()
+
+  // Set form values when user data is loaded
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || '')
+      setLastName(user.lastName || '')
+    }
+  }, [user])
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
-    setErrors({})
+    setFormErrors({})
 
     // Basic validation
     const newErrors: {
@@ -40,17 +42,24 @@ const ProfilePage = ({ user }: ProfilePageProps) => {
     }
 
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
+      setFormErrors(newErrors)
       return
     }
 
     try {
-      // TODO: Replace with actual API call when backend is updated
-      console.log('Updating profile:', { firstName, lastName })
-      setSuccess('Profile updated successfully!')
-    } catch {
-      setError('Failed to update profile. Please try again.')
+      await updateProfile({ firstName, lastName }).unwrap()
+    } catch (err) {
+      console.error('Failed to update profile:', err)
     }
+  }
+
+  if (isLoadingUser) {
+    return (
+      <div className="has-text-centered p-6">
+        <p className="is-size-4">Loading profile...</p>
+        <progress className="progress is-primary mt-4" max="100" />
+      </div>
+    )
   }
 
   return (
@@ -69,11 +78,11 @@ const ProfilePage = ({ user }: ProfilePageProps) => {
             <p className="subtitle">Please provide your name to complete your profile.</p>
 
             <form onSubmit={handleSubmit}>
-              {success && (
+              {isSuccess && (
                 <div className="notification is-success mb-4">
-                  <button className="delete" onClick={() => setSuccess(null)}></button>
+                  <button className="delete" onClick={() => null}></button>
                   <p>
-                    <strong>Success!</strong> {success}
+                    <strong>Success!</strong> Profile updated successfully!
                   </p>
                 </div>
               )}
@@ -88,16 +97,17 @@ const ProfilePage = ({ user }: ProfilePageProps) => {
                       <input
                         type="text"
                         id="first_name"
-                        className={`input is-medium ${errors.firstName ? 'is-danger' : ''}`}
+                        className={`input is-medium ${formErrors.firstName ? 'is-danger' : ''}`}
                         placeholder="John"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
+                        disabled={isUpdating}
                       />
                       <span className="icon is-small is-left">
                         <i className="fas fa-user"></i>
                       </span>
                     </div>
-                    {errors.firstName && <p className="help is-danger">{errors.firstName}</p>}
+                    {formErrors.firstName && <p className="help is-danger">{formErrors.firstName}</p>}
                   </div>
                 </div>
                 <div className="column is-6">
@@ -109,23 +119,27 @@ const ProfilePage = ({ user }: ProfilePageProps) => {
                       <input
                         type="text"
                         id="last_name"
-                        className={`input is-medium ${errors.lastName ? 'is-danger' : ''}`}
+                        className={`input is-medium ${formErrors.lastName ? 'is-danger' : ''}`}
                         placeholder="Doe"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
+                        disabled={isUpdating}
                       />
                       <span className="icon is-small is-left">
                         <i className="fas fa-user"></i>
                       </span>
                     </div>
-                    {errors.lastName && <p className="help is-danger">{errors.lastName}</p>}
+                    {formErrors.lastName && <p className="help is-danger">{formErrors.lastName}</p>}
                   </div>
                 </div>
               </div>
 
               <div className="field mt-5">
                 <div className="control">
-                  <button type="submit" className="button is-primary is-medium is-fullwidth">
+                  <button
+                    type="submit"
+                    className={`button is-primary is-medium is-fullwidth ${isUpdating ? 'is-loading' : ''}`}
+                    disabled={isUpdating}>
                     <span className="icon">
                       <i className="fas fa-save"></i>
                     </span>
@@ -134,9 +148,9 @@ const ProfilePage = ({ user }: ProfilePageProps) => {
                 </div>
               </div>
 
-              {error && (
+              {updateError && (
                 <div className="notification is-danger mt-4">
-                  <p>{error}</p>
+                  <p>{JSON.stringify(updateError)}</p>
                 </div>
               )}
             </form>

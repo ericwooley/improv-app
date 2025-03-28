@@ -89,7 +89,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'profile',
-        element: <ProfilePage user={mockUser} />,
+        element: <ProfilePage />,
       },
       {
         path: 'games',
