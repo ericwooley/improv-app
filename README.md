@@ -139,6 +139,12 @@ erDiagram
         timestamp created_at
     }
 
+    group_followers {
+        string group_id PK,FK
+        string user_id PK,FK
+        timestamp created_at
+    }
+
     events {
         string id PK
         string group_id FK
@@ -148,6 +154,7 @@ erDiagram
         timestamp start_time
         timestamp end_time
         string created_by FK
+        string visibility
         timestamp created_at
     }
 
@@ -194,7 +201,9 @@ erDiagram
     users ||--o{ email_tokens : "authenticates"
     users ||--o{ improv_groups : "creates"
     users ||--o{ group_members : "joins"
+    users ||--o{ group_followers : "follows"
     improv_groups ||--o{ group_members : "has"
+    improv_groups ||--o{ group_followers : "followed by"
     improv_groups ||--|{ events : "schedules"
     users ||--o{ events : "creates"
     events ||--o{ event_rsvps : "receives"

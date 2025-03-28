@@ -156,12 +156,14 @@ func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	rows, err := h.db.Query(`
-		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
+		SELECT DISTINCT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
 		       g.name as group_name
 		FROM events e
-		JOIN group_members m ON e.group_id = m.group_id
 		JOIN improv_groups g ON e.group_id = g.id
-		WHERE m.user_id = $1
+		LEFT JOIN group_members m ON e.group_id = m.group_id AND m.user_id = $1
+		LEFT JOIN group_followers f ON e.group_id = f.group_id AND f.user_id = $1
+		WHERE e.visibility = 'public'
+		   OR (e.visibility = 'private' AND (m.user_id IS NOT NULL OR f.user_id IS NOT NULL))
 		ORDER BY e.start_time DESC
 	`, user.ID)
 	if err != nil {
@@ -301,17 +303,4 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 	eventData := struct {
 		Event     Event           `json:"event"`
 		GroupName string          `json:"groupName"`
-		RSVPs     []RSVP          `json:"rsvps"`
-		Games     []GameWithOrder `json:"games"`
-	}{
-		Event:     event,
-		GroupName: groupName,
-		RSVPs:     rsvps,
-		Games:     games,
-	}
-
-	RespondWithJSON(w, http.StatusOK, ApiResponse{
-		Success: true,
-		Data:    eventData,
-	})
-}
+		RSVPs     []RSVP          `

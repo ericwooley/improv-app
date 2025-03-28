@@ -64,6 +64,15 @@ func InitDB() *sql.DB {
 			FOREIGN KEY (user_id) REFERENCES users(id)
 		);
 
+		CREATE TABLE IF NOT EXISTS group_followers (
+			group_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (group_id, user_id),
+			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
+			FOREIGN KEY (user_id) REFERENCES users(id)
+		);
+
 		CREATE TABLE IF NOT EXISTS events (
 			id TEXT PRIMARY KEY,
 			group_id TEXT NOT NULL,
@@ -73,6 +82,7 @@ func InitDB() *sql.DB {
 			start_time TIMESTAMP NOT NULL,
 			end_time TIMESTAMP NOT NULL,
 			created_by TEXT NOT NULL,
+			visibility TEXT NOT NULL DEFAULT 'private',
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
 			FOREIGN KEY (created_by) REFERENCES users(id)

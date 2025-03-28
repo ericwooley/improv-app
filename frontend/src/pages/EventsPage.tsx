@@ -1,14 +1,5 @@
 import { useState } from 'react'
-import {
-  PageHeader,
-  CardGrid,
-  ItemCard,
-  EmptyState,
-  ActionButton,
-  InfoItem,
-  formatDate,
-  formatTime,
-} from '../components'
+import { PageHeader, CardGrid, ItemCard, EmptyState, InfoItem, formatDate, formatTime } from '../components'
 
 interface Event {
   id: string
@@ -21,32 +12,16 @@ interface Event {
   groupName: string
 }
 
-interface Group {
-  id: string
-  name: string
-}
-
 interface EventsPageProps {
   initialEvents?: Event[]
-  groups?: Group[]
 }
 
-const EventsPage = ({ initialEvents = [], groups = [] }: EventsPageProps) => {
+const EventsPage = ({ initialEvents = [] }: EventsPageProps) => {
   const [events] = useState<Event[]>(initialEvents)
 
   return (
     <div className="content-wrapper">
-      <PageHeader title="Improv Events" subtitle="Schedule and manage your improv events" />
-
-      {events.length > 0 && (
-        <div className="mb-5">
-          {groups.length > 0 ? (
-            <ActionButton text="Create Event" to="/events/new" icon="fas fa-plus" />
-          ) : (
-            <ActionButton text="Create Group First" to="/groups/new" icon="fas fa-users" />
-          )}
-        </div>
-      )}
+      <PageHeader title="Improv Events" subtitle="View upcoming improv events" />
 
       {events.length > 0 ? (
         <CardGrid>
@@ -71,18 +46,7 @@ const EventsPage = ({ initialEvents = [], groups = [] }: EventsPageProps) => {
           ))}
         </CardGrid>
       ) : (
-        <EmptyState
-          message="No events have been scheduled yet."
-          actionText={groups.length > 0 ? 'Schedule Your First Event' : undefined}
-          actionLink={groups.length > 0 ? '/events/new' : undefined}
-          actionIcon="fas fa-plus"
-          secondaryMessage={groups.length === 0 ? 'You need to create a group before scheduling events.' : undefined}
-          secondaryAction={
-            groups.length === 0 ? (
-              <ActionButton text="Create a Group" to="/groups/new" icon="fas fa-users" />
-            ) : undefined
-          }
-        />
+        <EmptyState message="No events have been scheduled yet." />
       )}
     </div>
   )
