@@ -1,19 +1,16 @@
-import { useState } from 'react'
-import { PageHeader, CardGrid, ItemCard, EmptyState, ActionButton, InfoItem, formatDate } from '../components'
+import { PageHeader, CardGrid, EmptyState, ActionButton } from '../components'
+import { GroupCard } from '../components/GroupCard'
+import { useGetGroupsQuery } from '../store/api/groupsApi'
 
-interface Group {
-  id: string
-  name: string
-  description: string
-  createdAt: Date
-}
-
-interface GroupsPageProps {
-  initialGroups?: Group[]
-}
-
-const GroupsPage = ({ initialGroups = [] }: GroupsPageProps) => {
-  const [groups] = useState<Group[]>(initialGroups)
+const GroupsPage = () => {
+  const {
+    data: groupsResponse,
+    isLoading,
+    error,
+  } = useGetGroupsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  })
+  const groups = groupsResponse?.data || []
 
   return (
     <div className="content-wrapper">
@@ -25,20 +22,20 @@ const GroupsPage = ({ initialGroups = [] }: GroupsPageProps) => {
         </div>
       )}
 
-      {groups.length > 0 ? (
+      {isLoading ? (
+        <div className="has-text-centered">
+          <span className="icon is-large">
+            <i className="fas fa-spinner fa-pulse"></i>
+          </span>
+        </div>
+      ) : error ? (
+        <div className="notification is-danger">
+          <p>Error loading groups. Please try again later.</p>
+        </div>
+      ) : groups.length > 0 ? (
         <CardGrid>
           {groups.map((group) => (
-            <div key={group.id} className="column is-4">
-              <ItemCard
-                id={group.id}
-                title={group.name}
-                description={group.description}
-                footerLink={`/groups/${group.id}`}>
-                <InfoItem icon="fas fa-calendar-alt">
-                  <span className="is-size-7">Created {formatDate(group.createdAt)}</span>
-                </InfoItem>
-              </ItemCard>
-            </div>
+            <GroupCard key={group.ID} group={group} />
           ))}
         </CardGrid>
       ) : (

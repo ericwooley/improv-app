@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -25,10 +27,10 @@ func NewGroupHandler(db *sql.DB) *GroupHandler {
 
 func (h *GroupHandler) Create(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
-	// Parse JSON request
+
 	var groupRequest struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
+		Name        string `json:"name" validate:"required,min=3,max=100"`
+		Description string `json:"description" validate:"omitempty,max=500"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -37,6 +39,35 @@ func (h *GroupHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	// Trim whitespace
+	groupRequest.Name = strings.TrimSpace(groupRequest.Name)
+	groupRequest.Description = strings.TrimSpace(groupRequest.Description)
+
+	// Validate the request
+	validate := validator.New()
+	if err := validate.Struct(groupRequest); err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		errorMessage := "Validation failed: "
+		for _, e := range validationErrors {
+			switch e.Field() {
+			case "Name":
+				if e.Tag() == "required" {
+					errorMessage += "Name is required. "
+				} else if e.Tag() == "min" {
+					errorMessage += "Name must be at least 3 characters. "
+				} else if e.Tag() == "max" {
+					errorMessage += "Name must be less than 100 characters. "
+				}
+			case "Description":
+				if e.Tag() == "max" {
+					errorMessage += "Description must be less than 500 characters. "
+				}
+			}
+		}
+		RespondWithError(w, http.StatusBadRequest, errorMessage)
+		return
+	}
 
 	groupID := uuid.New().String()
 	err := h.db.QueryRow(`

@@ -5,7 +5,7 @@ import { useGetGroupsQuery } from '../store/api/groupsApi'
 import { useGetEventsQuery } from '../store/api/eventsApi'
 import { Group } from '../store/api/groupsApi'
 import { Event } from '../store/api/eventsApi'
-import { CardGrid, ItemCard, ActionButton, InfoItem, formatDate, formatTime } from '../components'
+import { CardGrid, ItemCard, ActionButton, InfoItem, formatDate, formatTime, GroupCard } from '../components'
 
 // Define API response structure
 interface ApiResponse<T> {
@@ -99,21 +99,7 @@ const HomePage = () => {
                   ) : groups.length > 0 ? (
                     <div className="groups-grid">
                       {groups.map((group: Group) => (
-                        <div key={group.id} className="box has-background-white-ter mb-3">
-                          <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-center">
-                            <div className="mb-3-mobile">
-                              <h3 className="title is-5 mb-2">{group.name}</h3>
-                              <p className="subtitle is-6 has-text-grey">{group.description}</p>
-                            </div>
-                            <ActionButton
-                              text=""
-                              to={`/groups/${group.id}`}
-                              icon="fas fa-chevron-right"
-                              variant="link"
-                              outlined
-                            />
-                          </div>
-                        </div>
+                        <GroupCard key={group.ID} group={group} variant="compact" />
                       ))}
                     </div>
                   ) : (

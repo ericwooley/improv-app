@@ -2,10 +2,10 @@ import { APIResponse } from '../types'
 import { apiSlice } from './apiSlice'
 
 export interface Group {
-  id: string
-  name: string
-  description: string
-  createdAt: string
+  ID: string
+  Name: string
+  Description: string
+  CreatedAt: string
 }
 
 export interface CreateGroupRequest {
@@ -19,8 +19,8 @@ export const groupsApi = apiSlice.injectEndpoints({
       query: () => '/groups',
       providesTags: (result) => {
         return result
-          ? [...result.data.map(({ id }) => ({ type: 'Group' as const, id })), { type: 'Group', id: 'LIST' }]
-          : [{ type: 'Group', id: 'LIST' }]
+          ? [...result.data.map(({ ID }) => ({ type: 'Group' as const, ID })), { type: 'Group', ID: 'LIST' }]
+          : [{ type: 'Group', ID: 'LIST' }]
       },
     }),
 
