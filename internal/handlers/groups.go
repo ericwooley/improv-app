@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -458,11 +459,13 @@ func (h *GroupHandler) AddGameToLibrary(w http.ResponseWriter, r *http.Request) 
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 	if err != nil {
+		fmt.Println(err)
 		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
 		return
 	}
 
 	if role != "admin" && role != "organizer" {
+		fmt.Println("User is not an admin or organizer")
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can manage the group library")
 		return
 	}
@@ -473,11 +476,13 @@ func (h *GroupHandler) AddGameToLibrary(w http.ResponseWriter, r *http.Request) 
 		SELECT EXISTS(SELECT 1 FROM games WHERE id = $1)
 	`, gameID).Scan(&gameExists)
 	if err != nil {
+		fmt.Println(err)
 		RespondWithError(w, http.StatusInternalServerError, "Error checking game existence")
 		return
 	}
 
 	if !gameExists {
+		fmt.Println("Game not found")
 		RespondWithError(w, http.StatusNotFound, "Game not found")
 		return
 	}
@@ -488,6 +493,7 @@ func (h *GroupHandler) AddGameToLibrary(w http.ResponseWriter, r *http.Request) 
 		SELECT EXISTS(SELECT 1 FROM group_game_libraries WHERE group_id = $1 AND game_id = $2)
 	`, groupID, gameID).Scan(&inLibrary)
 	if err != nil {
+		fmt.Println(err)
 		RespondWithError(w, http.StatusInternalServerError, "Error checking library")
 		return
 	}
@@ -506,6 +512,7 @@ func (h *GroupHandler) AddGameToLibrary(w http.ResponseWriter, r *http.Request) 
 		VALUES ($1, $2, $3)
 	`, groupID, gameID, user.ID)
 	if err != nil {
+		log.Printf("Error adding game %s to library for group %s: %v", gameID, groupID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error adding game to library")
 		return
 	}
@@ -531,11 +538,14 @@ func (h *GroupHandler) RemoveGameFromLibrary(w http.ResponseWriter, r *http.Requ
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 	if err != nil {
+		log.Printf("Error checking member role for user %s in group %s: %v", user.ID, groupID, err)
 		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
 		return
 	}
 
 	if role != "admin" && role != "organizer" {
+		log.Printf("User %s with role %s attempted to remove game %s from group %s library",
+			user.ID, role, gameID, groupID)
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can manage the group library")
 		return
 	}
@@ -546,11 +556,13 @@ func (h *GroupHandler) RemoveGameFromLibrary(w http.ResponseWriter, r *http.Requ
 		SELECT EXISTS(SELECT 1 FROM group_game_libraries WHERE group_id = $1 AND game_id = $2)
 	`, groupID, gameID).Scan(&inLibrary)
 	if err != nil {
+		log.Printf("Error checking if game %s is in library for group %s: %v", gameID, groupID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error checking library")
 		return
 	}
 
 	if !inLibrary {
+		log.Printf("Game %s not found in library for group %s", gameID, groupID)
 		RespondWithJSON(w, http.StatusOK, ApiResponse{
 			Success: true,
 			Message: "Game is not in the library",
@@ -564,10 +576,12 @@ func (h *GroupHandler) RemoveGameFromLibrary(w http.ResponseWriter, r *http.Requ
 		WHERE group_id = $1 AND game_id = $2
 	`, groupID, gameID)
 	if err != nil {
+		log.Printf("Error removing game %s from library for group %s: %v", gameID, groupID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error removing game from library")
 		return
 	}
 
+	log.Printf("Successfully removed game %s from library for group %s", gameID, groupID)
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Message: "Game removed from library successfully",

@@ -6,11 +6,13 @@ import {
   FormControl,
   FormGroup,
   FormControlLabel,
-  Checkbox,
   Typography,
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Switch,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PageHeader, Breadcrumb } from '../components'
@@ -21,17 +23,33 @@ import {
   useAddGameToLibraryMutation,
   useRemoveGameFromLibraryMutation,
 } from '../store/api/groupsApi'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ErrorIcon from '@mui/icons-material/Error'
 
 // Component to manage group libraries
 const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
   const { data: groupsData, isLoading: groupsLoading } = useGetGroupsQuery()
-  const { data: gameLibrariesData, isLoading: librariesLoading } = useGetGameGroupLibrariesQuery(gameId)
+  const {
+    data: gameLibrariesData,
+    isLoading: librariesLoading,
+    refetch: refetchLibraries,
+  } = useGetGameGroupLibrariesQuery(gameId)
   const [adminGroups, setAdminGroups] = useState<Array<{ ID: string; Name: string; userRole: string }>>([])
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [addGameToLibrary] = useAddGameToLibraryMutation()
   const [removeGameFromLibrary] = useRemoveGameFromLibraryMutation()
+  const [pendingGroups, setPendingGroups] = useState<Record<string, boolean>>({})
+  const [statusMessage, setStatusMessage] = useState<Record<string, { success: boolean; message: string }>>({})
+
+  // Helper function to check if group is in library
+  const isGroupInLibrary = useCallback(
+    (groupId: string) => {
+      if (!gameLibrariesData?.data) return false
+      return gameLibrariesData.data.some((libraryGroup) => libraryGroup.id.toLowerCase() === groupId.toLowerCase())
+    },
+    [gameLibrariesData]
+  )
 
   useEffect(() => {
     if (groupsData?.data) {
@@ -60,50 +78,44 @@ const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
     }
   }, [groupsData])
 
-  // Get the list of group IDs that have this game in their library
-  useEffect(() => {
-    if (gameLibrariesData?.data) {
-      const groupsWithThisGame = gameLibrariesData.data.map((group) => group.id)
-      setSelectedGroups(groupsWithThisGame)
-    }
-  }, [gameLibrariesData])
-
-  const handleGroupToggle = (groupId: string) => {
-    setSelectedGroups((prev) => {
-      if (prev.includes(groupId)) {
-        return prev.filter((id) => id !== groupId)
-      } else {
-        return [...prev, groupId]
-      }
-    })
-  }
-
-  const handleSave = async () => {
-    if (!gameId) return
-
+  // Handle toggling a group library membership
+  const handleGroupToggle = async (groupId: string, inLibrary: boolean) => {
     try {
-      // Get current groups with this game
-      const currentGroupsWithGame = gameLibrariesData?.data?.map((group) => group.id) || []
+      setPendingGroups((prev) => ({ ...prev, [groupId]: true }))
+      setStatusMessage((prev) => ({ ...prev, [groupId]: { success: false, message: 'Updating...' } }))
 
-      // For each admin group, check if it should have the game
-      for (const group of adminGroups) {
-        const shouldHaveGame = selectedGroups.includes(group.ID)
-        const alreadyHasGame = currentGroupsWithGame.includes(group.ID)
-
-        if (shouldHaveGame && !alreadyHasGame) {
-          // Add game to library
-          await addGameToLibrary({ groupId: group.ID, gameId })
-        } else if (!shouldHaveGame && alreadyHasGame) {
-          // Remove game from library
-          await removeGameFromLibrary({ groupId: group.ID, gameId })
-        }
+      if (inLibrary) {
+        // Remove from library
+        await removeGameFromLibrary({ groupId, gameId })
+        setStatusMessage((prev) => ({ ...prev, [groupId]: { success: true, message: 'Removed from library' } }))
+      } else {
+        // Add to library
+        await addGameToLibrary({ groupId, gameId })
+        setStatusMessage((prev) => ({ ...prev, [groupId]: { success: true, message: 'Added to library' } }))
       }
 
-      // Show success feedback
-      alert('Group libraries updated successfully')
+      // Refetch to update the lists
+      await refetchLibraries()
     } catch (error) {
-      console.error('Error updating group libraries:', error)
-      alert('Failed to update group libraries')
+      console.error(`Error toggling group ${groupId}:`, error)
+      setStatusMessage((prev) => ({
+        ...prev,
+        [groupId]: {
+          success: false,
+          message: 'Error updating library',
+        },
+      }))
+    } finally {
+      setPendingGroups((prev) => ({ ...prev, [groupId]: false }))
+
+      // Clear status message after 3 seconds
+      setTimeout(() => {
+        setStatusMessage((prev) => {
+          const newStatus = { ...prev }
+          delete newStatus[groupId]
+          return newStatus
+        })
+      }, 3000)
     }
   }
 
@@ -120,24 +132,61 @@ const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
         <Typography variant="h6">Manage Group Libraries</Typography>
       </AccordionSummary>
       <AccordionDetails>
-        <FormControl component="fieldset">
+        <FormControl component="fieldset" fullWidth>
           <FormGroup>
-            {adminGroups.map((group) => (
-              <FormControlLabel
-                key={group.ID}
-                control={
-                  <Checkbox checked={selectedGroups.includes(group.ID)} onChange={() => handleGroupToggle(group.ID)} />
-                }
-                label={`${group.Name} (${group.userRole})`}
-              />
-            ))}
+            {adminGroups.map((group) => {
+              const inLibrary = isGroupInLibrary(group.ID)
+              const isPending = pendingGroups[group.ID]
+              const status = statusMessage[group.ID]
+
+              return (
+                <Box
+                  key={group.ID}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    py: 1,
+                    borderBottom: '1px solid #eee',
+                  }}>
+                  <Typography>
+                    {group.Name}{' '}
+                    <Typography component="span" color="text.secondary">
+                      ({group.userRole})
+                    </Typography>
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {status && (
+                      <Tooltip title={status.message}>
+                        <IconButton size="small" color={status.success ? 'success' : 'error'}>
+                          {status.success ? <CheckCircleIcon fontSize="small" /> : <ErrorIcon fontSize="small" />}
+                        </IconButton>
+                      </Tooltip>
+                    )}
+
+                    {isPending ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={inLibrary}
+                            onChange={() => handleGroupToggle(group.ID, inLibrary)}
+                            color="primary"
+                          />
+                        }
+                        label={inLibrary ? 'In Library' : 'Not In Library'}
+                        labelPlacement="start"
+                        sx={{ ml: 0, mr: 0 }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              )
+            })}
           </FormGroup>
         </FormControl>
-        <Box sx={{ mt: 2 }}>
-          <Button variant="contained" color="primary" onClick={handleSave}>
-            Save Changes
-          </Button>
-        </Box>
       </AccordionDetails>
     </Accordion>
   )
