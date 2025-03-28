@@ -105,8 +105,11 @@ func InitDB() *sql.DB {
 			min_players INTEGER NOT NULL,
 			max_players INTEGER NOT NULL,
 			created_by TEXT NOT NULL,
+			group_id TEXT NOT NULL,
+			public BOOLEAN NOT NULL DEFAULT FALSE,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (created_by) REFERENCES users(id)
+			FOREIGN KEY (created_by) REFERENCES users(id),
+			FOREIGN KEY (group_id) REFERENCES improv_groups(id)
 		);
 
 		CREATE TABLE IF NOT EXISTS game_tags (
@@ -120,6 +123,15 @@ func InitDB() *sql.DB {
 			PRIMARY KEY (game_id, tag_id),
 			FOREIGN KEY (game_id) REFERENCES games(id),
 			FOREIGN KEY (tag_id) REFERENCES game_tags(id)
+		);
+
+		CREATE TABLE IF NOT EXISTS group_game_libraries (
+			group_id TEXT NOT NULL,
+			game_id TEXT NOT NULL,
+			added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (group_id, game_id),
+			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
+			FOREIGN KEY (game_id) REFERENCES games(id)
 		);
 
 		CREATE TABLE IF NOT EXISTS event_games (

@@ -172,6 +172,8 @@ erDiagram
         integer min_players
         integer max_players
         string created_by FK
+        string group_id FK
+        boolean public
         timestamp created_at
     }
 
@@ -183,6 +185,12 @@ erDiagram
     game_tag_associations {
         string game_id PK,FK
         string tag_id PK,FK
+    }
+
+    group_game_libraries {
+        string group_id PK,FK
+        string game_id PK,FK
+        timestamp added_at
     }
 
     event_games {
@@ -209,8 +217,11 @@ erDiagram
     events ||--o{ event_rsvps : "receives"
     users ||--o{ event_rsvps : "submits"
     users ||--o{ games : "creates"
+    improv_groups ||--o{ games : "owns"
     games ||--o{ game_tag_associations : "categorized by"
     game_tags ||--o{ game_tag_associations : "applied to"
+    improv_groups ||--o{ group_game_libraries : "has in library"
+    games ||--o{ group_game_libraries : "included in"
     events ||--o{ event_games : "includes"
     games ||--o{ event_games : "featured in"
     users ||--o{ user_game_preferences : "rates"
