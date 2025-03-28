@@ -38,7 +38,6 @@ const HomePage = () => {
         <>
           <div className="mb-5">
             <h1 className="title is-2">Dashboard</h1>
-            <p className="subtitle is-5">Welcome back, {user.firstName}!</p>
           </div>
 
           <div className="columns is-desktop">

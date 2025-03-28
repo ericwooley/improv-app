@@ -119,25 +119,18 @@ const MainLayout = () => {
         <div className="sidebar-user">
           {isAuthenticated && user && (
             <div className="is-flex is-align-items-center">
-              <div className="is-flex-shrink-0 mr-3">
-                <span className="icon is-medium has-text-light">
-                  <i className="fas fa-user-circle fa-2x"></i>
+              <p className="has-text-weight-medium">
+                {user.firstName} {user.lastName}
+              </p>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="button is-danger is-outlined is-fullwidth mt-2">
+                <span className="icon is-small">
+                  <i className="fas fa-sign-out-alt"></i>
                 </span>
-              </div>
-              <div>
-                <p className="has-text-weight-medium">
-                  {user.firstName} {user.lastName}
-                </p>
-                <button
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="button is-small is-danger is-outlined is-fullwidth mt-2">
-                  <span className="icon is-small">
-                    <i className="fas fa-sign-out-alt"></i>
-                  </span>
-                  <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
-                </button>
-              </div>
+                <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+              </button>
             </div>
           )}
         </div>
