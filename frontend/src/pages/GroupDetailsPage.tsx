@@ -37,6 +37,7 @@ import {
   People as PeopleIcon,
   Bookmarks as LibraryIcon,
   Inventory as OwnedIcon,
+  Security as SecurityIcon,
 } from '@mui/icons-material'
 import { useState } from 'react'
 
@@ -161,8 +162,8 @@ const GroupDetailsPage = () => {
             <CardHeader avatar={<InfoIcon />} title="Group Information" />
             <CardContent>
               <Stack spacing={2}>
-                <InfoItem icon="fas fa-calendar-alt">Created {formatDate(new Date(group.CreatedAt))}</InfoItem>
-                <InfoItem icon="fas fa-user-shield">Your Role: {userRole}</InfoItem>
+                <InfoItem icon={<CalendarIcon />}>Created {formatDate(new Date(group.CreatedAt))}</InfoItem>
+                <InfoItem icon={<SecurityIcon />}>Your Role: {userRole}</InfoItem>
               </Stack>
             </CardContent>
           </Card>

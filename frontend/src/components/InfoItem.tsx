@@ -1,8 +1,8 @@
 import React, { ReactNode } from 'react'
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, SvgIconProps } from '@mui/material'
 
 interface InfoItemProps {
-  icon: string
+  icon: React.ReactElement<SvgIconProps>
   children: ReactNode
   className?: string
 }
@@ -17,13 +17,13 @@ const InfoItem: React.FC<InfoItemProps> = ({ icon, children, className }) => {
         ...(className && { className }),
       }}>
       <Box
-        component="i"
-        className={icon}
         sx={{
           color: 'info.main',
           mr: 2,
-        }}
-      />
+          display: 'flex',
+        }}>
+        {React.cloneElement(icon, { color: 'info' })}
+      </Box>
       <Typography>{children}</Typography>
     </Box>
   )
