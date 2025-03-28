@@ -37,21 +37,58 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			MinPlayers  int    `json:"minPlayers"`
 			MaxPlayers  int    `json:"maxPlayers"`
 			Tags        string `json:"tags"`
+			GroupID     string `json:"groupId"`
 		}
 
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&gameRequest); err != nil {
+			log.Printf("Error decoding game request: %v", err)
 			RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 			return
 		}
 		defer r.Body.Close()
 
-		gameID := uuid.New().String()
+		// Validate request
+		if gameRequest.Name == "" {
+			RespondWithError(w, http.StatusBadRequest, "Game name is required")
+			return
+		}
+		if gameRequest.MinPlayers < 1 {
+			RespondWithError(w, http.StatusBadRequest, "Minimum players must be at least 1")
+			return
+		}
+		if gameRequest.MaxPlayers < gameRequest.MinPlayers {
+			RespondWithError(w, http.StatusBadRequest, "Maximum players must be greater than or equal to minimum players")
+			return
+		}
+		if gameRequest.GroupID == "" {
+			RespondWithError(w, http.StatusBadRequest, "Group ID is required")
+			return
+		}
+
+		// Check if user is a member of the group
+		var role string
 		err := h.db.QueryRow(`
-			INSERT INTO games (id, name, description, min_players, max_players, created_by)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			SELECT role
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		`, gameRequest.GroupID, user.ID).Scan(&role)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				RespondWithError(w, http.StatusForbidden, "You must be a member of the group to create games")
+				return
+			}
+			log.Printf("Error checking group membership: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
+			return
+		}
+
+		gameID := uuid.New().String()
+		err = h.db.QueryRow(`
+			INSERT INTO games (id, name, description, min_players, max_players, created_by, group_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id
-		`, gameID, gameRequest.Name, gameRequest.Description, gameRequest.MinPlayers, gameRequest.MaxPlayers, user.ID).Scan(&gameID)
+		`, gameID, gameRequest.Name, gameRequest.Description, gameRequest.MinPlayers, gameRequest.MaxPlayers, user.ID, gameRequest.GroupID).Scan(&gameID)
 		if err != nil {
 			log.Printf("Error creating game: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error creating game")
@@ -95,17 +132,17 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Fetch the newly created game with tags
-		var game Game
+		var game models.Game
 		var tagsStr sql.NullString
 		err = h.db.QueryRow(`
-			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by,
+			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id,
 					GROUP_CONCAT(DISTINCT t.name) as tags
 			FROM games g
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			WHERE g.id = $1
 			GROUP BY g.id
-		`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &tagsStr)
+		`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &tagsStr)
 		if err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "Error fetching created game")
 			return
@@ -126,7 +163,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	// GET: List games
 	rows, err := h.db.Query(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by,
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id,
 		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
@@ -141,11 +178,11 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var games []Game
+	var games []models.Game
 	for rows.Next() {
-		var game Game
+		var game models.Game
 		var tagsStr sql.NullString
-		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &tagsStr)
+		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &tagsStr)
 		if err != nil {
 			log.Printf("Error scanning game row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
@@ -171,17 +208,17 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	gameID := vars["id"]
 
-	var game Game
+	var game models.Game
 	var tagsStr sql.NullString
 	err := h.db.QueryRow(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by,
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id,
 		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 		LEFT JOIN game_tags t ON gta.tag_id = t.id
 		WHERE g.id = $1
 		GROUP BY g.id
-	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &tagsStr)
+	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &tagsStr)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Game not found: %s", gameID)
@@ -257,12 +294,12 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gameData := struct {
-		Game          Game           `json:"game"`
-		Rating        int            `json:"rating"`
+		Game           models.Game    `json:"game"`
+		Rating         int            `json:"rating"`
 		UpcomingEvents []UpcomingEvent `json:"upcomingEvents"`
 	}{
-		Game:          game,
-		Rating:        rating,
+		Game:           game,
+		Rating:         rating,
 		UpcomingEvents: upcomingEvents,
 	}
 

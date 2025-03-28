@@ -13,6 +13,7 @@ import GroupDetailsPage from './pages/GroupDetailsPage'
 import EditGroupPage from './pages/EditGroupPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
+import NewGamePage from './pages/NewGamePage'
 import NotFoundPage from './pages/NotFoundPage'
 
 const AppRoutes = () => {
@@ -39,6 +40,7 @@ const AppRoutes = () => {
       <Route path="/groups/:groupId/edit" element={<EditGroupPage />} />
       <Route path="/events" element={<EventsPage />} />
       <Route path="/events/new" element={<NewEventPage />} />
+      <Route path="/games/new" element={<NewGamePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="*" element={<NotFoundPage />} />

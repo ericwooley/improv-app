@@ -7,6 +7,10 @@ export interface Game {
   description: string
   minPlayers: number
   maxPlayers: number
+  createdBy: string
+  groupId: string
+  public: boolean
+  createdAt: string
   tags: string[]
 }
 
@@ -15,6 +19,7 @@ export interface CreateGameRequest {
   description: string
   minPlayers: number
   maxPlayers: number
+  groupId: string
   tags: string
 }
 

@@ -105,6 +105,12 @@ const GroupDetailsPage = () => {
                   icon="fas fa-calendar-plus"
                   fullWidth
                 />
+                <ActionButton
+                  text="Create Game"
+                  to={`/games/new?groupId=${group.ID}`}
+                  icon="fas fa-gamepad"
+                  fullWidth
+                />
                 {userRole === 'admin' && (
                   <>
                     <ActionButton
