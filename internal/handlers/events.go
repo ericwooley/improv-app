@@ -303,4 +303,17 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 	eventData := struct {
 		Event     Event           `json:"event"`
 		GroupName string          `json:"groupName"`
-		RSVPs     []RSVP          `
+		RSVPs     []RSVP          `json:"rsvps"`
+		Games     []GameWithOrder `json:"games"`
+	}{
+		Event:     event,
+		GroupName: groupName,
+		RSVPs:     rsvps,
+		Games:     games,
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    eventData,
+	})
+}
