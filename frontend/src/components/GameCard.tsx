@@ -33,11 +33,7 @@ const GameCard = ({ game, showViewButton = true }: GameCardProps) => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 3,
-        },
+
       }}>
       <CardHeader
         title={game.name}

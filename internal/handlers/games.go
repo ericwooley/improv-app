@@ -223,9 +223,34 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	gameID := vars["id"]
 
+	// First check if the user has access to this game
+	var hasAccess bool
+	err := h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM games g
+			WHERE g.id = $1 AND (
+				g.public = TRUE
+				OR g.created_by = $2
+				OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)
+			)
+		)
+	`, gameID, user.ID).Scan(&hasAccess)
+
+	if err != nil {
+		log.Printf("Error checking game access: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking game access")
+		return
+	}
+
+	if !hasAccess {
+		log.Printf("Unauthorized access attempt to game %s by user %s", gameID, user.ID)
+		RespondWithError(w, http.StatusForbidden, "You don't have access to this game")
+		return
+	}
+
 	var game models.Game
 	var tagsStr sql.NullString
-	err := h.db.QueryRow(`
+	err = h.db.QueryRow(`
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
