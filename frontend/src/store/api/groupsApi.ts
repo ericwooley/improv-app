@@ -6,6 +6,21 @@ export interface Group {
   Name: string
   Description: string
   CreatedAt: string
+  CreatedBy: string
+}
+
+export interface GroupMember {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+}
+
+export interface GroupDetails {
+  group: Group
+  members: GroupMember[]
+  userRole: string
 }
 
 export interface CreateGroupRequest {
@@ -24,7 +39,7 @@ export const groupsApi = apiSlice.injectEndpoints({
       },
     }),
 
-    getGroup: builder.query<APIResponse<Group>, string>({
+    getGroup: builder.query<APIResponse<GroupDetails>, string>({
       query: (id) => `/groups/${id}`,
       providesTags: (_, __, id) => [{ type: 'Group', id }],
     }),

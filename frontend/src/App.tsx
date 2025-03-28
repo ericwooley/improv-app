@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage'
 import GamesPage from './pages/GamesPage'
 import GroupsPage from './pages/GroupsPage'
 import NewGroupPage from './pages/NewGroupPage'
+import GroupDetailsPage from './pages/GroupDetailsPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -41,6 +42,10 @@ const router = createBrowserRouter([
       {
         path: 'groups/new',
         element: <NewGroupPage />,
+      },
+      {
+        path: 'groups/:groupId',
+        element: <GroupDetailsPage />,
       },
       {
         path: 'events',

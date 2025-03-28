@@ -14,7 +14,7 @@ export const GroupCard = ({ group, variant = 'default', className = '' }: GroupC
         <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-center">
           <div className="mb-3-mobile">
             <h3 className="title">{group.Name}</h3>
-            <p className="subtitle  has-text-grey">{group.Description}</p>
+            <p className="subtitle has-text-grey">{group.Description}</p>
           </div>
           <ActionButton text="" to={`/groups/${group.ID}`} icon="fas fa-chevron-right" variant="link" outlined />
         </div>
