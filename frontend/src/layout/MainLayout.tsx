@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
-import { RootState } from '../store'
+import { useDispatch } from 'react-redux'
 import { clearCredentials } from '../store/slices/authSlice'
+import { useProfileCompletion } from '../hooks/useProfileCompletion'
 import {
   Box,
   Drawer,
@@ -37,28 +37,12 @@ const drawerWidth = 250
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
+  const { isAuthenticated, isLoading, needsToCompleteProfile } = useProfileCompletion()
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const previousUserState = useRef({ firstName: user?.firstName, lastName: user?.lastName })
-
-  // Define explicit variables for profile status
-  const needsToCompleteProfile = !user?.firstName || !user?.lastName
-  const hadIncompleteProfile = !previousUserState.current.firstName || !previousUserState.current.lastName
-  const profileCompleted = hadIncompleteProfile && !needsToCompleteProfile
-
-  useEffect(() => {
-    // Navigate to dashboard when profile is newly completed
-    if (profileCompleted) {
-      navigate('/')
-    }
-
-    // Keep track of previous state for comparison on next render
-    previousUserState.current = { firstName: user?.firstName, lastName: user?.lastName }
-  }, [user?.firstName, user?.lastName, navigate, profileCompleted])
 
   const handleLogout = async () => {
     try {
@@ -114,6 +98,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     </Box>
   )
 
+  // If loading, show a minimal layout
+  if (isLoading) {
+    return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>{children}</Box>
+  }
+
   // If not authenticated, only render the children without navigation
   if (!isAuthenticated) {
     return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>{children}</Box>
@@ -121,11 +110,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // If user needs to complete profile, show profile page
   if (needsToCompleteProfile) {
-    // If we're not already on the profile page, redirect them there
-    if (location.pathname !== '/profile') {
-      navigate('/profile')
-    }
-
     // Simplified layout for incomplete profile
     return (
       <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto', minHeight: '100vh', bgcolor: 'background.default' }}>
