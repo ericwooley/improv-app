@@ -340,8 +340,8 @@ func (h *GroupHandler) GetLibraryGames(w http.ResponseWriter, r *http.Request) {
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.public, g.created_at, g.created_by,
 		       CASE WHEN g.created_by = $1 OR g.group_id = $2 THEN true ELSE false END as owned_by_group
 		FROM games g
-		LEFT JOIN group_game_libraries gg ON g.id = gg.game_id
-		WHERE gg.group_id = $2 OR g.public = true
+		JOIN group_game_libraries gg ON g.id = gg.game_id
+		WHERE gg.group_id = $2
 		ORDER BY g.name
 	`, user.ID, groupID)
 	if err != nil {
