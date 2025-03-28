@@ -45,6 +45,15 @@ export interface AddGameToLibraryRequest {
   groupId: string
 }
 
+export interface AddMemberRequest {
+  email: string
+  role: string
+}
+
+export interface UpdateMemberRoleRequest {
+  role: string
+}
+
 export const groupsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getGroups: builder.query<APIResponse<Group[]>, void>({
@@ -115,6 +124,40 @@ export const groupsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_, __, { groupId }) => [{ type: 'Game', id: `${groupId}-library` }],
     }),
+
+    getGroupMembers: builder.query<APIResponse<GroupMember[]>, string>({
+      query: (id) => `/groups/${id}/members`,
+      providesTags: (_, __, id) => [{ type: 'Group', id }],
+    }),
+
+    addMember: builder.mutation<APIResponse<GroupMember>, { groupId: string; memberData: AddMemberRequest }>({
+      query: ({ groupId, memberData }) => ({
+        url: `/groups/${groupId}/members`,
+        method: 'POST',
+        body: memberData,
+      }),
+      invalidatesTags: (_, __, { groupId }) => [{ type: 'Group', id: groupId }],
+    }),
+
+    updateMemberRole: builder.mutation<
+      APIResponse<GroupMember>,
+      { groupId: string; userId: string; roleData: UpdateMemberRoleRequest }
+    >({
+      query: ({ groupId, userId, roleData }) => ({
+        url: `/groups/${groupId}/members/${userId}`,
+        method: 'PUT',
+        body: roleData,
+      }),
+      invalidatesTags: (_, __, { groupId }) => [{ type: 'Group', id: groupId }],
+    }),
+
+    removeMember: builder.mutation<APIResponse<void>, { groupId: string; userId: string }>({
+      query: ({ groupId, userId }) => ({
+        url: `/groups/${groupId}/members/${userId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_, __, { groupId }) => [{ type: 'Group', id: groupId }],
+    }),
   }),
 })
 
@@ -128,4 +171,8 @@ export const {
   useGetGroupOwnedGamesQuery,
   useAddGameToLibraryMutation,
   useRemoveGameFromLibraryMutation,
+  useGetGroupMembersQuery,
+  useAddMemberMutation,
+  useUpdateMemberRoleMutation,
+  useRemoveMemberMutation,
 } = groupsApi

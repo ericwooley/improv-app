@@ -98,6 +98,12 @@ func main() {
 	api.HandleFunc("/groups/{id}/games/library/{gameId}", middleware.RequireAuthAPI(sqlDB, groupHandler.AddGameToLibrary)).Methods("POST")
 	api.HandleFunc("/groups/{id}/games/library/{gameId}", middleware.RequireAuthAPI(sqlDB, groupHandler.RemoveGameFromLibrary)).Methods("DELETE")
 
+	// Group member management routes
+	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.ListMembers)).Methods("GET")
+	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.AddMember)).Methods("POST")
+	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateMemberRole)).Methods("PUT")
+	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.RemoveMember)).Methods("DELETE")
+
 	// Event routes
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.ListAll)).Methods("GET")
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.Create)).Methods("POST")

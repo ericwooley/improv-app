@@ -587,3 +587,390 @@ func (h *GroupHandler) RemoveGameFromLibrary(w http.ResponseWriter, r *http.Requ
 		Message: "Game removed from library successfully",
 	})
 }
+
+// ListMembers handles fetching all members of a group
+func (h *GroupHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user is a member of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	// Get members
+	memberRows, err := h.db.Query(`
+		SELECT u.id, u.email, u.first_name, u.last_name, gm.role
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		WHERE gm.group_id = $1
+		ORDER BY gm.role, u.first_name, u.last_name
+	`, groupID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group members")
+		return
+	}
+	defer memberRows.Close()
+
+	type Member struct {
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Role      string `json:"role"`
+	}
+
+	var members []Member
+	for memberRows.Next() {
+		var member Member
+		err := memberRows.Scan(&member.ID, &member.Email, &member.FirstName, &member.LastName, &member.Role)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning members")
+			return
+		}
+		members = append(members, member)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    members,
+	})
+}
+
+// AddMember handles adding a new member to a group
+func (h *GroupHandler) AddMember(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user is an admin of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" {
+		RespondWithError(w, http.StatusForbidden, "Only admins can add members")
+		return
+	}
+
+	var memberRequest struct {
+		Email string `json:"email" validate:"required,email"`
+		Role  string `json:"role" validate:"required,oneof=member admin organizer"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&memberRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate the request
+	validate := validator.New()
+	if err := validate.Struct(memberRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid member data")
+		return
+	}
+
+	// Check if the user exists
+	var userID string
+	err = h.db.QueryRow(`
+		SELECT id
+		FROM users
+		WHERE email = $1
+	`, memberRequest.Email).Scan(&userID)
+	if err == sql.ErrNoRows {
+		RespondWithError(w, http.StatusNotFound, "User not found")
+		return
+	} else if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking user")
+		return
+	}
+
+	// Check if the user is already a member
+	var isMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, userID).Scan(&isMember)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking membership")
+		return
+	}
+
+	if isMember {
+		RespondWithError(w, http.StatusBadRequest, "User is already a member of this group")
+		return
+	}
+
+	// Add the user to the group
+	_, err = h.db.Exec(`
+		INSERT INTO group_members (group_id, user_id, role)
+		VALUES ($1, $2, $3)
+	`, groupID, userID, memberRequest.Role)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error adding member")
+		return
+	}
+
+	// Get the updated member information
+	var member struct {
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Role      string `json:"role"`
+	}
+	err = h.db.QueryRow(`
+		SELECT u.id, u.email, u.first_name, u.last_name, gm.role
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		WHERE gm.group_id = $1 AND gm.user_id = $2
+	`, groupID, userID).Scan(&member.ID, &member.Email, &member.FirstName, &member.LastName, &member.Role)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching added member")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusCreated, ApiResponse{
+		Success: true,
+		Message: "Member added successfully",
+		Data:    member,
+	})
+}
+
+// UpdateMemberRole handles updating a member's role
+func (h *GroupHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+	targetUserID := vars["userId"]
+
+	// Check if user is an admin of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" {
+		RespondWithError(w, http.StatusForbidden, "Only admins can update member roles")
+		return
+	}
+
+	var roleRequest struct {
+		Role string `json:"role" validate:"required,oneof=member admin organizer"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&roleRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate the request
+	validate := validator.New()
+	if err := validate.Struct(roleRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid role")
+		return
+	}
+
+	// Check if the target user is a member
+	var isMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, targetUserID).Scan(&isMember)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking membership")
+		return
+	}
+
+	if !isMember {
+		RespondWithError(w, http.StatusNotFound, "User is not a member of this group")
+		return
+	}
+
+	// Prevent removing the last admin
+	if roleRequest.Role != "admin" {
+		var adminCount int
+		err = h.db.QueryRow(`
+			SELECT COUNT(*)
+			FROM group_members
+			WHERE group_id = $1 AND role = 'admin'
+		`, groupID).Scan(&adminCount)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error checking admin count")
+			return
+		}
+
+		var currentRole string
+		err = h.db.QueryRow(`
+			SELECT role
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		`, groupID, targetUserID).Scan(&currentRole)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error checking current role")
+			return
+		}
+
+		if adminCount == 1 && currentRole == "admin" {
+			RespondWithError(w, http.StatusBadRequest, "Cannot remove the last admin")
+			return
+		}
+	}
+
+	// Update the member's role
+	_, err = h.db.Exec(`
+		UPDATE group_members
+		SET role = $1
+		WHERE group_id = $2 AND user_id = $3
+	`, roleRequest.Role, groupID, targetUserID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error updating member role")
+		return
+	}
+
+	// Get the updated member information
+	var member struct {
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Role      string `json:"role"`
+	}
+	err = h.db.QueryRow(`
+		SELECT u.id, u.email, u.first_name, u.last_name, gm.role
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		WHERE gm.group_id = $1 AND gm.user_id = $2
+	`, groupID, targetUserID).Scan(&member.ID, &member.Email, &member.FirstName, &member.LastName, &member.Role)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated member")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Member role updated successfully",
+		Data:    member,
+	})
+}
+
+// RemoveMember handles removing a member from a group
+func (h *GroupHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+	targetUserID := vars["userId"]
+
+	// Check if user is an admin of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	// Allow users to remove themselves, otherwise require admin privileges
+	if targetUserID != user.ID && role != "admin" {
+		RespondWithError(w, http.StatusForbidden, "Only admins can remove other members")
+		return
+	}
+
+	// Check if the target user is a member
+	var isMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, targetUserID).Scan(&isMember)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking membership")
+		return
+	}
+
+	if !isMember {
+		RespondWithError(w, http.StatusNotFound, "User is not a member of this group")
+		return
+	}
+
+	// Prevent removing the last admin
+	var targetRole string
+	err = h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, targetUserID).Scan(&targetRole)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking target role")
+		return
+	}
+
+	if targetRole == "admin" {
+		var adminCount int
+		err = h.db.QueryRow(`
+			SELECT COUNT(*)
+			FROM group_members
+			WHERE group_id = $1 AND role = 'admin'
+		`, groupID).Scan(&adminCount)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error checking admin count")
+			return
+		}
+
+		if adminCount == 1 {
+			RespondWithError(w, http.StatusBadRequest, "Cannot remove the last admin")
+			return
+		}
+	}
+
+	// Remove the member
+	_, err = h.db.Exec(`
+		DELETE FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, targetUserID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error removing member")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Member removed successfully",
+	})
+}
