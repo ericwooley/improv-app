@@ -374,3 +374,72 @@ func (h *GameHandler) RateGame(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
+
+// GetGameGroupLibraries returns all groups that have a specific game in their library
+func (h *GameHandler) GetGameGroupLibraries(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	gameID := vars["id"]
+
+	// Check if the game exists
+	var gameExists bool
+	err := h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM games WHERE id = $1 AND (public = TRUE OR created_by = $2 OR
+			group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)))
+	`, gameID, user.ID).Scan(&gameExists)
+
+	if err != nil {
+		log.Printf("Error checking game access: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking game access")
+		return
+	}
+
+	if !gameExists {
+		RespondWithError(w, http.StatusForbidden, "Game not found or you don't have access")
+		return
+	}
+
+	// Get all groups that have this game in their library
+	rows, err := h.db.Query(`
+		SELECT g.id, g.name, g.description, g.created_at, g.created_by,
+			   gm.role as user_role
+		FROM improv_groups g
+		JOIN group_game_libraries ggl ON g.id = ggl.group_id
+		JOIN group_members gm ON g.id = gm.group_id
+		WHERE ggl.game_id = $1 AND gm.user_id = $2
+		ORDER BY g.name
+	`, gameID, user.ID)
+
+	if err != nil {
+		log.Printf("Error fetching groups with game in library: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group libraries")
+		return
+	}
+	defer rows.Close()
+
+	type GroupWithRole struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		CreatedAt   string `json:"createdAt"`
+		CreatedBy   string `json:"createdBy"`
+		UserRole    string `json:"userRole"`
+	}
+
+	var groups []GroupWithRole
+	for rows.Next() {
+		var group GroupWithRole
+		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy, &group.UserRole)
+		if err != nil {
+			log.Printf("Error scanning group: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning group data")
+			return
+		}
+		groups = append(groups, group)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    groups,
+	})
+}

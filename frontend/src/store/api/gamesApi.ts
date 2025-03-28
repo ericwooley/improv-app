@@ -31,6 +31,15 @@ export interface GameDetailsResponse {
   upcomingEvents: UpcomingEvent[]
 }
 
+export interface GroupWithRole {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  createdBy: string
+  userRole: string
+}
+
 export interface CreateGameRequest {
   name: string
   description: string
@@ -103,6 +112,11 @@ export const gamesApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_, __, { gameId }) => [{ type: 'Game', id: gameId }],
     }),
+
+    getGameGroupLibraries: builder.query<APIResponse<GroupWithRole[]>, string>({
+      query: (gameId) => `/games/${gameId}/libraries`,
+      providesTags: (_, __, gameId) => [{ type: 'Game' as const, id: `library-${gameId}` }],
+    }),
   }),
 })
 
@@ -113,4 +127,5 @@ export const {
   useUpdateGameMutation,
   useDeleteGameMutation,
   useRateGameMutation,
+  useGetGameGroupLibrariesQuery,
 } = gamesApi

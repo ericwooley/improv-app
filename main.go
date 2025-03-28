@@ -95,6 +95,8 @@ func main() {
 	api.HandleFunc("/groups/{id}", middleware.RequireAuthAPI(sqlDB, groupHandler.Update)).Methods("PUT")
 	api.HandleFunc("/groups/{id}/games/library", middleware.RequireAuthAPI(sqlDB, groupHandler.GetLibraryGames)).Methods("GET")
 	api.HandleFunc("/groups/{id}/games/owned", middleware.RequireAuthAPI(sqlDB, groupHandler.GetOwnedGames)).Methods("GET")
+	api.HandleFunc("/groups/{id}/games/library/{gameId}", middleware.RequireAuthAPI(sqlDB, groupHandler.AddGameToLibrary)).Methods("POST")
+	api.HandleFunc("/groups/{id}/games/library/{gameId}", middleware.RequireAuthAPI(sqlDB, groupHandler.RemoveGameFromLibrary)).Methods("DELETE")
 
 	// Event routes
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.ListAll)).Methods("GET")
@@ -106,6 +108,7 @@ func main() {
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET", "POST")
 	api.HandleFunc("/games/{id}", middleware.RequireAuthAPI(sqlDB, gameHandler.Get)).Methods("GET")
 	api.HandleFunc("/games/{id}/rate", middleware.RequireAuthAPI(sqlDB, gameHandler.RateGame)).Methods("POST")
+	api.HandleFunc("/games/{id}/libraries", middleware.RequireAuthAPI(sqlDB, gameHandler.GetGameGroupLibraries)).Methods("GET")
 
 	// Serve frontend static files in production
 	fs := http.FileServer(http.Dir("./frontend/dist"))

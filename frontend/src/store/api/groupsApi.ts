@@ -40,6 +40,11 @@ export interface CreateGroupRequest {
   description: string
 }
 
+export interface AddGameToLibraryRequest {
+  gameId: string
+  groupId: string
+}
+
 export const groupsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getGroups: builder.query<APIResponse<Group[]>, void>({
@@ -94,6 +99,22 @@ export const groupsApi = apiSlice.injectEndpoints({
       query: (id) => `/groups/${id}/games/owned`,
       providesTags: (_, __, id) => [{ type: 'Game', id: `${id}-owned` }],
     }),
+
+    addGameToLibrary: builder.mutation<APIResponse<void>, AddGameToLibraryRequest>({
+      query: ({ groupId, gameId }) => ({
+        url: `/groups/${groupId}/games/library/${gameId}`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_, __, { groupId }) => [{ type: 'Game', id: `${groupId}-library` }],
+    }),
+
+    removeGameFromLibrary: builder.mutation<APIResponse<void>, AddGameToLibraryRequest>({
+      query: ({ groupId, gameId }) => ({
+        url: `/groups/${groupId}/games/library/${gameId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_, __, { groupId }) => [{ type: 'Game', id: `${groupId}-library` }],
+    }),
   }),
 })
 
@@ -105,4 +126,6 @@ export const {
   useDeleteGroupMutation,
   useGetGroupLibraryGamesQuery,
   useGetGroupOwnedGamesQuery,
+  useAddGameToLibraryMutation,
+  useRemoveGameFromLibraryMutation,
 } = groupsApi

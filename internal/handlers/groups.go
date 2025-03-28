@@ -442,3 +442,134 @@ func (h *GroupHandler) GetOwnedGames(w http.ResponseWriter, r *http.Request) {
 		Data:    games,
 	})
 }
+
+// AddGameToLibrary handles adding a game to a group's library
+func (h *GroupHandler) AddGameToLibrary(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+	gameID := vars["gameId"]
+
+	// Check if user has admin or organizer role in the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" && role != "organizer" {
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can manage the group library")
+		return
+	}
+
+	// Check if the game exists
+	var gameExists bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM games WHERE id = $1)
+	`, gameID).Scan(&gameExists)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking game existence")
+		return
+	}
+
+	if !gameExists {
+		RespondWithError(w, http.StatusNotFound, "Game not found")
+		return
+	}
+
+	// Check if the game is already in the library
+	var inLibrary bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM group_game_libraries WHERE group_id = $1 AND game_id = $2)
+	`, groupID, gameID).Scan(&inLibrary)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking library")
+		return
+	}
+
+	if inLibrary {
+		RespondWithJSON(w, http.StatusOK, ApiResponse{
+			Success: true,
+			Message: "Game is already in the library",
+		})
+		return
+	}
+
+	// Add the game to the library
+	_, err = h.db.Exec(`
+		INSERT INTO group_game_libraries (group_id, game_id, added_by)
+		VALUES ($1, $2, $3)
+	`, groupID, gameID, user.ID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error adding game to library")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Game added to library successfully",
+	})
+}
+
+// RemoveGameFromLibrary handles removing a game from a group's library
+func (h *GroupHandler) RemoveGameFromLibrary(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+	gameID := vars["gameId"]
+
+	// Check if user has admin or organizer role in the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" && role != "organizer" {
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can manage the group library")
+		return
+	}
+
+	// Check if the game is in the library
+	var inLibrary bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM group_game_libraries WHERE group_id = $1 AND game_id = $2)
+	`, groupID, gameID).Scan(&inLibrary)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error checking library")
+		return
+	}
+
+	if !inLibrary {
+		RespondWithJSON(w, http.StatusOK, ApiResponse{
+			Success: true,
+			Message: "Game is not in the library",
+		})
+		return
+	}
+
+	// Remove the game from the library
+	_, err = h.db.Exec(`
+		DELETE FROM group_game_libraries
+		WHERE group_id = $1 AND game_id = $2
+	`, groupID, gameID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error removing game from library")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Game removed from library successfully",
+	})
+}
