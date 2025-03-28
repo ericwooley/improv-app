@@ -1,4 +1,5 @@
 import { apiSlice } from './apiSlice'
+import { APIResponse } from '../types'
 
 export interface Game {
   id: string
@@ -19,20 +20,20 @@ export interface CreateGameRequest {
 
 export const gamesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getGames: builder.query<Game[], void>({
+    getGames: builder.query<APIResponse<Game[]>, void>({
       query: () => '/games',
       providesTags: (result) =>
         result
-          ? [...result.map(({ id }) => ({ type: 'Game' as const, id })), { type: 'Game', id: 'LIST' }]
+          ? [...result.data.map(({ id }) => ({ type: 'Game' as const, id })), { type: 'Game', id: 'LIST' }]
           : [{ type: 'Game', id: 'LIST' }],
     }),
 
-    getGame: builder.query<Game, string>({
+    getGame: builder.query<APIResponse<Game>, string>({
       query: (id) => `/games/${id}`,
       providesTags: (_, __, id) => [{ type: 'Game', id }],
     }),
 
-    createGame: builder.mutation<Game, CreateGameRequest>({
+    createGame: builder.mutation<APIResponse<Game>, CreateGameRequest>({
       query: (gameData) => ({
         url: '/games',
         method: 'POST',
@@ -47,7 +48,7 @@ export const gamesApi = apiSlice.injectEndpoints({
       invalidatesTags: [{ type: 'Game', id: 'LIST' }],
     }),
 
-    updateGame: builder.mutation<Game, Partial<Game> & { id: string }>({
+    updateGame: builder.mutation<APIResponse<Game>, Partial<Game> & { id: string }>({
       query: ({ id, ...gameData }) => ({
         url: `/games/${id}`,
         method: 'PUT',
@@ -59,7 +60,7 @@ export const gamesApi = apiSlice.injectEndpoints({
       ],
     }),
 
-    deleteGame: builder.mutation<void, string>({
+    deleteGame: builder.mutation<APIResponse<void>, string>({
       query: (id) => ({
         url: `/games/${id}`,
         method: 'DELETE',

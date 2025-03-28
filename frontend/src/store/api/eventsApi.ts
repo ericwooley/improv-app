@@ -33,20 +33,20 @@ export const eventsApi = apiSlice.injectEndpoints({
       },
     }),
 
-    getEvent: builder.query<Event, string>({
+    getEvent: builder.query<APIResponse<Event>, string>({
       query: (id) => `/events/${id}`,
       providesTags: (_, __, id) => [{ type: 'Event', id }],
     }),
 
-    getEventsByGroup: builder.query<Event[], string>({
+    getEventsByGroup: builder.query<APIResponse<Event[]>, string>({
       query: (groupId) => `/groups/${groupId}/events`,
       providesTags: (result) =>
         result
-          ? [...result.map(({ id }) => ({ type: 'Event' as const, id })), { type: 'Event', id: 'LIST' }]
+          ? [...result.data.map(({ id }) => ({ type: 'Event' as const, id })), { type: 'Event', id: 'LIST' }]
           : [{ type: 'Event', id: 'LIST' }],
     }),
 
-    createEvent: builder.mutation<Event, CreateEventRequest>({
+    createEvent: builder.mutation<APIResponse<Event>, CreateEventRequest>({
       query: (eventData) => ({
         url: '/events',
         method: 'POST',
@@ -55,7 +55,7 @@ export const eventsApi = apiSlice.injectEndpoints({
       invalidatesTags: [{ type: 'Event', id: 'LIST' }],
     }),
 
-    updateEvent: builder.mutation<Event, Partial<Event> & { id: string }>({
+    updateEvent: builder.mutation<APIResponse<Event>, Partial<Event> & { id: string }>({
       query: ({ id, ...eventData }) => ({
         url: `/events/${id}`,
         method: 'PUT',
@@ -67,7 +67,7 @@ export const eventsApi = apiSlice.injectEndpoints({
       ],
     }),
 
-    deleteEvent: builder.mutation<void, string>({
+    deleteEvent: builder.mutation<APIResponse<void>, string>({
       query: (id) => ({
         url: `/events/${id}`,
         method: 'DELETE',

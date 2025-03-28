@@ -58,7 +58,7 @@ export const authSlice = createSlice({
       })
       .addMatcher(authApi.endpoints.getMe.matchFulfilled, (state, action) => {
         state.isLoading = false
-        state.user = action.payload
+        state.user = action.payload.data
         state.isAuthenticated = true
       })
       .addMatcher(authApi.endpoints.getMe.matchRejected, (state, action) => {
@@ -80,7 +80,7 @@ export const authSlice = createSlice({
       })
       .addMatcher(authApi.endpoints.updateProfile.matchFulfilled, (state, action) => {
         state.isLoading = false
-        state.user = action.payload
+        state.user = action.payload.data
       })
       .addMatcher(authApi.endpoints.updateProfile.matchRejected, (state, action) => {
         state.isLoading = false

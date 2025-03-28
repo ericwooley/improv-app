@@ -120,9 +120,7 @@ const MainLayout = () => {
         <div className="sidebar-user">
           {isAuthenticated && user && (
             <div className="is-flex is-align-items-center">
-              <p className="has-text-weight-medium">
-                {user.firstName} {user.lastName}
-              </p>
+
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}

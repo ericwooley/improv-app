@@ -24,12 +24,12 @@ export const groupsApi = apiSlice.injectEndpoints({
       },
     }),
 
-    getGroup: builder.query<Group, string>({
+    getGroup: builder.query<APIResponse<Group>, string>({
       query: (id) => `/groups/${id}`,
       providesTags: (_, __, id) => [{ type: 'Group', id }],
     }),
 
-    createGroup: builder.mutation<Group, CreateGroupRequest>({
+    createGroup: builder.mutation<APIResponse<Group>, CreateGroupRequest>({
       query: (groupData) => ({
         url: '/groups',
         method: 'POST',
@@ -38,7 +38,7 @@ export const groupsApi = apiSlice.injectEndpoints({
       invalidatesTags: [{ type: 'Group', id: 'LIST' }],
     }),
 
-    updateGroup: builder.mutation<Group, Partial<Group> & { id: string }>({
+    updateGroup: builder.mutation<APIResponse<Group>, Partial<Group> & { id: string }>({
       query: ({ id, ...groupData }) => ({
         url: `/groups/${id}`,
         method: 'PUT',
@@ -50,7 +50,7 @@ export const groupsApi = apiSlice.injectEndpoints({
       ],
     }),
 
-    deleteGroup: builder.mutation<void, string>({
+    deleteGroup: builder.mutation<APIResponse<void>, string>({
       query: (id) => ({
         url: `/groups/${id}`,
         method: 'DELETE',
