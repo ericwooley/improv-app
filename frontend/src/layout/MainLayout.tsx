@@ -120,7 +120,6 @@ const MainLayout = () => {
         <div className="sidebar-user">
           {isAuthenticated && user && (
             <div className="is-flex is-align-items-center">
-
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
@@ -146,6 +145,9 @@ const MainLayout = () => {
       {/* Main Content */}
       <div className="main-content">
         <Outlet />
+        <footer className="footer">
+          <p>© {new Date().getFullYear()} ImprovHQ. All rights reserved.</p>
+        </footer>
       </div>
     </div>
   )

@@ -221,3 +221,97 @@ func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Data:    groupData,
 	})
 }
+
+// Update handles updating a group's information
+func (h *GroupHandler) Update(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user is an admin of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" {
+		RespondWithError(w, http.StatusForbidden, "Only admins can update the group")
+		return
+	}
+
+	var groupRequest struct {
+		Name        string `json:"name" validate:"required,min=3,max=100"`
+		Description string `json:"description" validate:"omitempty,max=500"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&groupRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Trim whitespace
+	groupRequest.Name = strings.TrimSpace(groupRequest.Name)
+	groupRequest.Description = strings.TrimSpace(groupRequest.Description)
+
+	// Validate the request
+	validate := validator.New()
+	if err := validate.Struct(groupRequest); err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		errorMessage := "Validation failed: "
+		for _, e := range validationErrors {
+			switch e.Field() {
+			case "Name":
+				if e.Tag() == "required" {
+					errorMessage += "Name is required. "
+				} else if e.Tag() == "min" {
+					errorMessage += "Name must be at least 3 characters. "
+				} else if e.Tag() == "max" {
+					errorMessage += "Name must be less than 100 characters. "
+				}
+			case "Description":
+				if e.Tag() == "max" {
+					errorMessage += "Description must be less than 500 characters. "
+				}
+			}
+		}
+		RespondWithError(w, http.StatusBadRequest, errorMessage)
+		return
+	}
+
+	// Update the group
+	_, err = h.db.Exec(`
+		UPDATE improv_groups
+		SET name = $1, description = $2
+		WHERE id = $3
+	`, groupRequest.Name, groupRequest.Description, groupID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error updating group")
+		return
+	}
+
+	// Fetch the updated group
+	var group ImprovGroup
+	err = h.db.QueryRow(`
+		SELECT id, name, description, created_at, created_by
+		FROM improv_groups
+		WHERE id = $1
+	`, groupID).Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated group")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Group updated successfully",
+		Data:    group,
+	})
+}
