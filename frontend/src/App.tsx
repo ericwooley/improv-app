@@ -13,6 +13,7 @@ import GamesPage from './pages/GamesPage'
 import GroupsPage from './pages/GroupsPage'
 import NewGroupPage from './pages/NewGroupPage'
 import GroupDetailsPage from './pages/GroupDetailsPage'
+import EditGroupPage from './pages/EditGroupPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
       {
         path: 'groups/:groupId',
         element: <GroupDetailsPage />,
+      },
+      {
+        path: 'groups/:groupId/edit',
+        element: <EditGroupPage />,
       },
       {
         path: 'events',

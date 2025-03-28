@@ -1,20 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateGroupMutation } from '../store/api/groupsApi'
-import {
-  PageHeader,
-  Breadcrumb,
-  FormContainer,
-  InputField,
-  TextareaField,
-  FormActions,
-  ActionButton,
-} from '../components'
+import { PageHeader, Breadcrumb } from '../components'
+import { GroupForm, GroupFormData } from '../components/GroupForm'
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
 const NewGroupPage = () => {
   const navigate = useNavigate()
   const [createGroup, { isLoading, error }] = useCreateGroupMutation()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<GroupFormData>({
     name: '',
     description: '',
   })
@@ -31,6 +25,8 @@ const NewGroupPage = () => {
     }
   }
 
+  const errorMessage = error ? ((error as FetchBaseQueryError).data as string) : null
+
   return (
     <div className="content-wrapper">
       <Breadcrumb
@@ -42,39 +38,18 @@ const NewGroupPage = () => {
 
       <PageHeader title="Create New Group" subtitle="Set up a new improv group" />
 
-      <FormContainer onSubmit={handleCreateGroup}>
-        {error && (
-          <div className="alert alert-danger" role="alert">
-            {error instanceof Error ? error.message : 'Failed to create group'}
-          </div>
-        )}
-
-        <InputField
-          id="name"
-          label="Group Name"
-          value={formData.name}
-          placeholder="My Improv Group"
-          required
-          icon="fas fa-theater-masks"
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          disabled={isLoading}
-        />
-
-        <TextareaField
-          id="description"
-          label="Description"
-          value={formData.description}
-          placeholder="Tell us about your group..."
-          rows={3}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          disabled={isLoading}
-        />
-
-        <FormActions>
-          <ActionButton text="Cancel" to="/groups" variant="light" disabled={isLoading} />
-          <ActionButton text="Create Group" icon="fas fa-check" type="submit" disabled={isLoading} />
-        </FormActions>
-      </FormContainer>
+      <GroupForm
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleCreateGroup}
+        onCancel={() => navigate('/groups')}
+        isLoading={isLoading}
+        error={errorMessage ? new Error(errorMessage) : null}
+        submitButtonText="Create Group"
+        submitButtonIcon="fas fa-plus"
+        cancelButtonText="Cancel"
+        cancelButtonTo="/groups"
+      />
     </div>
   )
 }
