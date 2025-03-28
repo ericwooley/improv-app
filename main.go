@@ -89,7 +89,8 @@ func main() {
 	api.HandleFunc("/profile", middleware.RequireAuthAPI(sqlDB, authHandler.Profile)).Methods("GET", "PUT")
 
 	// Group routes
-	api.HandleFunc("/groups", middleware.RequireAuthAPI(sqlDB, groupHandler.List)).Methods("GET", "POST")
+	api.HandleFunc("/groups", middleware.RequireAuthAPI(sqlDB, groupHandler.List)).Methods("GET")
+	api.HandleFunc("/groups", middleware.RequireAuth(sqlDB, groupHandler.Create)).Methods("POST")
 	api.HandleFunc("/groups/{id}", middleware.RequireAuthAPI(sqlDB, groupHandler.Get)).Methods("GET")
 
 	// Event routes

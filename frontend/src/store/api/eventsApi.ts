@@ -1,3 +1,4 @@
+import { APIResponse } from '../types'
 import { apiSlice } from './apiSlice'
 
 export interface Event {
@@ -22,12 +23,14 @@ export interface CreateEventRequest {
 
 export const eventsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getEvents: builder.query<Event[], void>({
+    getEvents: builder.query<APIResponse<Event[]>, void>({
       query: () => '/events',
-      providesTags: (result) =>
-        result
-          ? [...result.map(({ id }) => ({ type: 'Event' as const, id })), { type: 'Event', id: 'LIST' }]
-          : [{ type: 'Event', id: 'LIST' }],
+      providesTags: (result) => {
+        const r = result?.data
+          ? [...result.data.map(({ id }) => ({ type: 'Event' as const, id })), { type: 'Event' as const, id: 'LIST' }]
+          : [{ type: 'Event' as const, id: 'LIST' }]
+        return r
+      },
     }),
 
     getEvent: builder.query<Event, string>({
