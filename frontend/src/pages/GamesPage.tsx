@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { PageHeader, CardGrid, ItemCard, EmptyState, ActionButton, TagList, InfoItem } from '../components'
 
 interface Game {
   id: string
@@ -19,81 +19,43 @@ const GamesPage = ({ initialGames = [] }: GamesPageProps) => {
 
   return (
     <div className="content-wrapper">
-      <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-start-mobile mb-5">
-        <div className="mb-4-mobile">
-          <h1 className="title is-2">Improv Games</h1>
-          <p className="subtitle is-5">Browse and manage your collection of improv games</p>
-        </div>
-      </div>
+      <PageHeader title="Improv Games" subtitle="Browse and manage your collection of improv games" />
 
       {games.length > 0 && (
         <div className="mb-5">
-          <Link to="/games/new" className="button is-primary">
-            <span className="icon">
-              <i className="fas fa-plus"></i>
-            </span>
-            <span>Create Game</span>
-          </Link>
+          <ActionButton text="Create Game" to="/games/new" icon="fas fa-plus" />
         </div>
       )}
 
       {/* Games Grid */}
       {games.length > 0 ? (
-        <div className="columns is-multiline">
+        <CardGrid>
           {games.map((game) => (
-            <div key={game.id} className="column is-4" data-game-id={game.id}>
-              <div className="card h-100">
-                <div className="card-content">
-                  <h2 className="title">{game.name}</h2>
-                  <p className="subtitle is-6 has-text-grey mb-4">{game.description}</p>
-                  <div className="is-flex is-align-items-center mb-3">
-                    <span className="icon has-text-info mr-2 is-small">
-                      <i className="fas fa-users"></i>
-                    </span>
-                    <span className="is-size-7">
-                      {game.minPlayers}-{game.maxPlayers} players
-                    </span>
-                  </div>
+            <div key={game.id} className="column is-4">
+              <ItemCard id={game.id} title={game.name} description={game.description} footerLink={`/games/${game.id}`}>
+                <InfoItem icon="fas fa-users" className="mb-3">
+                  <span className="is-size-7">
+                    {game.minPlayers}-{game.maxPlayers} players
+                  </span>
+                </InfoItem>
 
-                  {game.tags.length > 0 && (
-                    <div className="tags mb-4">
-                      {game.tags.map((tag, index) => (
-                        <span key={index} className="tag is-info is-light">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                <TagList tags={game.tags} />
 
-                  <div className="card-footer pt-3 is-flex is-justify-content-space-between">
-                    <Link to={`/games/${game.id}`} className="button is-info is-outlined">
-                      <span className="icon">
-                        <i className="fas fa-eye"></i>
-                      </span>
-                      <span>View</span>
-                    </Link>
-                    <button className="button is-danger is-outlined">
-                      <span className="icon">
-                        <i className="fas fa-trash"></i>
-                      </span>
-                      <span>Delete</span>
-                    </button>
-                  </div>
+                <div className="card-footer pt-3 is-flex is-justify-content-space-between">
+                  <ActionButton text="View" to={`/games/${game.id}`} variant="info" outlined icon="fas fa-eye" />
+                  <ActionButton text="Delete" variant="danger" outlined icon="fas fa-trash" />
                 </div>
-              </div>
+              </ItemCard>
             </div>
           ))}
-        </div>
+        </CardGrid>
       ) : (
-        <div className="notification is-light has-text-centered p-6">
-          <p className="mb-4">No games have been added yet.</p>
-          <Link to="/games/new" className="button is-primary">
-            <span className="icon">
-              <i className="fas fa-plus"></i>
-            </span>
-            <span>Add Your First Game</span>
-          </Link>
-        </div>
+        <EmptyState
+          message="No games have been added yet."
+          actionText="Add Your First Game"
+          actionLink="/games/new"
+          actionIcon="fas fa-plus"
+        />
       )}
     </div>
   )

@@ -5,6 +5,7 @@ import { useGetGroupsQuery } from '../store/api/groupsApi'
 import { useGetEventsQuery } from '../store/api/eventsApi'
 import { Group } from '../store/api/groupsApi'
 import { Event } from '../store/api/eventsApi'
+import { CardGrid, ItemCard, ActionButton, InfoItem, formatDate, formatTime } from '../components'
 
 // Define API response structure
 interface ApiResponse<T> {
@@ -21,16 +22,6 @@ const HomePage = () => {
 
   const groups = (groupsResponse as unknown as ApiResponse<Group[]>)?.data || []
   const events = (eventsResponse as unknown as ApiResponse<Event[]>)?.data || []
-
-  const formatDate = (dateStr: string | Date) => {
-    const date = dateStr instanceof Date ? dateStr : new Date(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
-
-  const formatTime = (dateStr: string | Date) => {
-    const date = dateStr instanceof Date ? dateStr : new Date(dateStr)
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  }
 
   return (
     <div className="content-wrapper">
@@ -54,24 +45,29 @@ const HomePage = () => {
                 </header>
                 <div className="card-content">
                   <div className="buttons is-centered-mobile">
-                    <Link to="/groups/new" className="button is-primary is-fullwidth mb-3">
-                      <span className="icon">
-                        <i className="fas fa-users"></i>
-                      </span>
-                      <span>New Group</span>
-                    </Link>
-                    <Link to="/events/new" className="button is-info is-fullwidth mb-3">
-                      <span className="icon">
-                        <i className="fas fa-calendar-plus"></i>
-                      </span>
-                      <span>New Event</span>
-                    </Link>
-                    <Link to="/games/play" className="button is-success is-fullwidth">
-                      <span className="icon">
-                        <i className="fas fa-play-circle"></i>
-                      </span>
-                      <span>Start Game</span>
-                    </Link>
+                    <ActionButton
+                      text="New Group"
+                      to="/groups/new"
+                      icon="fas fa-users"
+                      variant="primary"
+                      fullWidth
+                      className="mb-3"
+                    />
+                    <ActionButton
+                      text="New Event"
+                      to="/events/new"
+                      icon="fas fa-calendar-plus"
+                      variant="info"
+                      fullWidth
+                      className="mb-3"
+                    />
+                    <ActionButton
+                      text="Start Game"
+                      to="/games/play"
+                      icon="fas fa-play-circle"
+                      variant="success"
+                      fullWidth
+                    />
                   </div>
                 </div>
               </div>
@@ -109,11 +105,13 @@ const HomePage = () => {
                               <h3 className="title is-5 mb-2">{group.name}</h3>
                               <p className="subtitle is-6 has-text-grey">{group.description}</p>
                             </div>
-                            <Link to={`/groups/${group.id}`} className="button is-link is-light">
-                              <span className="icon">
-                                <i className="fas fa-chevron-right"></i>
-                              </span>
-                            </Link>
+                            <ActionButton
+                              text=""
+                              to={`/groups/${group.id}`}
+                              icon="fas fa-chevron-right"
+                              variant="link"
+                              outlined
+                            />
                           </div>
                         </div>
                       ))}
@@ -121,9 +119,13 @@ const HomePage = () => {
                   ) : (
                     <div className="notification is-light has-text-centered">
                       <p>You haven't joined any groups yet.</p>
-                      <Link to="/groups/new" className="button is-primary is-small mt-3">
-                        Create Group
-                      </Link>
+                      <ActionButton
+                        text="Create Group"
+                        to="/groups/new"
+                        icon="fas fa-plus"
+                        size="small"
+                        className="mt-3"
+                      />
                     </div>
                   )}
                 </div>
@@ -154,48 +156,34 @@ const HomePage = () => {
                   </span>
                 </div>
               ) : events.length > 0 ? (
-                <div className="columns is-multiline">
+                <CardGrid>
                   {events.map((event: Event) => (
                     <div key={event.id} className="column is-12-mobile is-6-tablet is-4-desktop">
-                      <div className="box has-background-white-ter h-100">
-                        <h3 className="title is-5">{event.title}</h3>
-                        <p className="subtitle is-6 has-text-grey mb-3">{event.description}</p>
-                        <div className="is-flex is-align-items-center mb-3">
-                          <span className="icon has-text-info mr-2">
-                            <i className="fas fa-map-marker-alt"></i>
-                          </span>
-                          <span>{event.location}</span>
-                        </div>
-                        <div className="is-flex is-align-items-center mb-3">
-                          <span className="icon has-text-info mr-2">
-                            <i className="fas fa-calendar"></i>
-                          </span>
-                          <span>{formatDate(event.startTime)}</span>
-                        </div>
-                        <div className="is-flex is-align-items-center mb-3">
-                          <span className="icon has-text-info mr-2">
-                            <i className="fas fa-clock"></i>
-                          </span>
-                          <span>
-                            {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                          </span>
-                        </div>
-                        <Link to={`/events/${event.id}`} className="button is-link is-outlined is-fullwidth">
-                          View Details
-                          <span className="icon ml-1">
-                            <i className="fas fa-arrow-right"></i>
-                          </span>
-                        </Link>
-                      </div>
+                      <ItemCard id={event.id} title={event.title} description={event.description}>
+                        <InfoItem icon="fas fa-map-marker-alt">{event.location}</InfoItem>
+
+                        <InfoItem icon="fas fa-calendar">{formatDate(event.startTime)}</InfoItem>
+
+                        <InfoItem icon="fas fa-clock">
+                          {formatTime(event.startTime)} - {formatTime(event.endTime)}
+                        </InfoItem>
+
+                        <ActionButton
+                          text="View Details"
+                          to={`/events/${event.id}`}
+                          icon="fas fa-arrow-right"
+                          variant="link"
+                          outlined
+                          fullWidth
+                        />
+                      </ItemCard>
                     </div>
                   ))}
-                </div>
+                </CardGrid>
               ) : (
                 <div className="notification is-light has-text-centered">
                   <p>No upcoming events scheduled.</p>
-                  <Link to="/events/new" className="button is-primary is-small mt-3">
-                    Create Event
-                  </Link>
+                  <ActionButton text="Create Event" to="/events/new" icon="fas fa-plus" size="small" className="mt-3" />
                 </div>
               )}
             </div>
@@ -224,18 +212,20 @@ const HomePage = () => {
                       Join our community of improvisers to organize groups, schedule events, and discover new games.
                     </p>
                     <div className="buttons is-centered">
-                      <Link to="/login" className="button is-primary is-large is-responsive">
-                        <span className="icon">
-                          <i className="fas fa-sign-in-alt"></i>
-                        </span>
-                        <span>Sign In</span>
-                      </Link>
-                      <Link to="/register" className="button is-link is-large is-responsive">
-                        <span className="icon">
-                          <i className="fas fa-user-plus"></i>
-                        </span>
-                        <span>Register</span>
-                      </Link>
+                      <ActionButton
+                        text="Sign In"
+                        to="/login"
+                        icon="fas fa-sign-in-alt"
+                        variant="primary"
+                        size="large"
+                      />
+                      <ActionButton
+                        text="Register"
+                        to="/register"
+                        icon="fas fa-user-plus"
+                        variant="link"
+                        size="large"
+                      />
                     </div>
                   </div>
                 </div>
