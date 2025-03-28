@@ -21,19 +21,6 @@ const GroupsPage = ({ initialGroups = [] }: GroupsPageProps) => {
 
   return (
     <div className="content-wrapper">
-      <nav className="breadcrumb has-arrow-separator mb-5" aria-label="breadcrumbs">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li className="is-active">
-            <a href="#" aria-current="page">
-              Groups
-            </a>
-          </li>
-        </ul>
-      </nav>
-
       <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-start-mobile mb-5">
         <div className="mb-4-mobile">
           <h1 className="title is-2">Improv Groups</h1>

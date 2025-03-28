@@ -44,9 +44,6 @@ const NewGroupPage = ({ onCreateGroup }: NewGroupPageProps) => {
       <nav className="breadcrumb has-arrow-separator mb-5" aria-label="breadcrumbs">
         <ul>
           <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
             <Link to="/groups">Groups</Link>
           </li>
           <li className="is-active">

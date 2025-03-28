@@ -62,9 +62,6 @@ const NewEventPage = ({ groups = [], onCreateEvent }: NewEventPageProps) => {
       <nav className="breadcrumb has-arrow-separator mb-5" aria-label="breadcrumbs">
         <ul>
           <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
             <Link to="/events">Events</Link>
           </li>
           <li className="is-active">
