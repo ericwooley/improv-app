@@ -77,3 +77,133 @@ This project uses [Air](https://github.com/cosmtrek/air) for hot-reloading durin
 - **Templates**: HTML templates are stored in the `templates/` directory and are automatically loaded at startup.
 - **Database**: PostgreSQL is used for data storage. The schema is defined in `schema.sql`.
 - **Routing**: The application uses Gorilla Mux for routing and supports dynamic page loading.
+
+## Planned Features
+
+### Improv Groups
+- Create and manage improv troupes or practice groups
+- Group membership with different roles (admin, member)
+- Group description and details
+
+### Events
+- Schedule improv events for specific improv groups (all events must belong to a group)
+- Event location management
+- RSVP system for tracking attendance
+- Ability to organize games for each event
+
+### Game Catalog
+- Comprehensive database of improv games
+- Game details including description, minimum and maximum players
+- Tagging system for categorizing games (e.g., warmup, short-form, long-form)
+- User rating system for games
+
+### Game Planning
+- Assign games to specific events
+- Order games within an event
+- Track user preferences for game selection
+- Filter games by tags, player count, or popularity
+
+## Database Schema
+
+```mermaid
+erDiagram
+    users {
+        string id PK
+        string email
+        string first_name
+        string last_name
+        timestamp created_at
+    }
+
+    email_tokens {
+        string id PK
+        string user_id FK
+        string token
+        boolean used
+        timestamp expires_at
+        timestamp created_at
+    }
+
+    improv_groups {
+        string id PK
+        string name
+        string description
+        string created_by FK
+        timestamp created_at
+    }
+
+    group_members {
+        string group_id PK,FK
+        string user_id PK,FK
+        string role
+        timestamp created_at
+    }
+
+    events {
+        string id PK
+        string group_id FK
+        string title
+        string description
+        string location
+        timestamp start_time
+        timestamp end_time
+        string created_by FK
+        timestamp created_at
+    }
+
+    event_rsvps {
+        string event_id PK,FK
+        string user_id PK,FK
+        string status
+        timestamp created_at
+    }
+
+    games {
+        string id PK
+        string name
+        string description
+        integer min_players
+        integer max_players
+        string created_by FK
+        timestamp created_at
+    }
+
+    game_tags {
+        string id PK
+        string name
+    }
+
+    game_tag_associations {
+        string game_id PK,FK
+        string tag_id PK,FK
+    }
+
+    event_games {
+        string event_id PK,FK
+        string game_id PK,FK
+        integer order_index
+    }
+
+    user_game_preferences {
+        string user_id PK,FK
+        string game_id PK,FK
+        integer rating
+        timestamp created_at
+    }
+
+    users ||--o{ email_tokens : "authenticates"
+    users ||--o{ improv_groups : "creates"
+    users ||--o{ group_members : "joins"
+    improv_groups ||--o{ group_members : "has"
+    improv_groups ||--|{ events : "schedules"
+    users ||--o{ events : "creates"
+    events ||--o{ event_rsvps : "receives"
+    users ||--o{ event_rsvps : "submits"
+    users ||--o{ games : "creates"
+    games ||--o{ game_tag_associations : "categorized by"
+    game_tags ||--o{ game_tag_associations : "applied to"
+    events ||--o{ event_games : "includes"
+    games ||--o{ event_games : "featured in"
+    users ||--o{ user_game_preferences : "rates"
+    games ||--o{ user_game_preferences : "rated by"
+```
