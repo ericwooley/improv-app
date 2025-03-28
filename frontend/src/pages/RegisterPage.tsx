@@ -28,19 +28,19 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="columns is-centered">
-      <div className="column is-6">
-        <div className="box has-background-white p-6 mt-5">
+    <div className="columns is-centered is-vcentered" style={{ minHeight: '100vh' }}>
+      <div className="column is-12-mobile is-8-tablet is-6-desktop">
+        <div className="box has-background-white p-5 mx-3 my-3">
           <div className="has-text-centered mb-5">
             <span className="icon is-large has-text-primary">
               <i className="fas fa-user-plus fa-3x"></i>
             </span>
-            <h1 className="title is-2 mt-3">Register</h1>
+            <h1 className="title is-2 is-size-3-mobile mt-3">Register</h1>
           </div>
 
           <div className="notification is-light">
-            <h2 className="title">Join Improv App</h2>
-            <p className="subtitle">Enter your email address to create an account.</p>
+            <h2 className="title is-4">Join Improv App</h2>
+            <p className="subtitle is-6">Enter your email address to create an account.</p>
 
             <form onSubmit={handleSubmit}>
               <div className="field">

@@ -41,9 +41,9 @@ const HomePage = () => {
             <p className="subtitle is-5">Welcome back, {user.firstName}!</p>
           </div>
 
-          <div className="columns">
+          <div className="columns is-desktop">
             {/* Quick Actions */}
-            <div className="column is-3">
+            <div className="column is-12-tablet is-3-desktop">
               <div className="card">
                 <header className="card-header">
                   <p className="card-header-title">
@@ -54,7 +54,7 @@ const HomePage = () => {
                   </p>
                 </header>
                 <div className="card-content">
-                  <div className="buttons are-medium">
+                  <div className="buttons is-centered-mobile">
                     <Link to="/groups/new" className="button is-primary is-fullwidth mb-3">
                       <span className="icon">
                         <i className="fas fa-users"></i>
@@ -79,7 +79,7 @@ const HomePage = () => {
             </div>
 
             {/* Your Groups */}
-            <div className="column">
+            <div className="column is-12-tablet is-9-desktop">
               <div className="card">
                 <header className="card-header">
                   <p className="card-header-title">
@@ -105,8 +105,8 @@ const HomePage = () => {
                     <div className="groups-grid">
                       {groups.map((group: Group) => (
                         <div key={group.id} className="box has-background-white-ter mb-3">
-                          <div className="is-flex is-justify-content-space-between is-align-items-center">
-                            <div>
+                          <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-center">
+                            <div className="mb-3-mobile">
                               <h3 className="title is-5 mb-2">{group.name}</h3>
                               <p className="subtitle is-6 has-text-grey">{group.description}</p>
                             </div>
@@ -157,8 +157,8 @@ const HomePage = () => {
               ) : events.length > 0 ? (
                 <div className="columns is-multiline">
                   {events.map((event: Event) => (
-                    <div key={event.id} className="column is-6">
-                      <div className="box has-background-white-ter">
+                    <div key={event.id} className="column is-12-mobile is-6-tablet is-4-desktop">
+                      <div className="box has-background-white-ter h-100">
                         <h3 className="title is-5">{event.title}</h3>
                         <p className="subtitle is-6 has-text-grey mb-3">{event.description}</p>
                         <div className="is-flex is-align-items-center mb-3">
@@ -207,29 +207,31 @@ const HomePage = () => {
         <div className="hero is-medium">
           <div className="hero-body">
             <div className="container has-text-centered">
-              <h1 className="title is-1">Welcome to Improv App</h1>
-              <p className="subtitle is-4 mb-6">Organize your improv groups, events, and games all in one place.</p>
+              <h1 className="title is-1 is-size-2-mobile">Welcome to Improv App</h1>
+              <p className="subtitle is-4 is-size-5-mobile mb-6">
+                Organize your improv groups, events, and games all in one place.
+              </p>
 
               <div className="columns is-centered">
-                <div className="column is-8">
-                  <div className="box has-background-white p-6">
-                    <div className="mb-6">
+                <div className="column is-12-mobile is-8-tablet">
+                  <div className="box has-background-white p-6 p-4-mobile">
+                    <div className="mb-6 mb-4-mobile">
                       <span className="icon is-large has-text-primary">
                         <i className="fas fa-theater-masks fa-3x"></i>
                       </span>
                     </div>
-                    <h2 className="title is-3 mb-4">Get Started Today</h2>
-                    <p className="subtitle is-5 mb-5">
+                    <h2 className="title is-3 is-size-4-mobile mb-4">Get Started Today</h2>
+                    <p className="subtitle is-5 is-size-6-mobile mb-5">
                       Join our community of improvisers to organize groups, schedule events, and discover new games.
                     </p>
                     <div className="buttons is-centered">
-                      <Link to="/login" className="button is-primary is-large">
+                      <Link to="/login" className="button is-primary is-large is-responsive">
                         <span className="icon">
                           <i className="fas fa-sign-in-alt"></i>
                         </span>
                         <span>Sign In</span>
                       </Link>
-                      <Link to="/register" className="button is-link is-large">
+                      <Link to="/register" className="button is-link is-large is-responsive">
                         <span className="icon">
                           <i className="fas fa-user-plus"></i>
                         </span>
