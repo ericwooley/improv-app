@@ -1,11 +1,25 @@
-import { Link } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import { useGetGroupsQuery } from '../store/api/groupsApi'
 import { useGetEventsQuery } from '../store/api/eventsApi'
 import { Group } from '../store/api/groupsApi'
 import { Event } from '../store/api/eventsApi'
-import { CardGrid, ItemCard, ActionButton, InfoItem, formatDate, formatTime, GroupCard } from '../components'
+import {
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardHeader,
+  CardContent,
+  List,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
+  Button,
+  CircularProgress,
+} from '@mui/material'
+import { Group as GroupIcon, Event as EventIcon } from '@mui/icons-material'
+import { Link } from 'react-router-dom'
 
 // Define API response structure
 interface ApiResponse<T> {
@@ -24,203 +38,104 @@ const HomePage = () => {
   const events = (eventsResponse as unknown as ApiResponse<Event[]>)?.data || []
 
   return (
-    <div className="content-wrapper">
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 2 }}>
       {isAuthenticated && user ? (
         <>
-          <div className="mb-5">
-            <h1 className="title is-2">Dashboard</h1>
-          </div>
+          <Typography variant="h4" sx={{ mb: 4 }}>
+            Dashboard
+          </Typography>
 
-          <div className="columns is-desktop">
-            {/* Quick Actions */}
-            <div className="column is-12-tablet is-3-desktop">
-              <div className="card">
-                <header className="card-header">
-                  <p className="card-header-title">
-                    <span className="icon mr-2">
-                      <i className="fas fa-bolt"></i>
-                    </span>
-                    Quick Actions
-                  </p>
-                </header>
-                <div className="card-content">
-                  <div className="buttons is-centered-mobile">
-                    <ActionButton
-                      text="New Group"
-                      to="/groups/new"
-                      icon="fas fa-users"
-                      variant="primary"
-                      fullWidth
-                      className="mb-3"
-                    />
-                    <ActionButton
-                      text="New Event"
-                      to="/events/new"
-                      icon="fas fa-calendar-plus"
-                      variant="info"
-                      fullWidth
-                      className="mb-3"
-                    />
-                    <ActionButton
-                      text="Start Game"
-                      to="/games/play"
-                      icon="fas fa-play-circle"
-                      variant="success"
-                      fullWidth
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Your Groups */}
-            <div className="column is-12-tablet is-9-desktop">
-              <div className="card">
-                <header className="card-header">
-                  <p className="card-header-title">
-                    <span className="icon mr-2">
-                      <i className="fas fa-users"></i>
-                    </span>
-                    Your Groups
-                  </p>
-                  <Link to="/groups" className="card-header-icon">
-                    <span className="icon">
-                      <i className="fas fa-angle-right"></i>
-                    </span>
-                  </Link>
-                </header>
-                <div className="card-content">
+          <Grid container spacing={3}>
+            {/* Recent Groups */}
+            <Grid size={12}>
+              <Card>
+                <CardHeader
+                  title="Recent Groups"
+                  action={
+                    <Button component={Link} to="/groups" variant="outlined" startIcon={<GroupIcon />}>
+                      View All
+                    </Button>
+                  }
+                />
+                <CardContent>
                   {groupsLoading ? (
-                    <div className="has-text-centered p-4">
-                      <span className="icon is-large">
-                        <i className="fas fa-spinner fa-pulse fa-2x"></i>
-                      </span>
-                    </div>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                      <CircularProgress />
+                    </Box>
                   ) : groups.length > 0 ? (
-                    <div className="groups-grid">
-                      {groups.map((group: Group) => (
-                        <GroupCard key={group.ID} group={group} variant="compact" />
+                    <List>
+                      {groups.slice(0, 5).map((group: Group) => (
+                        <ListItemButton key={group.ID} component={Link} to={`/groups/${group.ID}`}>
+                          <ListItemIcon>
+                            <GroupIcon />
+                          </ListItemIcon>
+                          <ListItemText primary={group.Name} secondary={group.Description} />
+                        </ListItemButton>
                       ))}
-                    </div>
+                    </List>
                   ) : (
-                    <div className="notification is-light has-text-centered">
-                      <p>You haven't joined any groups yet.</p>
-                      <ActionButton
-                        text="Create Group"
-                        to="/groups/new"
-                        icon="fas fa-plus"
-                        size="small"
-                        className="mt-3"
-                      />
-                    </div>
+                    <Typography color="text.secondary">
+                      No groups found. Create your first group to get started!
+                    </Typography>
                   )}
-                </div>
-              </div>
-            </div>
-          </div>
+                </CardContent>
+              </Card>
+            </Grid>
 
-          {/* Upcoming Events */}
-          <div className="card mt-5">
-            <header className="card-header">
-              <p className="card-header-title">
-                <span className="icon mr-2">
-                  <i className="fas fa-calendar-alt"></i>
-                </span>
-                Upcoming Events
-              </p>
-              <Link to="/events" className="card-header-icon">
-                <span className="icon">
-                  <i className="fas fa-angle-right"></i>
-                </span>
-              </Link>
-            </header>
-            <div className="card-content">
-              {eventsLoading ? (
-                <div className="has-text-centered p-4">
-                  <span className="icon is-large">
-                    <i className="fas fa-spinner fa-pulse fa-2x"></i>
-                  </span>
-                </div>
-              ) : events.length > 0 ? (
-                <CardGrid>
-                  {events.map((event: Event) => (
-                    <div key={event.id} className="column is-12-mobile is-6-tablet is-4-desktop">
-                      <ItemCard id={event.id} title={event.title} description={event.description}>
-                        <InfoItem icon="fas fa-map-marker-alt">{event.location}</InfoItem>
-
-                        <InfoItem icon="fas fa-calendar">{formatDate(event.startTime)}</InfoItem>
-
-                        <InfoItem icon="fas fa-clock">
-                          {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                        </InfoItem>
-
-                        <ActionButton
-                          text="View Details"
-                          to={`/events/${event.id}`}
-                          icon="fas fa-arrow-right"
-                          variant="link"
-                          outlined
-                          fullWidth
-                        />
-                      </ItemCard>
-                    </div>
-                  ))}
-                </CardGrid>
-              ) : (
-                <div className="notification is-light has-text-centered">
-                  <p>No upcoming events scheduled.</p>
-                  <ActionButton text="Create Event" to="/events/new" icon="fas fa-plus" size="small" className="mt-3" />
-                </div>
-              )}
-            </div>
-          </div>
+            {/* Upcoming Events */}
+            <Grid size={12}>
+              <Card>
+                <CardHeader
+                  title="Upcoming Events"
+                  action={
+                    <Button component={Link} to="/events" variant="outlined" startIcon={<EventIcon />}>
+                      View All
+                    </Button>
+                  }
+                />
+                <CardContent>
+                  {eventsLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : events.length > 0 ? (
+                    <List>
+                      {events.slice(0, 5).map((event: Event) => (
+                        <ListItemButton key={event.id} component={Link} to={`/events/${event.id}`}>
+                          <ListItemIcon>
+                            <EventIcon />
+                          </ListItemIcon>
+                          <ListItemText primary={event.title} secondary={event.description} />
+                        </ListItemButton>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography color="text.secondary">No upcoming events. Create an event to get started!</Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
         </>
       ) : (
-        // Welcome Page for Non-logged in Users
-        <div className="hero is-medium">
-          <div className="hero-body">
-            <div className="container has-text-centered">
-              <h1 className="title is-1 is-size-2-mobile">Welcome to Improv App</h1>
-              <p className="subtitle is-4 is-size-5-mobile mb-6">
-                Organize your improv groups, events, and games all in one place.
-              </p>
-
-              <div className="columns is-centered">
-                <div className="column is-12-mobile is-8-tablet">
-                  <div className="box has-background-white p-6 p-4-mobile">
-                    <div className="mb-6 mb-4-mobile">
-                      <span className="icon is-large has-text-primary">
-                        <i className="fas fa-theater-masks fa-3x"></i>
-                      </span>
-                    </div>
-                    <h2 className="title is-3 is-size-4-mobile mb-4">Get Started Today</h2>
-                    <p className="subtitle is-5 is-size-6-mobile mb-5">
-                      Join our community of improvisers to organize groups, schedule events, and discover new games.
-                    </p>
-                    <div className="buttons is-centered">
-                      <ActionButton
-                        text="Sign In"
-                        to="/login"
-                        icon="fas fa-sign-in-alt"
-                        variant="primary"
-                        size="large"
-                      />
-                      <ActionButton
-                        text="Register"
-                        to="/register"
-                        icon="fas fa-user-plus"
-                        variant="link"
-                        size="large"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h4" sx={{ mb: 2 }}>
+            Welcome to ImprovHQ
+          </Typography>
+          <Typography variant="subtitle1" sx={{ mb: 4 }}>
+            Sign in or create an account to get started
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button component={Link} to="/login" variant="contained" size="large">
+              Sign In
+            </Button>
+            <Button component={Link} to="/register" variant="outlined" size="large">
+              Create Account
+            </Button>
+          </Box>
+        </Box>
       )}
-    </div>
+    </Box>
   )
 }
 

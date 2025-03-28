@@ -1,99 +1,21 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { useGetMeQuery } from './store/api/authApi'
-
-// Layout
+import { BrowserRouter as Router } from 'react-router-dom'
+import { ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+import { theme } from './theme'
 import MainLayout from './layout/MainLayout'
-
-// Pages
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ProfilePage from './pages/ProfilePage'
-import GamesPage from './pages/GamesPage'
-import GroupsPage from './pages/GroupsPage'
-import NewGroupPage from './pages/NewGroupPage'
-import GroupDetailsPage from './pages/GroupDetailsPage'
-import EditGroupPage from './pages/EditGroupPage'
-import EventsPage from './pages/EventsPage'
-import NewEventPage from './pages/NewEventPage'
-import NotFoundPage from './pages/NotFoundPage'
-
-// Create routes
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <MainLayout />,
-    children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
-      {
-        path: 'profile',
-        element: <ProfilePage />,
-      },
-      {
-        path: 'games',
-        element: <GamesPage />,
-      },
-      {
-        path: 'groups',
-        element: <GroupsPage />,
-      },
-      {
-        path: 'groups/new',
-        element: <NewGroupPage />,
-      },
-      {
-        path: 'groups/:groupId',
-        element: <GroupDetailsPage />,
-      },
-      {
-        path: 'groups/:groupId/edit',
-        element: <EditGroupPage />,
-      },
-      {
-        path: 'events',
-        element: <EventsPage />,
-      },
-      {
-        path: 'events/new',
-        element: <NewEventPage />,
-      },
-      {
-        path: '*',
-        element: <NotFoundPage />,
-      },
-    ],
-  },
-  {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    path: '/register',
-    element: <RegisterPage />,
-  },
-])
+import AppRoutes from './routes'
 
 function App() {
-  // Fetch the current user when the app loads
-  const { isLoading } = useGetMeQuery()
-
-  // We don't need to manually update the store with the user data
-  // because the authSlice extraReducers will handle that automatically
-
-  if (isLoading) {
-    return (
-      <div className="is-flex is-justify-content-center is-align-items-center" style={{ height: '100vh' }}>
-        <span className="icon is-large">
-          <i className="fas fa-spinner fa-pulse fa-3x"></i>
-        </span>
-      </div>
-    )
-  }
-
-  return <RouterProvider router={router} />
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <MainLayout>
+          <AppRoutes />
+        </MainLayout>
+      </Router>
+    </ThemeProvider>
+  )
 }
 
 export default App
