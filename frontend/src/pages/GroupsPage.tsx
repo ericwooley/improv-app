@@ -34,20 +34,23 @@ const GroupsPage = ({ initialGroups = [] }: GroupsPageProps) => {
         </ul>
       </nav>
 
-      <div className="is-flex is-justify-content-space-between is-align-items-center mb-5">
-        <div>
+      <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-start-mobile mb-5">
+        <div className="mb-4-mobile">
           <h1 className="title is-2">Improv Groups</h1>
           <p className="subtitle is-5">Manage and explore your improv groups</p>
         </div>
-        <div>
-          <Link to="/groups/new" className="button is-primary is-medium">
+      </div>
+
+      {groups.length > 0 && (
+        <div className="mb-5">
+          <Link to="/groups/new" className="button is-primary">
             <span className="icon">
               <i className="fas fa-plus"></i>
             </span>
             <span>Create Group</span>
           </Link>
         </div>
-      </div>
+      )}
 
       {groups.length > 0 ? (
         <div className="columns is-multiline">

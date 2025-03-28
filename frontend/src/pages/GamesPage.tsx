@@ -15,68 +15,40 @@ interface GamesPageProps {
 }
 
 const GamesPage = ({ initialGames = [] }: GamesPageProps) => {
-  const [games, setGames] = useState<Game[]>(initialGames)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [newGame, setNewGame] = useState<{
-    name: string
-    description: string
-    minPlayers: number
-    maxPlayers: number
-    tags: string
-  }>({
-    name: '',
-    description: '',
-    minPlayers: 2,
-    maxPlayers: 8,
-    tags: '',
-  })
-
-  const handleCreateGame = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Create a new game object
-    const gameToAdd: Game = {
-      id: Date.now().toString(), // temporary ID until backend integration
-      name: newGame.name,
-      description: newGame.description,
-      minPlayers: newGame.minPlayers,
-      maxPlayers: newGame.maxPlayers,
-      tags: newGame.tags
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter((tag) => tag),
-    }
-
-    // Add the new game to the state
-    setGames([...games, gameToAdd])
-
-    // Reset form and close modal
-    setNewGame({
-      name: '',
-      description: '',
-      minPlayers: 2,
-      maxPlayers: 8,
-      tags: '',
-    })
-    setIsCreateModalOpen(false)
-  }
+  const [games] = useState<Game[]>(initialGames)
 
   return (
     <div className="content-wrapper">
-      <div className="is-flex is-justify-content-space-between is-align-items-center mb-5">
-        <div>
+      <nav className="breadcrumb has-arrow-separator mb-5" aria-label="breadcrumbs">
+        <ul>
+          <li>
+            <Link to="/">Home</Link>
+          </li>
+          <li className="is-active">
+            <a href="#" aria-current="page">
+              Games
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-start-mobile mb-5">
+        <div className="mb-4-mobile">
           <h1 className="title is-2">Improv Games</h1>
           <p className="subtitle is-5">Browse and manage your collection of improv games</p>
         </div>
-        <div>
-          <button onClick={() => setIsCreateModalOpen(true)} className="button is-primary is-medium">
+      </div>
+
+      {games.length > 0 && (
+        <div className="mb-5">
+          <Link to="/games/new" className="button is-primary">
             <span className="icon">
               <i className="fas fa-plus"></i>
             </span>
             <span>Create Game</span>
-          </button>
+          </Link>
         </div>
-      </div>
+      )}
 
       {/* Games Grid */}
       {games.length > 0 ? (
@@ -128,145 +100,14 @@ const GamesPage = ({ initialGames = [] }: GamesPageProps) => {
       ) : (
         <div className="notification is-light has-text-centered p-6">
           <p className="mb-4">No games have been added yet.</p>
-          <button onClick={() => setIsCreateModalOpen(true)} className="button is-primary">
+          <Link to="/games/new" className="button is-primary">
             <span className="icon">
               <i className="fas fa-plus"></i>
             </span>
             <span>Add Your First Game</span>
-          </button>
+          </Link>
         </div>
       )}
-
-      {/* Create Game Modal */}
-      <div className={`modal ${isCreateModalOpen ? 'is-active' : ''}`}>
-        <div className="modal-background" onClick={() => setIsCreateModalOpen(false)}></div>
-        <div className="modal-card">
-          <header className="modal-card-head">
-            <p className="modal-card-title">
-              <span className="icon mr-2">
-                <i className="fas fa-dice"></i>
-              </span>
-              Create New Game
-            </p>
-            <button className="delete" aria-label="close" onClick={() => setIsCreateModalOpen(false)}></button>
-          </header>
-          <section className="modal-card-body">
-            <form onSubmit={handleCreateGame}>
-              <div className="field">
-                <label htmlFor="name" className="label">
-                  Game Name
-                </label>
-                <div className="control has-icons-left">
-                  <input
-                    type="text"
-                    id="name"
-                    required
-                    className="input"
-                    placeholder="Freeze Tag"
-                    value={newGame.name}
-                    onChange={(e) => setNewGame({ ...newGame, name: e.target.value })}
-                  />
-                  <span className="icon is-small is-left">
-                    <i className="fas fa-gamepad"></i>
-                  </span>
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="description" className="label">
-                  Description
-                </label>
-                <div className="control">
-                  <textarea
-                    id="description"
-                    className="textarea"
-                    placeholder="Explain how to play the game..."
-                    value={newGame.description}
-                    onChange={(e) => setNewGame({ ...newGame, description: e.target.value })}></textarea>
-                </div>
-              </div>
-              <div className="columns">
-                <div className="column">
-                  <div className="field">
-                    <label htmlFor="min_players" className="label">
-                      Min Players
-                    </label>
-                    <div className="control has-icons-left">
-                      <input
-                        type="number"
-                        id="min_players"
-                        required
-                        min="1"
-                        className="input"
-                        placeholder="2"
-                        value={newGame.minPlayers}
-                        onChange={(e) => setNewGame({ ...newGame, minPlayers: parseInt(e.target.value) })}
-                      />
-                      <span className="icon is-small is-left">
-                        <i className="fas fa-user"></i>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="column">
-                  <div className="field">
-                    <label htmlFor="max_players" className="label">
-                      Max Players
-                    </label>
-                    <div className="control has-icons-left">
-                      <input
-                        type="number"
-                        id="max_players"
-                        required
-                        min="1"
-                        className="input"
-                        placeholder="8"
-                        value={newGame.maxPlayers}
-                        onChange={(e) => setNewGame({ ...newGame, maxPlayers: parseInt(e.target.value) })}
-                      />
-                      <span className="icon is-small is-left">
-                        <i className="fas fa-users"></i>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="tags" className="label">
-                  Tags
-                </label>
-                <div className="control has-icons-left">
-                  <input
-                    type="text"
-                    id="tags"
-                    className="input"
-                    placeholder="warmup, scene, narrative (comma-separated)"
-                    value={newGame.tags}
-                    onChange={(e) => setNewGame({ ...newGame, tags: e.target.value })}
-                  />
-                  <span className="icon is-small is-left">
-                    <i className="fas fa-tags"></i>
-                  </span>
-                </div>
-              </div>
-              <div className="field is-grouped is-grouped-right mt-5">
-                <p className="control">
-                  <button type="button" className="button is-light" onClick={() => setIsCreateModalOpen(false)}>
-                    Cancel
-                  </button>
-                </p>
-                <p className="control">
-                  <button type="submit" className="button is-primary">
-                    <span className="icon">
-                      <i className="fas fa-check"></i>
-                    </span>
-                    <span>Create Game</span>
-                  </button>
-                </p>
-              </div>
-            </form>
-          </section>
-        </div>
-      </div>
     </div>
   )
 }

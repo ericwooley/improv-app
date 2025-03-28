@@ -48,21 +48,24 @@ const EventsPage = ({ initialEvents = [], groups = [] }: EventsPageProps) => {
         </ul>
       </nav>
 
-      <div className="is-flex is-justify-content-space-between is-align-items-center mb-5">
-        <div>
+      <div className="is-flex is-flex-direction-column-mobile is-justify-content-space-between is-align-items-start-mobile mb-5">
+        <div className="mb-4-mobile">
           <h1 className="title is-2">Improv Events</h1>
           <p className="subtitle is-5">Schedule and manage your improv events</p>
         </div>
-        <div>
+      </div>
+
+      {events.length > 0 && (
+        <div className="mb-5">
           {groups.length > 0 ? (
-            <Link to="/events/new" className="button is-primary is-medium">
+            <Link to="/events/new" className="button is-primary">
               <span className="icon">
                 <i className="fas fa-plus"></i>
               </span>
               <span>Create Event</span>
             </Link>
           ) : (
-            <Link to="/groups/new" className="button is-primary is-medium">
+            <Link to="/groups/new" className="button is-primary">
               <span className="icon">
                 <i className="fas fa-users"></i>
               </span>
@@ -70,7 +73,7 @@ const EventsPage = ({ initialEvents = [], groups = [] }: EventsPageProps) => {
             </Link>
           )}
         </div>
-      </div>
+      )}
 
       {events.length > 0 ? (
         <div className="columns is-multiline">
