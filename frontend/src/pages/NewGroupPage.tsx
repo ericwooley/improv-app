@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useCreateGroupMutation } from '../store/api/groupsApi'
 import {
   PageHeader,
   Breadcrumb,
@@ -10,42 +11,24 @@ import {
   ActionButton,
 } from '../components'
 
-interface Group {
-  id: string
-  name: string
-  description: string
-  createdAt: Date
-}
-
-interface NewGroupPageProps {
-  onCreateGroup?: (group: Group) => void
-}
-
-const NewGroupPage = ({ onCreateGroup }: NewGroupPageProps) => {
+const NewGroupPage = () => {
   const navigate = useNavigate()
-  const [newGroup, setNewGroup] = useState({
+  const [createGroup, { isLoading, error }] = useCreateGroupMutation()
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
   })
 
-  const handleCreateGroup = (e: React.FormEvent) => {
+  const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Create a new group object
-    const groupToAdd: Group = {
-      id: Date.now().toString(), // temporary ID until backend integration
-      name: newGroup.name,
-      description: newGroup.description,
-      createdAt: new Date(),
+    try {
+      await createGroup(formData).unwrap()
+      navigate('/groups')
+    } catch (err) {
+      // Error is handled by the mutation hook
+      console.error('Failed to create group:', err)
     }
-
-    // Call the callback if provided
-    if (onCreateGroup) {
-      onCreateGroup(groupToAdd)
-    }
-
-    // Navigate back to groups page
-    navigate('/groups')
   }
 
   return (
@@ -60,28 +43,36 @@ const NewGroupPage = ({ onCreateGroup }: NewGroupPageProps) => {
       <PageHeader title="Create New Group" subtitle="Set up a new improv group" />
 
       <FormContainer onSubmit={handleCreateGroup}>
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error instanceof Error ? error.message : 'Failed to create group'}
+          </div>
+        )}
+
         <InputField
           id="name"
           label="Group Name"
-          value={newGroup.name}
+          value={formData.name}
           placeholder="My Improv Group"
           required
           icon="fas fa-theater-masks"
-          onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          disabled={isLoading}
         />
 
         <TextareaField
           id="description"
           label="Description"
-          value={newGroup.description}
+          value={formData.description}
           placeholder="Tell us about your group..."
           rows={3}
-          onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          disabled={isLoading}
         />
 
         <FormActions>
-          <ActionButton text="Cancel" to="/groups" variant="light" />
-          <ActionButton text="Create Group" icon="fas fa-check" type="submit" />
+          <ActionButton text="Cancel" to="/groups" variant="light" disabled={isLoading} />
+          <ActionButton text="Create Group" icon="fas fa-check" type="submit" disabled={isLoading} />
         </FormActions>
       </FormContainer>
     </div>

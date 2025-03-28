@@ -9,6 +9,7 @@ interface InputFieldProps {
   placeholder?: string
   required?: boolean
   icon?: string
+  disabled?: boolean
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
 
@@ -20,6 +21,7 @@ const InputField: React.FC<InputFieldProps> = ({
   placeholder = '',
   required = false,
   icon,
+  disabled = false,
   onChange,
 }) => {
   return (
@@ -31,6 +33,7 @@ const InputField: React.FC<InputFieldProps> = ({
         placeholder={placeholder}
         value={value}
         required={required}
+        disabled={disabled}
         onChange={onChange}
       />
     </FormField>

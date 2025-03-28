@@ -12,6 +12,7 @@ interface ActionButtonProps {
   size?: 'small' | 'normal' | 'medium' | 'large'
   className?: string
   type?: 'button' | 'submit' | 'reset'
+  disabled?: boolean
 }
 
 const ActionButton: React.FC<ActionButtonProps> = ({
@@ -25,6 +26,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   size,
   className = '',
   type = 'button',
+  disabled = false,
 }) => {
   const buttonClassName = [
     'button',
@@ -32,6 +34,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     outlined ? 'is-outlined' : '',
     fullWidth ? 'is-fullwidth' : '',
     size ? `is-${size}` : '',
+    disabled ? 'is-disabled' : '',
     className,
   ]
     .filter(Boolean)
@@ -57,7 +60,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   }
 
   return (
-    <button className={buttonClassName} onClick={onClick} type={type}>
+    <button className={buttonClassName} onClick={onClick} type={type} disabled={disabled}>
       {content}
     </button>
   )
