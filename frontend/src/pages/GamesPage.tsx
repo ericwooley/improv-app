@@ -1,17 +1,6 @@
-import {
-  Box,
-  Typography,
-  CardActions,
-  CircularProgress,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-} from '@mui/material'
-import { PageHeader, EmptyState, TagList, InfoItem } from '../components'
+import { Box, Typography, CircularProgress, Grid } from '@mui/material'
+import { PageHeader, EmptyState, GameCard } from '../components'
 import { useGetGamesQuery } from '../store/api/gamesApi'
-import { Link } from 'react-router-dom'
 
 const GamesPage = () => {
   const { data: gamesData, isLoading, error } = useGetGamesQuery()
@@ -44,36 +33,7 @@ const GamesPage = () => {
                 md: 4,
               }}
               key={game.id}>
-              <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardHeader title={game.name} />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {game.description}
-                  </Typography>
-
-                  <InfoItem icon="fas fa-users">
-                    <Typography variant="body2">
-                      {game.minPlayers}-{game.maxPlayers} players
-                    </Typography>
-                  </InfoItem>
-
-                  {game.public && (
-                    <InfoItem icon="fas fa-globe">
-                      <Typography variant="body2" color="primary.main">
-                        Public
-                      </Typography>
-                    </InfoItem>
-                  )}
-
-                  <TagList tags={game.tags} />
-                </CardContent>
-
-                <CardActions sx={{ pt: 2, justifyContent: 'flex-end' }}>
-                  <Button component={Link} to={`/games/${game.id}`} color="primary" size="small">
-                    View
-                  </Button>
-                </CardActions>
-              </Card>
+              <GameCard game={game} />
             </Grid>
           ))}
         </Grid>

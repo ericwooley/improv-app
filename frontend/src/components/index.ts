@@ -4,6 +4,7 @@ export { default as InfoItem } from './InfoItem'
 export { default as PageHeader } from './PageHeader'
 export { default as TagList } from './TagList'
 export { formatDate, formatTime } from './DateTimeFormatter'
+export { default as GameCard, type Game } from './GameCard'
 
 // Form Components
 export { default as FormField } from './FormField'

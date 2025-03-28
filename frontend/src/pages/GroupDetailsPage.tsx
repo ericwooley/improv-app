@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useGetGroupQuery, useGetGroupLibraryGamesQuery, useGetGroupOwnedGamesQuery } from '../store/api/groupsApi'
-import { PageHeader, Breadcrumb, InfoItem, formatDate } from '../components'
+import { PageHeader, Breadcrumb, InfoItem, formatDate, GameCard } from '../components'
 import {
   Box,
   Card,
@@ -126,38 +126,35 @@ const GroupDetailsPage = () => {
           </IconButton>
         }
       />
+      {userRole === 'admin' && (
+        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+          <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
+            <ListItemIcon>
+              <CalendarIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Create Event</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
+            <ListItemIcon>
+              <GamepadIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Create Game</ListItemText>
+          </MenuItem>
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
-          <ListItemIcon>
-            <CalendarIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Create Event</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
-          <ListItemIcon>
-            <GamepadIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Create Game</ListItemText>
-        </MenuItem>
-        {userRole === 'admin' && (
-          <>
-            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
-              <ListItemIcon>
-                <EditIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Edit Group</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
-              <ListItemIcon>
-                <PeopleIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Manage Members</ListItemText>
-            </MenuItem>
-          </>
-        )}
-      </Menu>
-
+          <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit Group</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
+            <ListItemIcon>
+              <PeopleIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Manage Members</ListItemText>
+          </MenuItem>
+        </Menu>
+      )}
       <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ flex: 1 }}>
           <Card sx={{ mb: 3 }}>
@@ -228,30 +225,7 @@ const GroupDetailsPage = () => {
                           md: 4,
                         }}
                         key={game.id}>
-                        <Card variant="outlined" sx={{ height: '100%' }}>
-                          <CardContent>
-                            <Typography variant="h6" component="div" gutterBottom>
-                              {game.name}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {game.description}
-                            </Typography>
-                            {game.ownedByGroup && (
-                              <Chip
-                                label="Owned"
-                                color="primary"
-                                size="small"
-                                icon={<OwnedIcon fontSize="small" />}
-                                sx={{ mt: 1 }}
-                              />
-                            )}
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                {game.minPlayers}-{game.maxPlayers} players
-                              </Typography>
-                            </Box>
-                          </CardContent>
-                        </Card>
+                        <GameCard game={game} />
                       </Grid>
                     ))}
                   </Grid>
@@ -277,21 +251,7 @@ const GroupDetailsPage = () => {
                           md: 4,
                         }}
                         key={game.id}>
-                        <Card variant="outlined" sx={{ height: '100%' }}>
-                          <CardContent>
-                            <Typography variant="h6" component="div" gutterBottom>
-                              {game.name}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {game.description}
-                            </Typography>
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                {game.minPlayers}-{game.maxPlayers} players
-                              </Typography>
-                            </Box>
-                          </CardContent>
-                        </Card>
+                        <GameCard game={game} />
                       </Grid>
                     ))}
                   </Grid>
