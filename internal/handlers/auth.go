@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"improv-app/internal/config"
 	"improv-app/internal/services"
@@ -80,15 +81,23 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // Verify handles magic link verification
 func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
+	redirectURL := os.Getenv("FRONTEND_URL")
+	if redirectURL == "" {
+		panic("FRONTEND_URL is not set")
+	}
+
 	if token == "" {
-		RespondWithError(w, http.StatusBadRequest, "Invalid token")
+		w.WriteHeader(http.StatusBadRequest)
+		// redirect to login page with flash
+		http.Redirect(w, r, redirectURL+"/login?error=missing_token", http.StatusSeeOther)
 		return
 	}
 
 	user, err := h.emailService.VerifyToken(token)
 	if err != nil {
-		fmt.Println("Error verifying token:", err)
-		RespondWithError(w, http.StatusBadRequest, "Invalid or expired token")
+		w.WriteHeader(http.StatusBadRequest)
+		// redirect to login page with flash
+		http.Redirect(w, r, redirectURL+"/login?error=invalid_token", http.StatusSeeOther)
 		return
 	}
 
@@ -96,19 +105,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	session.Values["user_id"] = user.ID
 	session.Save(r, w)
 
-	// Return user data in response
-	userData := map[string]interface{}{
-		"id":        user.ID,
-		"email":     user.Email,
-		"firstName": user.FirstName,
-		"lastName":  user.LastName,
-	}
-
-	RespondWithJSON(w, http.StatusOK, ApiResponse{
-		Success: true,
-		Message: "Authentication successful",
-		Data:    userData,
-	})
+	http.Redirect(w, r, redirectURL+"/", http.StatusSeeOther)
 }
 
 // GetCurrentUser returns the currently authenticated user

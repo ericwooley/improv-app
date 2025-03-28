@@ -73,18 +73,24 @@ func (s *EmailService) SendMagicLink(email string) error {
 	}
 
 	subject := "Your Magic Link for Improv App"
+
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		panic("BASE_URL is not set")
+	}
+
 	body := fmt.Sprintf(`
 		Hello,
 
 		Click the link below to sign in to your Improv App account:
 
-		http://localhost:4080/auth/verify?token=%s
+		%s/api/auth/verify?token=%s
 
 		This link will expire in 24 hours.
 
 		Best regards,
 		%s
-	`, token, fromName)
+	`, baseURL, token, fromName)
 
 	// Set up email message
 	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+

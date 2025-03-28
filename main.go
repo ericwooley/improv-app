@@ -14,6 +14,18 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// responseWriter is a wrapper for http.ResponseWriter that captures the status code
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+// WriteHeader captures the status code before calling the underlying WriteHeader
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -49,6 +61,23 @@ func main() {
 			}
 
 			next.ServeHTTP(w, r)
+		})
+	})
+
+	// Logging middleware with response status
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Create a custom response writer to capture status code
+			rw := &responseWriter{
+				ResponseWriter: w,
+				statusCode:     http.StatusOK, // Default status code
+			}
+
+			// Process the request
+			next.ServeHTTP(rw, r)
+
+			// Log both request and response details
+			log.Printf("[%s] %s %s -> %d", r.RemoteAddr, r.Method, r.URL.Path, rw.statusCode)
 		})
 	})
 
