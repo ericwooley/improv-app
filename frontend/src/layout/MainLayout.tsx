@@ -1,17 +1,31 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
+import { RootState } from '../store'
+import { useLogoutMutation } from '../store/api/authApi'
+import { clearCredentials } from '../store/slices/authSlice'
 import '../index.css'
 
-interface User {
-  firstName: string
-  lastName: string
-}
-
-interface MainLayoutProps {
-  user?: User
-}
-
-const MainLayout = ({ user }: MainLayoutProps) => {
+const MainLayout = () => {
   const location = useLocation()
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+
+  // Get auth state from Redux
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
+
+  // Get logout mutation
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation()
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap()
+      dispatch(clearCredentials())
+      navigate('/login')
+    } catch (error) {
+      console.error('Failed to logout:', error)
+    }
+  }
 
   return (
     <div className="app-container">
@@ -21,7 +35,7 @@ const MainLayout = ({ user }: MainLayoutProps) => {
           <h1 className="title is-5 has-text-white">Improv App</h1>
         </div>
         <div className="sidebar-menu">
-          {user ? (
+          {isAuthenticated ? (
             <>
               <Link to="/" className={location.pathname === '/' ? 'active-link mb-2' : 'mb-2'}>
                 <i className="fas fa-home"></i> Dashboard
@@ -54,7 +68,7 @@ const MainLayout = ({ user }: MainLayoutProps) => {
           )}
         </div>
         <div className="sidebar-user">
-          {user && (
+          {isAuthenticated && user && (
             <div className="is-flex is-align-items-center">
               <div className="is-flex-shrink-0 mr-3">
                 <span className="icon is-medium has-text-light">
@@ -66,14 +80,13 @@ const MainLayout = ({ user }: MainLayoutProps) => {
                   {user.firstName} {user.lastName}
                 </p>
                 <button
-                  onClick={() => {
-                    /* Handle logout */
-                  }}
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
                   className="button is-small is-danger is-outlined is-fullwidth mt-2">
                   <span className="icon is-small">
                     <i className="fas fa-sign-out-alt"></i>
                   </span>
-                  <span>Logout</span>
+                  <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
                 </button>
               </div>
             </div>

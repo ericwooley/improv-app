@@ -59,15 +59,20 @@ func main() {
 	api.HandleFunc("/auth/me", middleware.RequireAuthAPI(sqlDB, authHandler.GetCurrentUser)).Methods("GET")
 	api.HandleFunc("/profile", middleware.RequireAuthAPI(sqlDB, authHandler.Profile)).Methods("GET", "PUT")
 
-	// Protected resource routes
+	// Group routes
 	api.HandleFunc("/groups", middleware.RequireAuthAPI(sqlDB, groupHandler.List)).Methods("GET", "POST")
 	api.HandleFunc("/groups/{id}", middleware.RequireAuthAPI(sqlDB, groupHandler.Get)).Methods("GET")
 
-	api.HandleFunc("/groups/{id}/events", middleware.RequireAuthAPI(sqlDB, eventHandler.List)).Methods("GET", "POST")
+	// Event routes
+	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.ListAll)).Methods("GET")
+	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.Create)).Methods("POST")
 	api.HandleFunc("/events/{id}", middleware.RequireAuthAPI(sqlDB, eventHandler.Get)).Methods("GET")
+	api.HandleFunc("/groups/{id}/events", middleware.RequireAuthAPI(sqlDB, eventHandler.List)).Methods("GET", "POST")
 
+	// Game routes
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET", "POST")
 	api.HandleFunc("/games/{id}", middleware.RequireAuthAPI(sqlDB, gameHandler.Get)).Methods("GET")
+	api.HandleFunc("/games/{id}/rate", middleware.RequireAuthAPI(sqlDB, gameHandler.RateGame)).Methods("POST")
 
 	// Serve frontend static files in production
 	fs := http.FileServer(http.Dir("./frontend/dist"))

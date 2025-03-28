@@ -2,61 +2,105 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 type EventHandler struct {
-	db        *sql.DB
+	db *sql.DB
 }
 
 func NewEventHandler(db *sql.DB) *EventHandler {
 	return &EventHandler{
-		db:        db,
+		db: db,
 	}
 }
 
+// List handles GET and POST for events within a group
 func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	groupID := vars["id"]
 
-	if r.Method == "POST" {
-		title := r.FormValue("title")
-		description := r.FormValue("description")
-		location := r.FormValue("location")
-		startTime, err := time.Parse("2006-01-02T15:04", r.FormValue("start_time"))
-		if err != nil {
-			http.Error(w, "Invalid start time", http.StatusBadRequest)
-			return
-		}
-		endTime, err := time.Parse("2006-01-02T15:04", r.FormValue("end_time"))
-		if err != nil {
-			http.Error(w, "Invalid end time", http.StatusBadRequest)
-			return
-		}
-
-		var eventID string
-		err = h.db.QueryRow(`
-			INSERT INTO events (group_id, title, description, location, start_time, end_time, created_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id
-		`, groupID, title, description, location, startTime, endTime, user.ID).Scan(&eventID)
-		if err != nil {
-			http.Error(w, "Error creating event", http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r, "/events/"+eventID, http.StatusSeeOther)
+	// Verify user is a member of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
 		return
 	}
 
-	// GET: List events
+	if r.Method == "POST" {
+		// Parse JSON request
+		var eventRequest struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Location    string `json:"location"`
+			StartTime   string `json:"startTime"`
+			EndTime     string `json:"endTime"`
+		}
+
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&eventRequest); err != nil {
+			RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+		defer r.Body.Close()
+
+		startTime, err := time.Parse(time.RFC3339, eventRequest.StartTime)
+		if err != nil {
+			RespondWithError(w, http.StatusBadRequest, "Invalid start time format")
+			return
+		}
+
+		endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
+		if err != nil {
+			RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
+			return
+		}
+
+		eventID := uuid.New().String()
+		err = h.db.QueryRow(`
+			INSERT INTO events (id, group_id, title, description, location, start_time, end_time, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			RETURNING id
+		`, eventID, groupID, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, user.ID).Scan(&eventID)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error creating event")
+			return
+		}
+
+		// Fetch the newly created event
+		var event Event
+		err = h.db.QueryRow(`
+			SELECT id, group_id, title, description, location, start_time, end_time, created_at, created_by
+			FROM events
+			WHERE id = $1
+		`, eventID).Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching created event")
+			return
+		}
+
+		RespondWithJSON(w, http.StatusCreated, ApiResponse{
+			Success: true,
+			Message: "Event created successfully",
+			Data:    event,
+		})
+		return
+	}
+
+	// GET: List events for the group
 	rows, err := h.db.Query(`
 		SELECT id, title, description, location, start_time, end_time, created_at, created_by
 		FROM events
@@ -64,7 +108,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		ORDER BY start_time DESC
 	`, groupID)
 	if err != nil {
-		http.Error(w, "Error fetching events", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching events")
 		return
 	}
 	defer rows.Close()
@@ -74,103 +118,209 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		var event Event
 		err := rows.Scan(&event.ID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
 		if err != nil {
-			http.Error(w, "Error scanning events", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning events")
 			return
 		}
+		event.GroupID = groupID // Add the group ID
 		events = append(events, event)
 	}
 
-	data := models.PageData{
-		Title: "Events",
-		User:  user,
-		Data:  events,
-	}
-	RenderTemplateWithLayout(w, &data, "templates/events.html")
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    events,
+	})
 }
 
+// Create handles creating a new event
+func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
 
-func (h *EventHandler) ListGames(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
-  events := []Event{}
+
+	// Parse JSON request
+	var eventRequest struct {
+		GroupID     string `json:"groupId"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Location    string `json:"location"`
+		StartTime   string `json:"startTime"`
+		EndTime     string `json:"endTime"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&eventRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Verify user is a member of the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, eventRequest.GroupID, user.ID).Scan(&role)
+	if err != nil {
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	startTime, err := time.Parse(time.RFC3339, eventRequest.StartTime)
+	if err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid start time format")
+		return
+	}
+
+	endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
+	if err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
+		return
+	}
+
+	eventID := uuid.New().String()
+	err = h.db.QueryRow(`
+		INSERT INTO events (id, group_id, title, description, location, start_time, end_time, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
+	`, eventID, eventRequest.GroupID, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, user.ID).Scan(&eventID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error creating event")
+		return
+	}
+
+	// Fetch the newly created event
+	var event Event
+	err = h.db.QueryRow(`
+		SELECT id, group_id, title, description, location, start_time, end_time, created_at, created_by
+		FROM events
+		WHERE id = $1
+	`, eventID).Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching created event")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusCreated, ApiResponse{
+		Success: true,
+		Message: "Event created successfully",
+		Data:    event,
+	})
+}
+
+// ListAll returns all events the user has access to
+func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+
 	rows, err := h.db.Query(`
-		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by
+		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
+		       g.name as group_name
 		FROM events e
 		JOIN group_members m ON e.group_id = m.group_id
+		JOIN improv_groups g ON e.group_id = g.id
 		WHERE m.user_id = $1
+		ORDER BY e.start_time DESC
 	`, user.ID)
 	if err != nil {
-		http.Error(w, "Error fetching events", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching events")
 		return
 	}
 	defer rows.Close()
 
+	type EventWithGroup struct {
+		ID          string    `json:"id"`
+		GroupID     string    `json:"groupId"`
+		GroupName   string    `json:"groupName"`
+		Title       string    `json:"title"`
+		Description string    `json:"description"`
+		Location    string    `json:"location"`
+		StartTime   time.Time `json:"startTime"`
+		EndTime     time.Time `json:"endTime"`
+		CreatedAt   time.Time `json:"createdAt"`
+		CreatedBy   string    `json:"createdBy"`
+	}
+
+	var events []EventWithGroup
 	for rows.Next() {
-		var event Event
-		err := rows.Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+		var event EventWithGroup
+		err := rows.Scan(
+			&event.ID, &event.GroupID, &event.Title, &event.Description,
+			&event.Location, &event.StartTime, &event.EndTime,
+			&event.CreatedAt, &event.CreatedBy, &event.GroupName,
+		)
 		if err != nil {
-			http.Error(w, "Error scanning events", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning events")
 			return
 		}
 		events = append(events, event)
 	}
 
-	data := models.PageData{
-		Title: "Events",
-		User:  user,
-		Data:  events,
-	}
-	RenderTemplateWithLayout(w, &data, "templates/events.html")
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    events,
+	})
 }
 
+// Get handles fetching a single event
 func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
 	var event Event
+	var groupName string
 	err := h.db.QueryRow(`
-		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by
+		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
+		       g.name as group_name
 		FROM events e
+		JOIN improv_groups g ON e.group_id = g.id
 		JOIN group_members m ON e.group_id = m.group_id
 		WHERE e.id = $1 AND m.user_id = $2
-	`, eventID, user.ID).Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+	`, eventID, user.ID).Scan(
+		&event.ID, &event.GroupID, &event.Title, &event.Description,
+		&event.Location, &event.StartTime, &event.EndTime,
+		&event.CreatedAt, &event.CreatedBy, &groupName,
+	)
 	if err != nil {
-		http.Error(w, "Event not found", http.StatusNotFound)
+		RespondWithError(w, http.StatusNotFound, "Event not found")
 		return
 	}
 
 	// Get RSVPs
-	rows, err := h.db.Query(`
-		SELECT u.first_name, u.last_name, r.status
+	rsvpRows, err := h.db.Query(`
+		SELECT u.id, u.first_name, u.last_name, r.status
 		FROM event_rsvps r
 		JOIN users u ON r.user_id = u.id
 		WHERE r.event_id = $1
 	`, eventID)
 	if err != nil {
-		http.Error(w, "Error fetching RSVPs", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching RSVPs")
 		return
 	}
-	defer rows.Close()
+	defer rsvpRows.Close()
 
 	type RSVP struct {
-		FirstName string
-		LastName  string
-		Status    string
+		UserID    string `json:"userId"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Status    string `json:"status"`
 	}
 
 	var rsvps []RSVP
-	for rows.Next() {
+	for rsvpRows.Next() {
 		var rsvp RSVP
-		err := rows.Scan(&rsvp.FirstName, &rsvp.LastName, &rsvp.Status)
+		err := rsvpRows.Scan(&rsvp.UserID, &rsvp.FirstName, &rsvp.LastName, &rsvp.Status)
 		if err != nil {
-			http.Error(w, "Error scanning RSVPs", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning RSVPs")
 			return
 		}
 		rsvps = append(rsvps, rsvp)
 	}
 
 	// Get assigned games
-	rows, err = h.db.Query(`
+	gameRows, err := h.db.Query(`
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, eg.order_index
 		FROM event_games eg
 		JOIN games g ON eg.game_id = g.id
@@ -178,35 +328,49 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ORDER BY eg.order_index
 	`, eventID)
 	if err != nil {
-		http.Error(w, "Error fetching games", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching games")
 		return
 	}
-	defer rows.Close()
+	defer gameRows.Close()
 
-	var games []Game
-	for rows.Next() {
-		var game Game
-		var orderIndex int
-		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &orderIndex)
+	type GameWithOrder struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		MinPlayers  int    `json:"minPlayers"`
+		MaxPlayers  int    `json:"maxPlayers"`
+		OrderIndex  int    `json:"orderIndex"`
+	}
+
+	var games []GameWithOrder
+	for gameRows.Next() {
+		var game GameWithOrder
+		err := gameRows.Scan(
+			&game.ID, &game.Name, &game.Description,
+			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex,
+		)
 		if err != nil {
-			http.Error(w, "Error scanning games", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
 			return
 		}
 		games = append(games, game)
 	}
 
-	data := models.PageData{
-		Title: event.Title,
-		User:  user,
-		Data: struct {
-			Event Event
-			RSVPs []RSVP
-			Games []Game
-		}{
-			Event: event,
-			RSVPs: rsvps,
-			Games: games,
-		},
+	// Include the member data in the response
+	eventData := struct {
+		Event     Event          `json:"event"`
+		GroupName string         `json:"groupName"`
+		RSVPs     []RSVP         `json:"rsvps"`
+		Games     []GameWithOrder `json:"games"`
+	}{
+		Event:     event,
+		GroupName: groupName,
+		RSVPs:     rsvps,
+		Games:     games,
 	}
-	RenderTemplateWithLayout(w, &data, "templates/event.html")
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    eventData,
+	})
 }

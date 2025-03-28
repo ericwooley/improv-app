@@ -1,43 +1,40 @@
 import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import { RootState } from '../store'
+import { useGetGroupsQuery } from '../store/api/groupsApi'
+import { useGetEventsQuery } from '../store/api/eventsApi'
+import { Group } from '../store/api/groupsApi'
+import { Event } from '../store/api/eventsApi'
 
-interface User {
-  firstName: string
-  lastName: string
+// Define API response structure
+interface ApiResponse<T> {
+  success: boolean
+  message?: string
+  data: T
+  error?: string
 }
 
-interface Group {
-  id: string
-  name: string
-  description: string
-}
+const HomePage = () => {
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
+  const { data: groupsResponse, isLoading: groupsLoading } = useGetGroupsQuery()
+  const { data: eventsResponse, isLoading: eventsLoading } = useGetEventsQuery()
 
-interface Event {
-  id: string
-  title: string
-  description: string
-  location: string
-  startTime: Date
-  endTime: Date
-}
+  const groups = (groupsResponse as unknown as ApiResponse<Group[]>)?.data || []
+  const events = (eventsResponse as unknown as ApiResponse<Event[]>)?.data || []
 
-interface HomePageProps {
-  user?: User
-  groups?: Group[]
-  events?: Event[]
-}
-
-const HomePage = ({ user, groups = [], events = [] }: HomePageProps) => {
-  const formatDate = (date: Date) => {
+  const formatDate = (dateStr: string | Date) => {
+    const date = dateStr instanceof Date ? dateStr : new Date(dateStr)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateStr: string | Date) => {
+    const date = dateStr instanceof Date ? dateStr : new Date(dateStr)
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
   return (
     <div className="content-wrapper">
-      {user ? (
+      {isAuthenticated && user ? (
         <>
           <div className="mb-5">
             <h1 className="title is-2">Dashboard</h1>
@@ -98,9 +95,15 @@ const HomePage = ({ user, groups = [], events = [] }: HomePageProps) => {
                   </Link>
                 </header>
                 <div className="card-content">
-                  {groups.length > 0 ? (
+                  {groupsLoading ? (
+                    <div className="has-text-centered p-4">
+                      <span className="icon is-large">
+                        <i className="fas fa-spinner fa-pulse fa-2x"></i>
+                      </span>
+                    </div>
+                  ) : groups.length > 0 ? (
                     <div className="groups-grid">
-                      {groups.map((group) => (
+                      {groups.map((group: Group) => (
                         <div key={group.id} className="box has-background-white-ter mb-3">
                           <div className="is-flex is-justify-content-space-between is-align-items-center">
                             <div>
@@ -145,9 +148,15 @@ const HomePage = ({ user, groups = [], events = [] }: HomePageProps) => {
               </Link>
             </header>
             <div className="card-content">
-              {events.length > 0 ? (
+              {eventsLoading ? (
+                <div className="has-text-centered p-4">
+                  <span className="icon is-large">
+                    <i className="fas fa-spinner fa-pulse fa-2x"></i>
+                  </span>
+                </div>
+              ) : events.length > 0 ? (
                 <div className="columns is-multiline">
-                  {events.map((event) => (
+                  {events.map((event: Event) => (
                     <div key={event.id} className="column is-6">
                       <div className="box has-background-white-ter">
                         <h3 className="title is-5">{event.title}</h3>

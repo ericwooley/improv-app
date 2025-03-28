@@ -1,22 +1,29 @@
 import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { useRegisterMutation } from '../store/api/authApi'
+import { useAppDispatch } from '../store/hooks'
+import { setCredentials } from '../store/slices/authSlice'
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const dispatch = useAppDispatch()
+
+  // RTK Query hook for register mutation
+  const [register, { isLoading, error }] = useRegisterMutation()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
 
     try {
-      // TODO: Replace with actual API call when backend is updated
-      console.log('Registering user with email:', email)
-      setSuccess('Registration successful! Please check your email for verification link.')
-    } catch {
-      setError('Failed to register. Please try again.')
+      const response = await register({ email }).unwrap()
+      // Update Redux state with the user info
+      dispatch(setCredentials(response.user))
+
+      // In a real app, you might want to redirect or show a success message
+      alert('Registration successful! Please check your email for verification link.')
+    } catch (err) {
+      // Error is handled by RTK Query and available in the error variable
+      console.error('Failed to register:', err)
     }
   }
 
@@ -49,6 +56,7 @@ const RegisterPage = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                   <span className="icon is-small is-left">
                     <i className="fas fa-envelope"></i>
@@ -57,7 +65,10 @@ const RegisterPage = () => {
               </div>
               <div className="field mt-5">
                 <div className="control">
-                  <button type="submit" className="button is-primary is-fullwidth is-medium">
+                  <button
+                    type="submit"
+                    className={`button is-primary is-fullwidth is-medium ${isLoading ? 'is-loading' : ''}`}
+                    disabled={isLoading}>
                     <span className="icon">
                       <i className="fas fa-user-plus"></i>
                     </span>
@@ -69,13 +80,7 @@ const RegisterPage = () => {
 
             {error && (
               <div className="notification is-danger mt-4">
-                <p>{error}</p>
-              </div>
-            )}
-
-            {success && (
-              <div className="notification is-success mt-4">
-                <p>{success}</p>
+                <p>{JSON.stringify(error)}</p>
               </div>
             )}
           </div>

@@ -2,39 +2,52 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 
 	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 type GroupHandler struct {
-	db        *sql.DB
+	db *sql.DB
 }
 
 func NewGroupHandler(db *sql.DB) *GroupHandler {
 	return &GroupHandler{
-		db:        db,
+		db: db,
 	}
 }
 
+// List handles GET and POST requests for groups
 func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
-		user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	if r.Method == "POST" {
-		name := r.FormValue("name")
-		description := r.FormValue("description")
+		// Parse JSON request
+		var groupRequest struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+		}
 
-		var groupID string
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&groupRequest); err != nil {
+			RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+		defer r.Body.Close()
+
+		groupID := uuid.New().String()
 		err := h.db.QueryRow(`
-			INSERT INTO improv_groups (name, description, created_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO improv_groups (id, name, description, created_by)
+			VALUES ($1, $2, $3, $4)
 			RETURNING id
-		`, name, description, user.ID).Scan(&groupID)
+		`, groupID, groupRequest.Name, groupRequest.Description, user.ID).Scan(&groupID)
 		if err != nil {
-			http.Error(w, "Error creating group", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error creating group")
 			return
 		}
 
@@ -44,11 +57,27 @@ func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, 'admin')
 		`, groupID, user.ID)
 		if err != nil {
-			http.Error(w, "Error adding group member", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error adding group member")
 			return
 		}
 
-		http.Redirect(w, r, "/groups/"+groupID, http.StatusSeeOther)
+		// Fetch the newly created group
+		var group ImprovGroup
+		err = h.db.QueryRow(`
+			SELECT id, name, description, created_at, created_by
+			FROM improv_groups
+			WHERE id = $1
+		`, groupID).Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching created group")
+			return
+		}
+
+		RespondWithJSON(w, http.StatusCreated, ApiResponse{
+			Success: true,
+			Message: "Group created successfully",
+			Data:    group,
+		})
 		return
 	}
 
@@ -61,7 +90,7 @@ func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
 		ORDER BY g.created_at DESC
 	`, user.ID)
 	if err != nil {
-		http.Error(w, "Error fetching groups", http.StatusInternalServerError)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching groups")
 		return
 	}
 	defer rows.Close()
@@ -71,20 +100,19 @@ func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
 		var group ImprovGroup
 		err := rows.Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy)
 		if err != nil {
-			http.Error(w, "Error scanning groups", http.StatusInternalServerError)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning groups")
 			return
 		}
 		groups = append(groups, group)
 	}
 
-	data := models.PageData{
-		Title: "Groups",
-		User:  user,
-		Data:  groups,
-	}
-	RenderTemplateWithLayout(w, &data, "templates/groups.html")
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    groups,
+	})
 }
 
+// Get handles fetching a single group by ID
 func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
@@ -97,7 +125,7 @@ func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 	`, groupID).Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy)
 	if err != nil {
-		http.Error(w, "Group not found", http.StatusNotFound)
+		RespondWithError(w, http.StatusNotFound, "Group not found")
 		return
 	}
 
@@ -109,14 +137,55 @@ func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 	if err != nil {
-		http.Error(w, "Not a member of this group", http.StatusForbidden)
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
 		return
 	}
 
-	data := models.PageData{
-		Title: group.Name,
-		User:  user,
-		Data:  group,
+	// Get members
+	memberRows, err := h.db.Query(`
+		SELECT u.id, u.email, u.first_name, u.last_name, gm.role
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		WHERE gm.group_id = $1
+	`, groupID)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group members")
+		return
 	}
-	RenderTemplateWithLayout(w, &data, "templates/group.html")
+	defer memberRows.Close()
+
+	type Member struct {
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Role      string `json:"role"`
+	}
+
+	var members []Member
+	for memberRows.Next() {
+		var member Member
+		err := memberRows.Scan(&member.ID, &member.Email, &member.FirstName, &member.LastName, &member.Role)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning members")
+			return
+		}
+		members = append(members, member)
+	}
+
+	// Include the member data in the response
+	groupData := struct {
+		Group   ImprovGroup `json:"group"`
+		Members []Member    `json:"members"`
+		UserRole string      `json:"userRole"`
+	}{
+		Group:   group,
+		Members: members,
+		UserRole: role,
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    groupData,
+	})
 }
