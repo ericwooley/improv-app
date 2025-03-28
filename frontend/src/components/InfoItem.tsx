@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react'
-import { Box, Typography, SvgIconProps } from '@mui/material'
+import { Box, SvgIconProps } from '@mui/material'
 
 interface InfoItemProps {
   icon: React.ReactElement<SvgIconProps>
@@ -24,7 +24,7 @@ const InfoItem: React.FC<InfoItemProps> = ({ icon, children, className }) => {
         }}>
         {React.cloneElement(icon, { color: 'info' })}
       </Box>
-      <Typography>{children}</Typography>
+      {children}
     </Box>
   )
 }

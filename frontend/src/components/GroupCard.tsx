@@ -1,6 +1,7 @@
 import { ActionButton, InfoItem, formatDate } from './index'
 import { Group } from '../store/api/groupsApi'
 import { Box, Typography, Card, CardContent, CardActions } from '@mui/material'
+import { CalendarToday as CalendarIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material'
 
 interface GroupCardProps {
   group: Group
@@ -25,7 +26,7 @@ export const GroupCard = ({ group, variant = 'default' }: GroupCardProps) => {
                 {group.Description}
               </Typography>
             </Box>
-            <ActionButton text="" to={`/groups/${group.ID}`} icon="fas fa-chevron-right" variant="text" />
+            <ActionButton text="" to={`/groups/${group.ID}`} icon={<ChevronRightIcon />} variant="text" />
           </Box>
         </CardContent>
       </Card>
@@ -41,7 +42,7 @@ export const GroupCard = ({ group, variant = 'default' }: GroupCardProps) => {
         <Typography variant="body2" color="text.secondary" paragraph>
           {group.Description}
         </Typography>
-        <InfoItem icon="fas fa-calendar-alt">
+        <InfoItem icon={<CalendarIcon />}>
           <Typography variant="caption">Created {formatDate(new Date(group.CreatedAt))}</Typography>
         </InfoItem>
       </CardContent>

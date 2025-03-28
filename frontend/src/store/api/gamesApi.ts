@@ -14,6 +14,23 @@ export interface Game {
   tags: string[]
 }
 
+export interface UpcomingEvent {
+  id: string
+  title: string
+  description: string
+  location: string
+  startTime: string
+  endTime: string
+  groupId: string
+  groupName: string
+}
+
+export interface GameDetailsResponse {
+  game: Game
+  rating: number
+  upcomingEvents: UpcomingEvent[]
+}
+
 export interface CreateGameRequest {
   name: string
   description: string
@@ -22,6 +39,10 @@ export interface CreateGameRequest {
   groupId: string
   tags: string
   public: boolean
+}
+
+export interface RateGameRequest {
+  rating: number
 }
 
 export const gamesApi = apiSlice.injectEndpoints({
@@ -34,7 +55,7 @@ export const gamesApi = apiSlice.injectEndpoints({
           : [{ type: 'Game', id: 'LIST' }],
     }),
 
-    getGame: builder.query<APIResponse<Game>, string>({
+    getGame: builder.query<APIResponse<GameDetailsResponse>, string>({
       query: (id) => `/games/${id}`,
       providesTags: (_, __, id) => [{ type: 'Game', id }],
     }),
@@ -73,6 +94,15 @@ export const gamesApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Game', id: 'LIST' }],
     }),
+
+    rateGame: builder.mutation<APIResponse<{ gameId: string; rating: number }>, { gameId: string; rating: number }>({
+      query: ({ gameId, rating }) => ({
+        url: `/games/${gameId}/rate`,
+        method: 'POST',
+        body: { rating },
+      }),
+      invalidatesTags: (_, __, { gameId }) => [{ type: 'Game', id: gameId }],
+    }),
   }),
 })
 
@@ -82,4 +112,5 @@ export const {
   useCreateGameMutation,
   useUpdateGameMutation,
   useDeleteGameMutation,
+  useRateGameMutation,
 } = gamesApi

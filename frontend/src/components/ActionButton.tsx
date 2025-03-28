@@ -1,13 +1,14 @@
-import React from 'react'
+import React, { ReactElement } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, ButtonProps } from '@mui/material'
+import { Button, ButtonProps, SvgIconProps } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { ChevronRight as ChevronRightIcon } from '@mui/icons-material'
 
 interface ActionButtonProps {
   text: string
   to?: string
   onClick?: () => void
-  icon?: string
+  icon?: ReactElement<SvgIconProps> | string
   variant?: 'contained' | 'outlined' | 'text'
   color?: 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'
   fullWidth?: boolean
@@ -36,6 +37,19 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   type = 'button',
   disabled = false,
 }) => {
+  // Convert string-based font-awesome icons to MUI icon components
+  const getIcon = () => {
+    if (!icon) return undefined
+
+    // If icon is already a React element (MUI icon), use it
+    if (React.isValidElement(icon)) {
+      return icon
+    }
+
+    // If using a string (legacy font-awesome), provide a default MUI icon
+    return <ChevronRightIcon />
+  }
+
   const buttonProps: ButtonProps = {
     variant,
     color,
@@ -44,7 +58,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     type,
     disabled,
     className,
-    startIcon: icon ? <i className={icon} /> : undefined,
+    startIcon: getIcon(),
   }
 
   const content = <Button {...buttonProps}>{text}</Button>

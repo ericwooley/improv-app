@@ -22,9 +22,10 @@ export interface Game {
 
 interface GameCardProps {
   game: Game
+  showViewButton?: boolean
 }
 
-const GameCard = ({ game }: GameCardProps) => {
+const GameCard = ({ game, showViewButton = true }: GameCardProps) => {
   return (
     <Card
       variant="outlined"
@@ -83,21 +84,22 @@ const GameCard = ({ game }: GameCardProps) => {
           </Box>
         )}
       </CardContent>
-
-      <Box sx={{ mt: 'auto' }}>
-        <Divider />
-        <CardActions sx={{ justifyContent: 'flex-end', py: 1 }}>
-          <Button
-            component={Link}
-            to={`/games/${game.id}`}
-            color="primary"
-            size="small"
-            variant="contained"
-            endIcon={<ArrowForwardIcon />}>
-            View
-          </Button>
-        </CardActions>
-      </Box>
+      {showViewButton && (
+        <Box sx={{ mt: 'auto' }}>
+          <Divider />
+          <CardActions sx={{ justifyContent: 'flex-end', py: 1 }}>
+            <Button
+              component={Link}
+              to={`/games/${game.id}`}
+              color="primary"
+              size="small"
+              variant="contained"
+              endIcon={<ArrowForwardIcon />}>
+              View
+            </Button>
+          </CardActions>
+        </Box>
+      )}
     </Card>
   )
 }

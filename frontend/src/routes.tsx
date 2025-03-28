@@ -13,6 +13,7 @@ import EditGroupPage from './pages/EditGroupPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
 import NewGamePage from './pages/NewGamePage'
+import GameDetailsPage from './pages/GameDetailsPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 const AppRoutes = () => {
@@ -33,13 +34,14 @@ const AppRoutes = () => {
       <Route path="/" element={<HomePage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/games" element={<GamesPage />} />
+      <Route path="/games/new" element={<NewGamePage />} />
+      <Route path="/games/:gameId" element={<GameDetailsPage />} />
       <Route path="/groups" element={<GroupsPage />} />
       <Route path="/groups/new" element={<NewGroupPage />} />
       <Route path="/groups/:groupId" element={<GroupDetailsPage />} />
       <Route path="/groups/:groupId/edit" element={<EditGroupPage />} />
       <Route path="/events" element={<EventsPage />} />
       <Route path="/events/new" element={<NewEventPage />} />
-      <Route path="/games/new" element={<NewGamePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

@@ -1,9 +1,10 @@
 ---
 description: 
-globs: frontent/**/*
+globs: frontend/**/*
 alwaysApply: false
 ---
 
+use bun for installs, all web installs are in the frontend directory
 we are using material ui 7. Grids look like this:
 ```tsx
 <Grid container spacing={2}>

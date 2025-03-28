@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { PageHeader, EmptyState, InfoItem, formatDate, formatTime } from '../components'
 import { Box, Typography, Grid, Card, CardContent, CardHeader, CardActions, Button } from '@mui/material'
 import { Link } from 'react-router-dom'
+import {
+  People as PeopleIcon,
+  LocationOn as LocationIcon,
+  CalendarToday as CalendarIcon,
+  AccessTime as ClockIcon,
+} from '@mui/icons-material'
 
 interface Event {
   id: string
@@ -42,13 +48,13 @@ const EventsPage = ({ initialEvents = [] }: EventsPageProps) => {
                     {event.description}
                   </Typography>
 
-                  <InfoItem icon="fas fa-users">{event.groupName}</InfoItem>
+                  <InfoItem icon={<PeopleIcon />}>{event.groupName}</InfoItem>
 
-                  <InfoItem icon="fas fa-map-marker-alt">{event.location}</InfoItem>
+                  <InfoItem icon={<LocationIcon />}>{event.location}</InfoItem>
 
-                  <InfoItem icon="fas fa-calendar-day">{formatDate(event.startTime)}</InfoItem>
+                  <InfoItem icon={<CalendarIcon />}>{formatDate(event.startTime)}</InfoItem>
 
-                  <InfoItem icon="fas fa-clock">
+                  <InfoItem icon={<ClockIcon />}>
                     {formatTime(event.startTime)} - {formatTime(event.endTime)}
                   </InfoItem>
                 </CardContent>
