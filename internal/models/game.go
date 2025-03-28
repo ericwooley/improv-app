@@ -11,5 +11,6 @@ type Game struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	CreatedBy   string    `json:"createdBy"`
 	GroupID     string    `json:"groupId"`
+	Public      bool      `json:"public"`
 	Tags        []string  `json:"tags"`
 }

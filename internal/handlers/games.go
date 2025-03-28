@@ -38,6 +38,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			MaxPlayers  int      `json:"maxPlayers"`
 			Tags        []string `json:"tags"`
 			GroupID     string   `json:"groupId"`
+			Public      bool     `json:"public"`
 		}
 
 		decoder := json.NewDecoder(r.Body)
@@ -85,10 +86,10 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 		gameID := uuid.New().String()
 		err = h.db.QueryRow(`
-			INSERT INTO games (id, name, description, min_players, max_players, created_by, group_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO games (id, name, description, min_players, max_players, created_by, group_id, public)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			RETURNING id
-		`, gameID, gameRequest.Name, gameRequest.Description, gameRequest.MinPlayers, gameRequest.MaxPlayers, user.ID, gameRequest.GroupID).Scan(&gameID)
+		`, gameID, gameRequest.Name, gameRequest.Description, gameRequest.MinPlayers, gameRequest.MaxPlayers, user.ID, gameRequest.GroupID, gameRequest.Public).Scan(&gameID)
 		if err != nil {
 			log.Printf("Error creating game: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error creating game")
@@ -97,9 +98,8 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Created new game: %s (ID: %s)", gameRequest.Name, gameID)
 
 		// Handle tags
-		tags := strings.Split(gameRequest.Tags, ",")
 		var tagIDs []string
-		for _, tag := range tags {
+		for _, tag := range gameRequest.Tags {
 			tag = strings.TrimSpace(tag)
 			if tag == "" {
 				continue
@@ -135,14 +135,14 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		var game models.Game
 		var tagsStr sql.NullString
 		err = h.db.QueryRow(`
-			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id,
+			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 					GROUP_CONCAT(DISTINCT t.name) as tags
 			FROM games g
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			WHERE g.id = $1
 			GROUP BY g.id
-		`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &tagsStr)
+		`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
 		if err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "Error fetching created game")
 			return
@@ -163,7 +163,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	// GET: List games
 	rows, err := h.db.Query(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id,
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
@@ -182,7 +182,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var game models.Game
 		var tagsStr sql.NullString
-		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &tagsStr)
+		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
 		if err != nil {
 			log.Printf("Error scanning game row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
@@ -211,14 +211,14 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var game models.Game
 	var tagsStr sql.NullString
 	err := h.db.QueryRow(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id,
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM games g
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 		LEFT JOIN game_tags t ON gta.tag_id = t.id
 		WHERE g.id = $1
 		GROUP BY g.id
-	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &tagsStr)
+	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Game not found: %s", gameID)

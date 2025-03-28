@@ -17,6 +17,7 @@ const NewGamePage = () => {
     maxPlayers: 8,
     groupId: groupId || '',
     tags: '',
+    public: false,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,6 +107,22 @@ const NewGamePage = () => {
                 helperText="Enter tags separated by commas (e.g., warmup, short-form, long-form)"
                 fullWidth
               />
+
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Button
+                  variant={formData.public ? 'contained' : 'outlined'}
+                  color={formData.public ? 'primary' : 'inherit'}
+                  onClick={() => setFormData((prev) => ({ ...prev, public: true }))}
+                  sx={{ mr: 1 }}>
+                  Public
+                </Button>
+                <Button
+                  variant={!formData.public ? 'contained' : 'outlined'}
+                  color={!formData.public ? 'primary' : 'inherit'}
+                  onClick={() => setFormData((prev) => ({ ...prev, public: false }))}>
+                  Private
+                </Button>
+              </Box>
 
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button variant="outlined" onClick={() => navigate(`/groups/${groupId}`)} disabled={isLoading}>

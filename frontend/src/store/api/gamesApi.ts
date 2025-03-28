@@ -21,6 +21,7 @@ export interface CreateGameRequest {
   maxPlayers: number
   groupId: string
   tags: string
+  public: boolean
 }
 
 export const gamesApi = apiSlice.injectEndpoints({
