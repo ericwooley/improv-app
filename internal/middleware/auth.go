@@ -100,28 +100,6 @@ func RequireAuthAPI(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// For API requests, we'll still check profile completion but only for non-profile endpoints
-		if len(user.FirstName) < 2 || len(user.LastName) < 2 {
-			// Allow access to profile endpoints
-			if strings.Contains(r.URL.Path, "/profile") || strings.Contains(r.URL.Path, "/auth/me") {
-				ctx := r.Context()
-				ctx = context.WithValue(ctx, UserContextKey, &user)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
-			}
-
-			// For other endpoints, return a specific status code and message
-			RespondWithJSON(w, http.StatusForbidden, ApiResponse{
-				Success: false,
-				Error:   "Profile incomplete",
-				Data: map[string]interface{}{
-					"profileComplete": false,
-					"requiresAction": "completeProfile",
-				},
-			})
-			return
-		}
-
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, UserContextKey, &user)
 		next.ServeHTTP(w, r.WithContext(ctx))

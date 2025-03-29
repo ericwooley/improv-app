@@ -1,4 +1,4 @@
-import { baseApi } from './baseApi'
+import { apiSlice } from './apiSlice'
 
 // Define invitation interface
 export interface Invitation {
@@ -27,7 +27,7 @@ export interface AcceptanceResponse {
   role: string
 }
 
-export const invitationsApi = baseApi.injectEndpoints({
+export const invitationsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getInvitations: builder.query<ApiResponse<Invitation[]>, void>({
       query: () => ({
