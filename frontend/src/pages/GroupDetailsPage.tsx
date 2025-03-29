@@ -160,6 +160,8 @@ const GroupDetailsPage = () => {
         {/* Games Tab */}
         <TabPanel value={mainTabValue} index={2}>
           <GroupGamesTab
+            userRole={userRole}
+            groupId={group.ID}
             libraryGames={libraryGames}
             ownedGames={ownedGames}
             libraryLoading={libraryLoading}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Box, Card, CardContent, Tabs, Tab, Typography, Grid, CircularProgress } from '@mui/material'
-import { Bookmarks as LibraryIcon, Inventory as OwnedIcon } from '@mui/icons-material'
+import { Box, Card, CardContent, Tabs, Tab, Typography, Grid, CircularProgress, CardActionArea } from '@mui/material'
+import { Bookmarks as LibraryIcon, Inventory as OwnedIcon, Add as AddIcon } from '@mui/icons-material'
 import { GameCard, Game } from '..'
 
 interface TabPanelProps {
@@ -36,10 +36,20 @@ interface GroupGamesTabProps {
   ownedGames: Game[]
   libraryLoading: boolean
   ownedLoading: boolean
+  userRole: string
+  groupId: string
 }
 
-const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ libraryGames, ownedGames, libraryLoading, ownedLoading }) => {
+const GroupGamesTab: React.FC<GroupGamesTabProps> = ({
+  libraryGames,
+  ownedGames,
+  libraryLoading,
+  ownedLoading,
+  userRole,
+  groupId,
+}) => {
   const [gamesTabValue, setGamesTabValue] = useState(0)
+  const isAdminOrOrganizer = userRole === 'admin' || userRole === 'organizer'
 
   const handleGamesTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setGamesTabValue(newValue)
@@ -100,8 +110,43 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ libraryGames, ownedGames,
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
             </Box>
-          ) : ownedGames.length > 0 ? (
+          ) : (
             <Grid container spacing={2}>
+              {isAdminOrOrganizer && groupId && (
+                <Grid
+                  size={{
+                    xs: 12,
+                    sm: 6,
+                    md: 4,
+                  }}
+                  key="add-game-card">
+                  <Card
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      border: '2px dashed',
+                      borderColor: 'primary.main',
+                      bgcolor: 'background.paper',
+                    }}>
+                    <CardActionArea
+                      component="a"
+                      href={`/games/new?groupId=${groupId}`}
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        p: 3,
+                        height: '100%',
+                      }}>
+                      <AddIcon color="primary" sx={{ fontSize: 40, mb: 2 }} />
+                      <Typography variant="h6" color="primary" align="center">
+                        Add New Game
+                      </Typography>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              )}
               {ownedGames.map((game) => (
                 <Grid
                   size={{
@@ -114,10 +159,18 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ libraryGames, ownedGames,
                 </Grid>
               ))}
             </Grid>
-          ) : (
+          )}
+          {!ownedLoading && ownedGames.length === 0 && !isAdminOrOrganizer && (
             <Box sx={{ p: 4, textAlign: 'center' }}>
               <Typography color="text.secondary">
                 This group hasn't added any games yet. Contact an organizer to add some games!
+              </Typography>
+            </Box>
+          )}
+          {!ownedLoading && ownedGames.length === 0 && isAdminOrOrganizer && (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography color="text.secondary">
+                This group hasn't added any games yet. Use the card above to add your first game!
               </Typography>
             </Box>
           )}
