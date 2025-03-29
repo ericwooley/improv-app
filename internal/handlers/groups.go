@@ -146,7 +146,6 @@ func (h *GroupHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		groups = append(groups, group)
 	}
-	fmt.Println(groups)
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Data:    groups,
