@@ -1,5 +1,4 @@
 import React from 'react'
-import { Box } from '@mui/material'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -16,7 +15,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, id = 'secti
       id={`${id}-tabpanel-${index}`}
       aria-labelledby={`${id}-tab-${index}`}
       {...other}>
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && children}
     </div>
   )
 }

@@ -14,7 +14,7 @@ interface GroupInfoTabProps {
 
 const GroupInfoTab: React.FC<GroupInfoTabProps> = ({ group, userRole }) => {
   return (
-    <Card>
+    <Card sx={{ mt: 0, pt: 0 }}>
       <CardContent>
         <Stack spacing={2}>
           <Typography variant="body1">{group.Description}</Typography>
