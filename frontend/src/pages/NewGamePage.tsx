@@ -132,7 +132,11 @@ const NewGamePage = () => {
                 value={formData.tags}
                 onChange={handleTagsChange}
                 renderTags={(value, getTagProps) =>
-                  value.map((option, index) => <Chip variant="outlined" label={option} {...getTagProps({ index })} />)
+                  value.map((option, index) => {
+                    const tagProps = getTagProps({ index })
+                    const { key, ...chipProps } = tagProps
+                    return <Chip key={key} variant="outlined" label={option} {...chipProps} />
+                  })
                 }
                 renderInput={(params) => (
                   <TextField

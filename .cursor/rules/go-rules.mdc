@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+Check the [README.md](mdc:README.md) for information about the project.
+
+Check [main.go](mdc:main.go) for api routes.
+
+the web uses vite to proxy localhost:5173 to localhost:4080 for the api. 
+
+use slices based on [apiSlice.ts](mdc:frontend/src/store/api/apiSlice.ts) for api requests.
+
+Check [db.go](mdc:internal/db/db.go) for current schema info.
