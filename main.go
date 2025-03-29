@@ -92,6 +92,7 @@ func main() {
 	// Group member management routes
 	api.HandleFunc("/groups/invites", middleware.RequireAuthAPI(sqlDB, invitationHandler.ListInvitations)).Methods("GET")
 	api.HandleFunc("/groups/invites/accept", middleware.RequireAuthAPI(sqlDB, invitationHandler.AcceptInvitation)).Methods("POST")
+	api.HandleFunc("/groups/invites/reject", middleware.RequireAuthAPI(sqlDB, invitationHandler.RejectInvitation)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.ListMembers)).Methods("GET")
 	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, invitationHandler.InviteMember)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateMemberRole)).Methods("PUT")

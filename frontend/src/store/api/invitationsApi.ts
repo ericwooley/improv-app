@@ -44,7 +44,15 @@ export const invitationsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Invitations', 'Groups'],
     }),
+    rejectInvitation: builder.mutation<ApiResponse<void>, { token: string }>({
+      query: ({ token }) => ({
+        url: '/groups/invites/reject',
+        method: 'POST',
+        body: { token },
+      }),
+      invalidatesTags: ['Invitations'],
+    }),
   }),
 })
 
-export const { useGetInvitationsQuery, useAcceptInvitationMutation } = invitationsApi
+export const { useGetInvitationsQuery, useAcceptInvitationMutation, useRejectInvitationMutation } = invitationsApi

@@ -394,3 +394,92 @@ func (h *InvitationHandler) ListInvitations(w http.ResponseWriter, r *http.Reque
 		Data:    invitations,
 	})
 }
+
+// RejectInvitation handles rejecting a group invitation
+func (h *InvitationHandler) RejectInvitation(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+
+	var rejectRequest struct {
+		Token string `json:"token" validate:"required"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&rejectRequest); err != nil {
+		fmt.Printf("Invalid request payload: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate the request
+	validate := validator.New()
+	if err := validate.Struct(rejectRequest); err != nil {
+		fmt.Printf("Invalid reject data: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid reject data")
+		return
+	}
+
+	// Begin transaction
+	tx, err := h.db.Begin()
+	if err != nil {
+		fmt.Printf("Error beginning transaction: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error processing rejection")
+		return
+	}
+	defer tx.Rollback()
+
+	// Get invitation details for notification
+	var groupID, groupName, invitedBy, invitedByEmail string
+	err = tx.QueryRow(`
+		SELECT i.group_id, g.name, i.invited_by, u.email
+		FROM group_invitations i
+		JOIN improv_groups g ON i.group_id = g.id
+		JOIN users u ON i.invited_by = u.id
+		WHERE i.token = $1 AND i.email = $2 AND i.status = 'pending'
+	`, rejectRequest.Token, user.Email).Scan(&groupID, &groupName, &invitedBy, &invitedByEmail)
+
+	if err == sql.ErrNoRows {
+		fmt.Printf("Invalid or expired invitation token: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid or expired invitation token")
+		return
+	} else if err != nil {
+		fmt.Printf("Error retrieving invitation: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error retrieving invitation")
+		return
+	}
+
+	// Update invitation status to 'rejected'
+	_, err = tx.Exec(`
+		UPDATE group_invitations
+		SET status = 'rejected'
+		WHERE token = $1 AND email = $2 AND status = 'pending'
+	`, rejectRequest.Token, user.Email)
+	if err != nil {
+		fmt.Printf("Error updating invitation status: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating invitation status")
+		return
+	}
+
+	// Create notification for the inviter
+	_, err = tx.Exec(`
+		INSERT INTO notifications (user_id, type, content, related_id, is_read, created_at)
+		VALUES ($1, 'invitation_rejected', $2, $3, false, $4)
+	`, invitedBy, fmt.Sprintf("%s declined your invitation to join %s", user.Email, groupName), groupID, time.Now())
+	if err != nil {
+		fmt.Printf("Error creating notification: %v\n", err)
+		// Don't fail the entire operation if notification creation fails
+		// Just log the error and continue
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		fmt.Printf("Error committing transaction: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error committing changes")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Invitation rejected successfully",
+	})
+}

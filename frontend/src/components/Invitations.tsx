@@ -9,9 +9,14 @@ import {
   Chip,
   Stack,
   Button,
+  ButtonGroup,
 } from '@mui/material'
-import { Mail as MailIcon, Check as AcceptIcon, Person as RoleIcon } from '@mui/icons-material'
-import { useGetInvitationsQuery, useAcceptInvitationMutation } from '../store/api/invitationsApi'
+import { Mail as MailIcon, Check as AcceptIcon, Close as RejectIcon, Person as RoleIcon } from '@mui/icons-material'
+import {
+  useGetInvitationsQuery,
+  useAcceptInvitationMutation,
+  useRejectInvitationMutation,
+} from '../store/api/invitationsApi'
 
 // Define API response structure
 interface ApiResponse<T> {
@@ -37,6 +42,7 @@ interface Invitation {
 const Invitations = () => {
   const { data: invitationsResponse, isLoading: invitationsLoading } = useGetInvitationsQuery()
   const [acceptInvitation, { isLoading: isAccepting }] = useAcceptInvitationMutation()
+  const [rejectInvitation, { isLoading: isRejecting }] = useRejectInvitationMutation()
 
   const invitations = (invitationsResponse as unknown as ApiResponse<Invitation[]>)?.data || []
 
@@ -46,6 +52,15 @@ const Invitations = () => {
       // No need to manually update the UI, RTK Query will invalidate and refetch the queries
     } catch (error) {
       console.error('Failed to accept invitation:', error)
+    }
+  }
+
+  const handleRejectInvitation = async (token: string) => {
+    try {
+      await rejectInvitation({ token }).unwrap()
+      // No need to manually update the UI, RTK Query will invalidate and refetch the queries
+    } catch (error) {
+      console.error('Failed to reject invitation:', error)
     }
   }
 
@@ -75,14 +90,24 @@ const Invitations = () => {
                   />
                   <Chip label={`From: ${invitation.inviterName}`} size="small" variant="outlined" />
                 </Stack>
-                <Button
-                  variant="contained"
-                  startIcon={<AcceptIcon />}
-                  onClick={() => handleAcceptInvitation(invitation.id)}
-                  disabled={isAccepting}
-                  size="small">
-                  Accept Invitation
-                </Button>
+                <ButtonGroup size="small">
+                  <Button
+                    variant="contained"
+                    startIcon={<AcceptIcon />}
+                    onClick={() => handleAcceptInvitation(invitation.id)}
+                    disabled={isAccepting || isRejecting}
+                    color="primary">
+                    Accept
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<RejectIcon />}
+                    onClick={() => handleRejectInvitation(invitation.id)}
+                    disabled={isAccepting || isRejecting}
+                    color="error">
+                    Reject
+                  </Button>
+                </ButtonGroup>
               </Box>
             ))}
           </List>
