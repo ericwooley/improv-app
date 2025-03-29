@@ -13,6 +13,8 @@ import {
   CircularProgress,
   Switch,
   FormControlLabel,
+  Chip,
+  Autocomplete,
 } from '@mui/material'
 
 const NewGamePage = () => {
@@ -27,14 +29,19 @@ const NewGamePage = () => {
     minPlayers: 2,
     maxPlayers: 8,
     groupId: groupId || '',
-    tags: '',
+    tags: [] as string[],
     public: true,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await createGame(formData).unwrap()
+      // Convert tags array to comma-separated string for API
+      const payload = {
+        ...formData,
+        tags: formData.tags.join(','),
+      }
+      await createGame(payload).unwrap()
       navigate(`/groups/${groupId}`)
     } catch (err) {
       console.error('Failed to create game:', err)
@@ -46,6 +53,13 @@ const NewGamePage = () => {
     setFormData((prev) => ({
       ...prev,
       [name as string]: name === 'public' ? checked : value,
+    }))
+  }
+
+  const handleTagsChange = (_event: React.SyntheticEvent, newValue: string[]) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: newValue,
     }))
   }
 
@@ -110,13 +124,18 @@ const NewGamePage = () => {
                 />
               </Box>
 
-              <TextField
-                label="Tags (comma-separated)"
-                name="tags"
+              <Autocomplete
+                multiple
+                freeSolo
+                options={[]}
                 value={formData.tags}
-                onChange={handleChange}
-                helperText="Enter tags separated by commas (e.g., warmup, short-form, long-form)"
-                fullWidth
+                onChange={handleTagsChange}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => <Chip variant="outlined" label={option} {...getTagProps({ index })} />)
+                }
+                renderInput={(params) => (
+                  <TextField {...params} label="Tags" helperText="Type a tag and press Enter to add it" fullWidth />
+                )}
               />
 
               <FormControlLabel
