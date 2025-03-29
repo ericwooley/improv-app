@@ -56,6 +56,13 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ libraryGames, ownedGames,
         </Box>
 
         <TabPanel value={gamesTabValue} index={0}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Library games are saved to this group's collection for easy access. These can include public games or
+              games from other groups that members have added to this group's library.
+            </Typography>
+          </Box>
+
           {libraryLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
@@ -82,6 +89,13 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ libraryGames, ownedGames,
         </TabPanel>
 
         <TabPanel value={gamesTabValue} index={1}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Group Games are created and owned by this specific group. These are original games that the group has
+              developed or customized for their own use.
+            </Typography>
+          </Box>
+
           {ownedLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
               <CircularProgress />
