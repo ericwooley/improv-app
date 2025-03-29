@@ -100,9 +100,11 @@ func main() {
 
 	// Group member management routes
 	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.ListMembers)).Methods("GET")
-	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.AddMember)).Methods("POST")
+	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.InviteMember)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateMemberRole)).Methods("PUT")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.RemoveMember)).Methods("DELETE")
+	api.HandleFunc("/groups/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.ListInvitations)).Methods("GET")
+	api.HandleFunc("/groups/invites/accept", middleware.RequireAuthAPI(sqlDB, groupHandler.AcceptInvitation)).Methods("POST")
 
 	// Event routes
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.ListAll)).Methods("GET")

@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, FormEvent, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useLoginMutation } from '../store/api/authApi'
 import { useAppDispatch } from '../store/hooks'
 import { setCredentials } from '../store/slices/authSlice'
@@ -20,9 +20,21 @@ import { Email as EmailIcon, Send as SendIcon, Key as KeyIcon } from '@mui/icons
 const LoginPage = () => {
   const [email, setEmail] = useState('')
   const dispatch = useAppDispatch()
+  const location = useLocation()
 
   // RTK Query hook for login mutation
   const [login, { isLoading, error }] = useLoginMutation()
+
+  // Check for invite parameter in URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const inviteId = params.get('invite')
+
+    if (inviteId) {
+      // Store the invite ID in localStorage to redirect after login
+      localStorage.setItem('pendingInvite', inviteId)
+    }
+  }, [location])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

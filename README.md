@@ -206,12 +206,26 @@ erDiagram
         timestamp created_at
     }
 
+    group_invitations {
+        string id PK
+        string group_id FK
+        string email
+        string invited_by FK
+        string role
+        string token
+        string status
+        timestamp expires_at
+        timestamp created_at
+    }
+
     users ||--o{ email_tokens : "authenticates"
     users ||--o{ improv_groups : "creates"
     users ||--o{ group_members : "joins"
     users ||--o{ group_followers : "follows"
+    users ||--o{ group_invitations : "sends"
     improv_groups ||--o{ group_members : "has"
     improv_groups ||--o{ group_followers : "followed by"
+    improv_groups ||--o{ group_invitations : "has"
     improv_groups ||--|{ events : "schedules"
     users ||--o{ events : "creates"
     events ||--o{ event_rsvps : "receives"

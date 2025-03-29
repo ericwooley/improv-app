@@ -27,3 +27,4 @@ app.db
 docker-data/mp
 tmp
 improv.db
+__debug*

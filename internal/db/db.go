@@ -152,6 +152,20 @@ func InitDB() *sql.DB {
 			FOREIGN KEY (user_id) REFERENCES users(id),
 			FOREIGN KEY (game_id) REFERENCES games(id)
 		);
+
+		CREATE TABLE IF NOT EXISTS group_invitations (
+			id TEXT PRIMARY KEY,
+			group_id TEXT NOT NULL,
+			email TEXT NOT NULL,
+			invited_by TEXT NOT NULL,
+			role TEXT NOT NULL,
+			token TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			expires_at TIMESTAMP NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
+			FOREIGN KEY (invited_by) REFERENCES users(id)
+		);
 	`)
 	if err != nil {
 		log.Fatal(err)

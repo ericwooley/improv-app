@@ -36,13 +36,11 @@ import {
   PersonAdd as PersonAddIcon,
   MoreVert as MoreVertIcon,
   FileDownload as FileDownloadIcon,
-  Email as EmailIcon,
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb } from '../components'
 import {
   useGetGroupQuery,
   useGetGroupMembersQuery,
-  useAddMemberMutation,
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
   GroupMember,
@@ -59,11 +57,10 @@ const GroupMembersPage = () => {
   const { data: groupData, isLoading: groupLoading, error: groupError } = useGetGroupQuery(groupId || '')
   const { data: membersData, isLoading: membersLoading } = useGetGroupMembersQuery(groupId || '')
 
-  const [addMember] = useAddMemberMutation()
   const [updateMemberRole] = useUpdateMemberRoleMutation()
   const [removeMember] = useRemoveMemberMutation()
 
-  const [openAddDialog, setOpenAddDialog] = useState(false)
+  const [openInviteDialog, setOpenInviteDialog] = useState(false)
   const [openEditDialog, setOpenEditDialog] = useState(false)
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null)
@@ -96,7 +93,7 @@ const GroupMembersPage = () => {
   const handleOpenAddDialog = () => {
     setEmail('')
     setRole('member')
-    setOpenAddDialog(true)
+    setOpenInviteDialog(true)
     handleActionMenuClose()
   }
 
@@ -114,26 +111,37 @@ const GroupMembersPage = () => {
   }
 
   const handleCloseDialogs = () => {
-    setOpenAddDialog(false)
+    setOpenInviteDialog(false)
     setOpenEditDialog(false)
     setOpenDeleteDialog(false)
   }
 
-  const handleAddMember = async () => {
+  const handleSendInvitation = async () => {
     try {
-      await addMember({
-        groupId: groupId || '',
-        memberData: { email, role },
-      }).unwrap()
+      const response = await fetch(`/api/groups/${groupId}/invites`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, role }),
+      })
 
-      setAlertSeverity('success')
-      setAlertMessage('Member added successfully')
-      setShowAlert(true)
-      handleCloseDialogs()
+      const data = await response.json()
+
+      if (data.success) {
+        setAlertSeverity('success')
+        setAlertMessage('Invitation sent successfully')
+        setShowAlert(true)
+        handleCloseDialogs()
+      } else {
+        setAlertSeverity('error')
+        setAlertMessage(data.message || 'Failed to send invitation')
+        setShowAlert(true)
+      }
     } catch (error: unknown) {
-      const errorResponse = error as { data?: { message?: string } }
+      const errorResponse = error as { data?: { error?: string } }
       setAlertSeverity('error')
-      setAlertMessage(errorResponse.data?.message || 'Failed to add member')
+      setAlertMessage(errorResponse.data?.error || 'Failed to send invitation')
       setShowAlert(true)
     }
   }
@@ -204,13 +212,6 @@ const GroupMembersPage = () => {
     handleActionMenuClose()
   }
 
-  const handleSendInvitation = () => {
-    setAlertSeverity('info')
-    setAlertMessage('Invitation feature coming soon!')
-    setShowAlert(true)
-    handleActionMenuClose()
-  }
-
   if (groupLoading || membersLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
@@ -261,13 +262,7 @@ const GroupMembersPage = () => {
           <ListItemIcon>
             <PersonAddIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Add Member</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleSendInvitation}>
-          <ListItemIcon>
-            <EmailIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Send Invitation</ListItemText>
+          <ListItemText>Invite Member</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleExportMembers}>
           <ListItemIcon>
@@ -335,9 +330,9 @@ const GroupMembersPage = () => {
         </MenuItem>
       </Menu>
 
-      {/* Add Member Dialog */}
-      <Dialog open={openAddDialog} onClose={handleCloseDialogs}>
-        <DialogTitle>Add New Member</DialogTitle>
+      {/* Invite Member Dialog */}
+      <Dialog open={openInviteDialog} onClose={handleCloseDialogs}>
+        <DialogTitle>Invite New Member</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
@@ -345,7 +340,7 @@ const GroupMembersPage = () => {
               fullWidth
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter member's email address"
+              placeholder="Enter email address to invite"
             />
             <TextField select label="Role" fullWidth value={role} onChange={(e) => setRole(e.target.value)}>
               {roleOptions.map((option) => (
@@ -358,8 +353,8 @@ const GroupMembersPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handleAddMember} variant="contained" color="primary">
-            Add Member
+          <Button onClick={handleSendInvitation} variant="contained" color="primary">
+            Send Invitation
           </Button>
         </DialogActions>
       </Dialog>

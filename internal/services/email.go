@@ -164,3 +164,118 @@ func (s *EmailService) GetUserByID(userID string) (*models.User, error) {
 	}
 	return &user, nil
 }
+
+// SendGroupInvitation sends an email inviting a user to join a group
+func (s *EmailService) SendGroupInvitation(email, groupID, groupName, inviterName, inviterID, role string) (string, error) {
+	token, err := s.generateToken()
+	if err != nil {
+		return "", err
+	}
+
+	// Create invitation record
+	invitationID := uuid.New().String()
+	_, err = s.db.Exec(`
+		INSERT INTO group_invitations (id, group_id, email, invited_by, role, token, status, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+	`, invitationID, groupID, email, inviterID, role, token, time.Now().Add(7*24*time.Hour))
+	if err != nil {
+		return "", err
+	}
+
+	// Send email with invitation link
+	from := os.Getenv("SMTP_FROM")
+	fromName := os.Getenv("SMTP_FROM_NAME")
+	if fromName == "" {
+		fromName = "Improv App"
+	}
+
+	to := os.Getenv("SMTP_TO")
+	if to == "" {
+		to = email
+	}
+
+	subject := fmt.Sprintf("Invitation to join %s on Improv App", groupName)
+
+	baseURL := os.Getenv("FRONTEND_URL")
+	if baseURL == "" {
+		panic("FRONTEND_URL is not set")
+	}
+
+	body := fmt.Sprintf(`
+		Hello,
+
+		You've been invited by %s to join "%s" as a %s on Improv App.
+
+		Click the link below to sign in and view your invitation:
+
+		%s/login?invite=%s
+
+		This invitation will expire in 7 days.
+
+		Best regards,
+		%s
+	`, inviterName, groupName, role, baseURL, invitationID, fromName)
+
+	// Set up email message
+	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+
+		"To: %s\r\n"+
+		"Subject: %s\r\n"+
+		"MIME-Version: 1.0\r\n"+
+		"Content-Type: text/plain; charset=UTF-8\r\n"+
+		"\r\n"+
+		"%s", fromName, from, to, subject, body))
+
+	// Connect to SMTP server
+	host := os.Getenv("SMTP_HOST")
+	port := os.Getenv("SMTP_PORT")
+	username := os.Getenv("SMTP_USERNAME")
+	password := os.Getenv("SMTP_PASSWORD")
+	log.Printf("Sending group invitation email to: %s for group: %s", to, groupName)
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+	auth := smtp.PlainAuth("", username, password, host)
+
+	err = smtp.SendMail(addr, auth, from, []string{to}, msg)
+	if err != nil {
+		log.Printf("Error sending invitation email: %v", err)
+		return "", fmt.Errorf("failed to send invitation email: %v", err)
+	}
+
+	log.Printf("Group invitation email sent to %s", email)
+	return token, nil
+}
+
+// VerifyGroupInvitation checks if an invitation token is valid and returns the invitation details
+func (s *EmailService) VerifyGroupInvitation(token string) (map[string]interface{}, error) {
+	var invitation struct {
+		ID        string
+		GroupID   string
+		GroupName string
+		Email     string
+		Role      string
+		Status    string
+	}
+
+	err := s.db.QueryRow(`
+		SELECT i.id, i.group_id, g.name, i.email, i.role, i.status
+		FROM group_invitations i
+		JOIN improv_groups g ON i.group_id = g.id
+		WHERE i.token = $1 AND i.status = 'pending' AND i.expires_at > $2
+	`, token, time.Now()).Scan(&invitation.ID, &invitation.GroupID, &invitation.GroupName,
+		&invitation.Email, &invitation.Role, &invitation.Status)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := map[string]interface{}{
+		"id":         invitation.ID,
+		"groupId":    invitation.GroupID,
+		"groupName":  invitation.GroupName,
+		"email":      invitation.Email,
+		"role":       invitation.Role,
+		"status":     invitation.Status,
+	}
+
+	return result, nil
+}
