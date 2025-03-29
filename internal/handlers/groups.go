@@ -176,8 +176,13 @@ func (h *GroupHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 	if err != nil {
-		fmt.Printf("User not a member of group: %v\n", err)
-		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		if err == sql.ErrNoRows {
+			fmt.Printf("User not a member of group: %v\n", err)
+			RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+			return
+		}
+		fmt.Printf("Database error checking membership: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
 		return
 	}
 

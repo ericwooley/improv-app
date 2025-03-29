@@ -145,6 +145,7 @@ const GroupDetailsPage = () => {
   }
 
   const { group, members, userRole } = groupResponse.data
+  const isAdmin = userRole === 'admin'
   const libraryGames = libraryGamesResponse?.data || []
   const ownedGames = ownedGamesResponse?.data || []
 
@@ -160,12 +161,14 @@ const GroupDetailsPage = () => {
       <PageHeader
         title={group.Name}
         actions={
-          <IconButton onClick={handleMenuOpen} aria-label="group actions">
-            <MoreVertIcon />
-          </IconButton>
+          isAdmin && (
+            <IconButton onClick={handleMenuOpen} aria-label="group actions">
+              <MoreVertIcon />
+            </IconButton>
+          )
         }
       />
-      {userRole === 'admin' && (
+      {isAdmin && (
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
           <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
             <ListItemIcon>
@@ -257,7 +260,7 @@ const GroupDetailsPage = () => {
                   <Tab icon={<LibraryIcon fontSize="small" />} label="Library" {...a11yProps(0)} iconPosition="start" />
                   <Tab
                     icon={<OwnedIcon fontSize="small" />}
-                    label="Owned Games"
+                    label="Group Games"
                     {...a11yProps(1)}
                     iconPosition="start"
                   />
@@ -311,7 +314,9 @@ const GroupDetailsPage = () => {
                   </Grid>
                 ) : (
                   <Box sx={{ p: 4, textAlign: 'center' }}>
-                    <Typography color="text.secondary">No owned games yet. Create a game for this group!</Typography>
+                    <Typography color="text.secondary">
+                      This group hasn't added any games yet. Contact an organizer to add some games!
+                    </Typography>
                   </Box>
                 )}
               </TabPanel>
