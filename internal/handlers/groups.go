@@ -994,6 +994,27 @@ func (h *GroupHandler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if there's already a pending invitation for this email to this group
+	var hasPendingInvitation bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1
+			FROM group_invitations
+			WHERE group_id = $1 AND email = $2 AND status = 'pending' AND expires_at > $3
+		)
+	`, groupID, inviteRequest.Email, time.Now()).Scan(&hasPendingInvitation)
+	if err != nil {
+		fmt.Printf("Error checking existing invitations: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking existing invitations")
+		return
+	}
+
+	if hasPendingInvitation {
+		fmt.Printf("User %s already has a pending invitation to group %s\n", inviteRequest.Email, groupID)
+		RespondWithError(w, http.StatusBadRequest, "This user already has a pending invitation to this group")
+		return
+	}
+
 	// Get group name for the invitation
 	var groupName string
 	err = h.db.QueryRow(`
