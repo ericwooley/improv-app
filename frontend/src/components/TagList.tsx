@@ -1,23 +1,22 @@
 import React from 'react'
+import { Box, Chip, SxProps, Theme } from '@mui/material'
 
 interface TagListProps {
   tags: string[]
-  variant?: 'info' | 'primary' | 'success' | 'warning' | 'danger'
-  light?: boolean
-  className?: string
+  variant?: 'default' | 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning'
+  size?: 'small' | 'medium'
+  sx?: SxProps<Theme>
 }
 
-const TagList: React.FC<TagListProps> = ({ tags, variant = 'info', light = true, className = 'mb-4' }) => {
+const TagList: React.FC<TagListProps> = ({ tags, variant = 'info', size = 'small', sx }) => {
   if (!tags || tags.length === 0) return null
 
   return (
-    <div className={`tags ${className}`}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, ...sx }}>
       {tags.map((tag, index) => (
-        <span key={index} className={`tag is-${variant}${light ? ' is-light' : ''}`}>
-          {tag}
-        </span>
+        <Chip key={index} label={tag} color={variant} size={size} variant="outlined" />
       ))}
-    </div>
+    </Box>
   )
 }
 

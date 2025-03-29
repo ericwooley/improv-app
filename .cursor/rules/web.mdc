@@ -34,3 +34,6 @@ To adjust sizes per screen size:
     <Item>size=8</Item>
   </Grid>
 ```
+
+
+All tabs components should sync their selected tab component to the url, using a `?tab-<unique-identifier>=<selected tab>` query selector. When the tab changes the url should reflect that, and that value should be the default selction for the tab. However, we do not want to try to sync the url bar changes down to the tab, as that makes the logic to difficult. This is just so people can link to a tab, and so a refresh works. We don't expect anyone to edit to url bar manually.
