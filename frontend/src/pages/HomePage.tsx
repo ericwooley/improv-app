@@ -18,9 +18,10 @@ import {
   Button,
   CircularProgress,
 } from '@mui/material'
-import { Group as GroupIcon, Event as EventIcon } from '@mui/icons-material'
+import { Event as EventIcon, Group as GroupIcon } from '@mui/icons-material'
 import { Link } from 'react-router-dom'
 import Invitations from '../components/Invitations'
+import { GroupsList } from '../components'
 
 // Define API response structure
 interface ApiResponse<T> {
@@ -62,26 +63,7 @@ const HomePage = () => {
                   }
                 />
                 <CardContent>
-                  {groupsLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                      <CircularProgress />
-                    </Box>
-                  ) : groups.length > 0 ? (
-                    <List>
-                      {groups.slice(0, 5).map((group: Group) => (
-                        <ListItemButton key={group.ID} component={Link} to={`/groups/${group.ID}`}>
-                          <ListItemIcon>
-                            <GroupIcon />
-                          </ListItemIcon>
-                          <ListItemText primary={group.Name} secondary={group.Description} />
-                        </ListItemButton>
-                      ))}
-                    </List>
-                  ) : (
-                    <Typography color="text.secondary">
-                      No groups found. Create your first group to get started!
-                    </Typography>
-                  )}
+                  <GroupsList groups={groups} isLoading={groupsLoading} maxItems={5} />
                 </CardContent>
               </Card>
             </Grid>

@@ -16,3 +16,4 @@ export { default as SelectField } from './SelectField'
 export { default as Breadcrumb } from './Breadcrumb'
 
 export * from './GroupCard'
+export { GroupsList } from './GroupsList'

@@ -1,7 +1,6 @@
-import { PageHeader, EmptyState, ActionButton } from '../components'
-import { GroupCard } from '../components/GroupCard'
+import { PageHeader, ActionButton, GroupsList } from '../components'
 import { useGetGroupsQuery } from '../store/api/groupsApi'
-import { Box, CircularProgress, Alert } from '@mui/material'
+import { Box, Paper } from '@mui/material'
 
 const GroupsPage = () => {
   const {
@@ -22,25 +21,16 @@ const GroupsPage = () => {
           <ActionButton text="Create Group" to="/groups/new" icon="fas fa-plus" />
         </Box>
       )}
-
-      {isLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : error ? (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          Error loading groups. Please try again later.
-        </Alert>
-      ) : groups.length > 0 ? (
-        groups.map((group) => <GroupCard key={group.ID} group={group} />)
-      ) : (
-        <EmptyState
-          message="You haven't created any groups yet."
-          actionText="Create Your First Group"
-          actionLink="/groups/new"
-          actionIcon="fas fa-plus"
+      <Paper>
+        <GroupsList
+          groups={groups}
+          isLoading={isLoading}
+          error={error}
+          emptyMessage="You haven't created any groups yet."
+          emptyActionText="Create Your First Group"
+          emptyActionLink="/groups/new"
         />
-      )}
+      </Paper>
     </Box>
   )
 }
