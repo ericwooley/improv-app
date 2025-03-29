@@ -1,10 +1,9 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useGetGroupQuery, useGetGroupLibraryGamesQuery, useGetGroupOwnedGamesQuery } from '../store/api/groupsApi'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, GameCard } from '../components'
 import {
   Box,
   Card,
-  CardHeader,
   CardContent,
   Table,
   TableBody,
@@ -39,7 +38,7 @@ import {
   Inventory as OwnedIcon,
   Security as SecurityIcon,
 } from '@mui/icons-material'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -54,28 +53,64 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`game-tabpanel-${index}`}
-      aria-labelledby={`game-tab-${index}`}
+      id={`section-tabpanel-${index}`}
+      aria-labelledby={`section-tab-${index}`}
       {...other}>
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
     </div>
   )
 }
 
 function a11yProps(index: number) {
   return {
-    id: `game-tab-${index}`,
-    'aria-controls': `game-tabpanel-${index}`,
+    id: `section-tab-${index}`,
+    'aria-controls': `section-tabpanel-${index}`,
   }
+}
+
+// Enum for tab values that correspond to URL params
+enum TabValue {
+  Info = 'info',
+  Members = 'members',
+  Games = 'games',
+}
+
+// Map numeric index to tab value
+const indexToTabValue: Record<number, TabValue> = {
+  0: TabValue.Info,
+  1: TabValue.Members,
+  2: TabValue.Games,
+}
+
+// Map tab value to numeric index
+const tabValueToIndex: Record<string, number> = {
+  [TabValue.Info]: 0,
+  [TabValue.Members]: 1,
+  [TabValue.Games]: 2,
 }
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: groupResponse, isLoading, error } = useGetGroupQuery(groupId || '')
   const { data: libraryGamesResponse, isLoading: libraryLoading } = useGetGroupLibraryGamesQuery(groupId || '')
   const { data: ownedGamesResponse, isLoading: ownedLoading } = useGetGroupOwnedGamesQuery(groupId || '')
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [tabValue, setTabValue] = useState(0)
+
+  // Get tab from URL params or default to info
+  const tabFromUrl = searchParams.get('tab') || TabValue.Info
+  const [mainTabValue, setMainTabValue] = useState(tabValueToIndex[tabFromUrl] || 0)
+
+  // Games subtabs state
+  const [gamesTabValue, setGamesTabValue] = useState(0)
+
+  // Sync URL when tab changes
+  useEffect(() => {
+    const currentTabValue = indexToTabValue[mainTabValue]
+    if (searchParams.get('tab') !== currentTabValue) {
+      setSearchParams({ tab: currentTabValue })
+    }
+  }, [mainTabValue, searchParams, setSearchParams])
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -85,8 +120,12 @@ const GroupDetailsPage = () => {
     setAnchorEl(null)
   }
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
+  const handleMainTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setMainTabValue(newValue)
+  }
+
+  const handleGamesTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setGamesTabValue(newValue)
   }
 
   if (isLoading) {
@@ -120,7 +159,6 @@ const GroupDetailsPage = () => {
 
       <PageHeader
         title={group.Name}
-        subtitle={group.Description}
         actions={
           <IconButton onClick={handleMenuOpen} aria-label="group actions">
             <MoreVertIcon />
@@ -156,20 +194,33 @@ const GroupDetailsPage = () => {
           </MenuItem>
         </Menu>
       )}
-      <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
-        <Box sx={{ flex: 1 }}>
-          <Card sx={{ mb: 3 }}>
-            <CardHeader avatar={<InfoIcon />} title="Group Information" />
+
+      {/* Main tabs */}
+      <Box sx={{ width: '100%', mt: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={mainTabValue} onChange={handleMainTabChange} aria-label="group details tabs" variant="fullWidth">
+            <Tab icon={<InfoIcon />} label="Information" {...a11yProps(0)} iconPosition="start" />
+            <Tab icon={<GroupIcon />} label="Members" {...a11yProps(1)} iconPosition="start" />
+            <Tab icon={<GamepadIcon />} label="Games" {...a11yProps(2)} iconPosition="start" />
+          </Tabs>
+        </Box>
+
+        {/* Information Tab */}
+        <TabPanel value={mainTabValue} index={0}>
+          <Card>
             <CardContent>
               <Stack spacing={2}>
+                <Typography variant="body1">{group.Description}</Typography>
                 <InfoItem icon={<CalendarIcon />}>Created {formatDate(new Date(group.CreatedAt))}</InfoItem>
                 <InfoItem icon={<SecurityIcon />}>Your Role: {userRole}</InfoItem>
               </Stack>
             </CardContent>
           </Card>
+        </TabPanel>
 
-          <Card sx={{ mb: 3 }}>
-            <CardHeader avatar={<GroupIcon />} title="Members" />
+        {/* Members Tab */}
+        <TabPanel value={mainTabValue} index={1}>
+          <Card>
             <CardContent>
               <TableContainer component={Paper} elevation={0}>
                 <Table>
@@ -195,12 +246,14 @@ const GroupDetailsPage = () => {
               </TableContainer>
             </CardContent>
           </Card>
+        </TabPanel>
 
+        {/* Games Tab */}
+        <TabPanel value={mainTabValue} index={2}>
           <Card>
-            <CardHeader avatar={<GamepadIcon />} title="Games" />
             <CardContent sx={{ pb: 0 }}>
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={tabValue} onChange={handleTabChange} aria-label="game tabs" variant="fullWidth">
+                <Tabs value={gamesTabValue} onChange={handleGamesTabChange} aria-label="game tabs" variant="fullWidth">
                   <Tab icon={<LibraryIcon fontSize="small" />} label="Library" {...a11yProps(0)} iconPosition="start" />
                   <Tab
                     icon={<OwnedIcon fontSize="small" />}
@@ -211,7 +264,7 @@ const GroupDetailsPage = () => {
                 </Tabs>
               </Box>
 
-              <TabPanel value={tabValue} index={0}>
+              <TabPanel value={gamesTabValue} index={0}>
                 {libraryLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                     <CircularProgress />
@@ -237,7 +290,7 @@ const GroupDetailsPage = () => {
                 )}
               </TabPanel>
 
-              <TabPanel value={tabValue} index={1}>
+              <TabPanel value={gamesTabValue} index={1}>
                 {ownedLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                     <CircularProgress />
@@ -264,7 +317,7 @@ const GroupDetailsPage = () => {
               </TabPanel>
             </CardContent>
           </Card>
-        </Box>
+        </TabPanel>
       </Box>
     </Box>
   )
