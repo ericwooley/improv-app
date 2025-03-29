@@ -42,6 +42,7 @@ func main() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(emailService)
 	groupHandler := handlers.NewGroupHandler(sqlDB)
+	invitationHandler := handlers.NewInvitationHandler(sqlDB)
 	eventHandler := handlers.NewEventHandler(sqlDB)
 	gameHandler := handlers.NewGameHandler(sqlDB)
 
@@ -89,12 +90,15 @@ func main() {
 	api.HandleFunc("/profile", middleware.RequireAuthAPI(sqlDB, authHandler.Profile)).Methods("GET", "PUT")
 
 	// Group member management routes
-	api.HandleFunc("/groups/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.ListInvitations)).Methods("GET")
-	api.HandleFunc("/groups/invites/accept", middleware.RequireAuthAPI(sqlDB, groupHandler.AcceptInvitation)).Methods("POST")
+	api.HandleFunc("/groups/invites", middleware.RequireAuthAPI(sqlDB, invitationHandler.ListInvitations)).Methods("GET")
+	api.HandleFunc("/groups/invites/accept", middleware.RequireAuthAPI(sqlDB, invitationHandler.AcceptInvitation)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.ListMembers)).Methods("GET")
-	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.InviteMember)).Methods("POST")
+	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, invitationHandler.InviteMember)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateMemberRole)).Methods("PUT")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.RemoveMember)).Methods("DELETE")
+
+	// Invitation verification route (no auth required)
+	api.HandleFunc("/groups/invites/verify", invitationHandler.VerifyInvitation).Methods("GET")
 
 	// Group routes
 	api.HandleFunc("/groups", middleware.RequireAuthAPI(sqlDB, groupHandler.List)).Methods("GET")
