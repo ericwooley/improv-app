@@ -46,18 +46,18 @@ const Invitations = () => {
 
   const invitations = (invitationsResponse as unknown as ApiResponse<Invitation[]>)?.data || []
 
-  const handleAcceptInvitation = async (token: string) => {
+  const handleAcceptInvitation = async (invitationId: string) => {
     try {
-      await acceptInvitation({ token }).unwrap()
+      await acceptInvitation({ invitationId }).unwrap()
       // No need to manually update the UI, RTK Query will invalidate and refetch the queries
     } catch (error) {
       console.error('Failed to accept invitation:', error)
     }
   }
 
-  const handleRejectInvitation = async (token: string) => {
+  const handleRejectInvitation = async (invitationId: string) => {
     try {
-      await rejectInvitation({ token }).unwrap()
+      await rejectInvitation({ invitationId }).unwrap()
       // No need to manually update the UI, RTK Query will invalidate and refetch the queries
     } catch (error) {
       console.error('Failed to reject invitation:', error)

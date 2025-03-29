@@ -167,17 +167,12 @@ func (s *EmailService) GetUserByID(userID string) (*models.User, error) {
 
 // SendGroupInvitation sends an email inviting a user to join a group
 func (s *EmailService) SendGroupInvitation(email, groupID, groupName, inviterName, inviterID, role string) (string, error) {
-	token, err := s.generateToken()
-	if err != nil {
-		return "", err
-	}
-
 	// Create invitation record
 	invitationID := uuid.New().String()
-	_, err = s.db.Exec(`
-		INSERT INTO group_invitations (id, group_id, email, invited_by, role, token, status, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
-	`, invitationID, groupID, email, inviterID, role, token, time.Now().Add(7*24*time.Hour))
+	_, err := s.db.Exec(`
+		INSERT INTO group_invitations (id, group_id, email, invited_by, role, status)
+		VALUES ($1, $2, $3, $4, $5, 'pending')
+	`, invitationID, groupID, email, inviterID, role)
 	if err != nil {
 		return "", err
 	}
@@ -210,8 +205,6 @@ func (s *EmailService) SendGroupInvitation(email, groupID, groupName, inviterNam
 
 		%s
 
-		This invitation will expire in 7 days.
-
 		Best regards,
 		%s
 	`, inviterName, groupName, role, baseURL, fromName)
@@ -242,11 +235,11 @@ func (s *EmailService) SendGroupInvitation(email, groupID, groupName, inviterNam
 	}
 
 	log.Printf("Group invitation email sent to %s", email)
-	return token, nil
+	return invitationID, nil
 }
 
-// VerifyGroupInvitation checks if an invitation token is valid and returns the invitation details
-func (s *EmailService) VerifyGroupInvitation(token string) (map[string]interface{}, error) {
+// VerifyGroupInvitation checks if an invitation is valid and returns the invitation details
+func (s *EmailService) VerifyGroupInvitation(invitationID string) (map[string]interface{}, error) {
 	var invitation struct {
 		ID        string
 		GroupID   string
@@ -260,8 +253,8 @@ func (s *EmailService) VerifyGroupInvitation(token string) (map[string]interface
 		SELECT i.id, i.group_id, g.name, i.email, i.role, i.status
 		FROM group_invitations i
 		JOIN improv_groups g ON i.group_id = g.id
-		WHERE i.token = $1 AND i.status = 'pending' AND i.expires_at > $2
-	`, token, time.Now()).Scan(&invitation.ID, &invitation.GroupID, &invitation.GroupName,
+		WHERE i.id = $1 AND i.status = 'pending'
+	`, invitationID).Scan(&invitation.ID, &invitation.GroupID, &invitation.GroupName,
 		&invitation.Email, &invitation.Role, &invitation.Status)
 
 	if err != nil {

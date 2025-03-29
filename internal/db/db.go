@@ -159,9 +159,7 @@ func InitDB() *sql.DB {
 			email TEXT NOT NULL,
 			invited_by TEXT NOT NULL,
 			role TEXT NOT NULL,
-			token TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'pending',
-			expires_at TIMESTAMP NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
 			FOREIGN KEY (invited_by) REFERENCES users(id)

@@ -118,9 +118,9 @@ func (h *InvitationHandler) InviteMember(w http.ResponseWriter, r *http.Request)
 		SELECT EXISTS(
 			SELECT 1
 			FROM group_invitations
-			WHERE group_id = $1 AND email = $2 AND status = 'pending' AND expires_at > $3
+			WHERE group_id = $1 AND email = $2 AND status = 'pending'
 		)
-	`, groupID, inviteRequest.Email, time.Now()).Scan(&hasPendingInvitation)
+	`, groupID, inviteRequest.Email).Scan(&hasPendingInvitation)
 	if err != nil {
 		fmt.Printf("Error checking existing invitations: %v\n", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error checking existing invitations")
@@ -156,7 +156,7 @@ func (h *InvitationHandler) InviteMember(w http.ResponseWriter, r *http.Request)
 	emailService := services.NewEmailService(h.db)
 
 	// Send invitation email
-	token, err := emailService.SendGroupInvitation(
+	invitationID, err := emailService.SendGroupInvitation(
 		inviteRequest.Email,
 		groupID,
 		groupName,
@@ -175,29 +175,29 @@ func (h *InvitationHandler) InviteMember(w http.ResponseWriter, r *http.Request)
 		Success: true,
 		Message: "Invitation sent successfully",
 		Data: map[string]string{
-			"email": inviteRequest.Email,
-			"token": token,
+			"email":       inviteRequest.Email,
+			"invitationId": invitationID,
 		},
 	})
 }
 
-// VerifyInvitation handles verifying a group invitation token
+// VerifyInvitation handles verifying a group invitation
 func (h *InvitationHandler) VerifyInvitation(w http.ResponseWriter, r *http.Request) {
-	token := r.URL.Query().Get("token")
-	if token == "" {
-		fmt.Printf("Missing invitation token\n")
-		RespondWithError(w, http.StatusBadRequest, "Missing invitation token")
+	invitationID := r.URL.Query().Get("id")
+	if invitationID == "" {
+		fmt.Printf("Missing invitation ID\n")
+		RespondWithError(w, http.StatusBadRequest, "Missing invitation ID")
 		return
 	}
 
 	// Create EmailService instance
 	emailService := services.NewEmailService(h.db)
 
-	// Verify the invitation token
-	invitation, err := emailService.VerifyGroupInvitation(token)
+	// Verify the invitation
+	invitation, err := emailService.VerifyGroupInvitation(invitationID)
 	if err != nil {
-		fmt.Printf("Invalid or expired invitation token: %v\n", err)
-		RespondWithError(w, http.StatusBadRequest, "Invalid or expired invitation token")
+		fmt.Printf("Invalid invitation: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid invitation")
 		return
 	}
 
@@ -213,7 +213,7 @@ func (h *InvitationHandler) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	var acceptRequest struct {
-		Token string `json:"token" validate:"required"`
+		InvitationID string `json:"invitationId" validate:"required"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -235,11 +235,11 @@ func (h *InvitationHandler) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 	// Create EmailService instance
 	emailService := services.NewEmailService(h.db)
 
-	// Verify the invitation token
-	invitation, err := emailService.VerifyGroupInvitation(acceptRequest.Token)
+	// Verify the invitation
+	invitation, err := emailService.VerifyGroupInvitation(acceptRequest.InvitationID)
 	if err != nil {
-		fmt.Printf("Invalid or expired invitation token: %v\n", err)
-		RespondWithError(w, http.StatusBadRequest, "Invalid or expired invitation token")
+		fmt.Printf("Invalid invitation: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid invitation")
 		return
 	}
 
@@ -298,8 +298,8 @@ func (h *InvitationHandler) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 	_, err = tx.Exec(`
 		UPDATE group_invitations
 		SET status = 'accepted'
-		WHERE token = $1
-	`, acceptRequest.Token)
+		WHERE id = $1
+	`, acceptRequest.InvitationID)
 	if err != nil {
 		fmt.Printf("Error updating invitation status: %v\n", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating invitation status")
@@ -333,9 +333,9 @@ func (h *InvitationHandler) ListInvitations(w http.ResponseWriter, r *http.Reque
 		FROM group_invitations i
 		JOIN improv_groups g ON i.group_id = g.id
 		JOIN users u ON i.invited_by = u.id
-		WHERE i.email = $1 AND i.status = 'pending' AND i.expires_at > $2
+		WHERE i.email = $1 AND i.status = 'pending'
 		ORDER BY i.created_at DESC
-	`, user.Email, time.Now())
+	`, user.Email)
 	if err != nil {
 		fmt.Printf("Error fetching invitations: %v\n", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching invitations")
@@ -400,7 +400,7 @@ func (h *InvitationHandler) RejectInvitation(w http.ResponseWriter, r *http.Requ
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	var rejectRequest struct {
-		Token string `json:"token" validate:"required"`
+		InvitationID string `json:"invitationId" validate:"required"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -435,12 +435,12 @@ func (h *InvitationHandler) RejectInvitation(w http.ResponseWriter, r *http.Requ
 		FROM group_invitations i
 		JOIN improv_groups g ON i.group_id = g.id
 		JOIN users u ON i.invited_by = u.id
-		WHERE i.token = $1 AND i.email = $2 AND i.status = 'pending'
-	`, rejectRequest.Token, user.Email).Scan(&groupID, &groupName, &invitedBy, &invitedByEmail)
+		WHERE i.id = $1 AND i.email = $2 AND i.status = 'pending'
+	`, rejectRequest.InvitationID, user.Email).Scan(&groupID, &groupName, &invitedBy, &invitedByEmail)
 
 	if err == sql.ErrNoRows {
-		fmt.Printf("Invalid or expired invitation token: %v\n", err)
-		RespondWithError(w, http.StatusBadRequest, "Invalid or expired invitation token")
+		fmt.Printf("Invalid invitation: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid invitation")
 		return
 	} else if err != nil {
 		fmt.Printf("Error retrieving invitation: %v\n", err)
@@ -452,8 +452,8 @@ func (h *InvitationHandler) RejectInvitation(w http.ResponseWriter, r *http.Requ
 	_, err = tx.Exec(`
 		UPDATE group_invitations
 		SET status = 'rejected'
-		WHERE token = $1 AND email = $2 AND status = 'pending'
-	`, rejectRequest.Token, user.Email)
+		WHERE id = $1 AND email = $2 AND status = 'pending'
+	`, rejectRequest.InvitationID, user.Email)
 	if err != nil {
 		fmt.Printf("Error updating invitation status: %v\n", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating invitation status")
