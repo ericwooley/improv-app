@@ -208,13 +208,13 @@ func (s *EmailService) SendGroupInvitation(email, groupID, groupName, inviterNam
 
 		Click the link below to sign in and view your invitation:
 
-		%s/login?invite=%s
+		%s
 
 		This invitation will expire in 7 days.
 
 		Best regards,
 		%s
-	`, inviterName, groupName, role, baseURL, invitationID, fromName)
+	`, inviterName, groupName, role, baseURL, fromName)
 
 	// Set up email message
 	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+

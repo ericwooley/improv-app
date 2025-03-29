@@ -2,6 +2,7 @@ import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import { useGetGroupsQuery } from '../store/api/groupsApi'
 import { useGetEventsQuery } from '../store/api/eventsApi'
+import { useGetInvitationsQuery, useAcceptInvitationMutation } from '../store/api/invitationsApi'
 import { Group } from '../store/api/groupsApi'
 import { Event } from '../store/api/eventsApi'
 import {
@@ -17,8 +18,16 @@ import {
   ListItemIcon,
   Button,
   CircularProgress,
+  Chip,
+  Stack,
 } from '@mui/material'
-import { Group as GroupIcon, Event as EventIcon } from '@mui/icons-material'
+import {
+  Group as GroupIcon,
+  Event as EventIcon,
+  Mail as MailIcon,
+  Check as AcceptIcon,
+  Person as RoleIcon,
+} from '@mui/icons-material'
 import { Link } from 'react-router-dom'
 
 // Define API response structure
@@ -29,13 +38,39 @@ interface ApiResponse<T> {
   error?: string
 }
 
+// Define Invitation interface
+interface Invitation {
+  id: string
+  groupId: string
+  groupName: string
+  email: string
+  role: string
+  status: string
+  invitedBy: string
+  inviterName: string
+  createdAt: string
+}
+
 const HomePage = () => {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
   const { data: groupsResponse, isLoading: groupsLoading } = useGetGroupsQuery()
   const { data: eventsResponse, isLoading: eventsLoading } = useGetEventsQuery()
 
+  const { data: invitationsResponse, isLoading: invitationsLoading } = useGetInvitationsQuery()
+  const [acceptInvitation, { isLoading: isAccepting }] = useAcceptInvitationMutation()
+
   const groups = (groupsResponse as unknown as ApiResponse<Group[]>)?.data || []
   const events = (eventsResponse as unknown as ApiResponse<Event[]>)?.data || []
+  const invitations = (invitationsResponse as unknown as ApiResponse<Invitation[]>)?.data || []
+
+  const handleAcceptInvitation = async (token: string) => {
+    try {
+      await acceptInvitation({ token }).unwrap()
+      // No need to manually update the UI, RTK Query will invalidate and refetch the queries
+    } catch (error) {
+      console.error('Failed to accept invitation:', error)
+    }
+  }
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', p: 2 }}>
@@ -44,6 +79,45 @@ const HomePage = () => {
           <Typography variant="h4" sx={{ mb: 4 }}>
             Dashboard
           </Typography>
+
+          {/* Pending Invitations - Now at the top level */}
+          {(invitations.length > 0 || invitationsLoading) && (
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Pending Invitations" avatar={<MailIcon color="primary" />} />
+              <CardContent>
+                {invitationsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <List sx={{ width: '100%' }}>
+                    {invitations.map((invitation) => (
+                      <Box key={invitation.id} sx={{ mb: 2, p: 2, border: '1px solid #eee', borderRadius: 1 }}>
+                        <Typography variant="h6">{invitation.groupName}</Typography>
+                        <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2 }}>
+                          <Chip
+                            icon={<RoleIcon fontSize="small" />}
+                            label={`Role: ${invitation.role}`}
+                            size="small"
+                            variant="outlined"
+                          />
+                          <Chip label={`From: ${invitation.inviterName}`} size="small" variant="outlined" />
+                        </Stack>
+                        <Button
+                          variant="contained"
+                          startIcon={<AcceptIcon />}
+                          onClick={() => handleAcceptInvitation(invitation.id)}
+                          disabled={isAccepting}
+                          size="small">
+                          Accept Invitation
+                        </Button>
+                      </Box>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Grid container spacing={3}>
             {/* Recent Groups */}
