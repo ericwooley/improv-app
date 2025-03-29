@@ -468,3 +468,35 @@ func (h *GameHandler) GetGameGroupLibraries(w http.ResponseWriter, r *http.Reque
 		Data:    groups,
 	})
 }
+
+// GetAllowedTags returns a list of allowed tags for games
+func (h *GameHandler) GetAllowedTags(w http.ResponseWriter, r *http.Request) {
+	// Hard-coded list of allowed tags for now
+	allowedTags := []string{
+		"Warm-up",
+		"Short-form",
+		"Long-form",
+		"Character",
+		"Environment",
+		"Narrative",
+		"Physical",
+		"Verbal",
+		"Musical",
+		"Introduction",
+		"High-energy",
+		"Low-energy",
+		"Performance",
+		"Practice",
+		"Beginner-friendly",
+		"Advanced",
+		"Solo",
+		"Group",
+		"Quick",
+		"Audience-interaction",
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    allowedTags,
+	})
+}

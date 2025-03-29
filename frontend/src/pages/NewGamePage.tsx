@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useCreateGameMutation } from '../store/api/gamesApi'
+import { useCreateGameMutation, useFetchAllowedTagsQuery } from '../store/api/gamesApi'
 import { PageHeader, Breadcrumb } from '../components'
 import {
   Box,
@@ -21,7 +21,9 @@ const NewGamePage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const groupId = searchParams.get('groupId')
+
   const [createGame, { isLoading, error }] = useCreateGameMutation()
+  const { data: allowedTags, isLoading: tagsLoading } = useFetchAllowedTagsQuery()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,7 +38,6 @@ const NewGamePage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      // Convert tags array to comma-separated string for API
       const payload = {
         ...formData,
         tags: formData.tags.join(','),
@@ -126,15 +127,29 @@ const NewGamePage = () => {
 
               <Autocomplete
                 multiple
-                freeSolo
-                options={[]}
+                options={allowedTags?.data || []}
+                loading={tagsLoading}
                 value={formData.tags}
                 onChange={handleTagsChange}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => <Chip variant="outlined" label={option} {...getTagProps({ index })} />)
                 }
                 renderInput={(params) => (
-                  <TextField {...params} label="Tags" helperText="Type a tag and press Enter to add it" fullWidth />
+                  <TextField
+                    {...params}
+                    label="Tags"
+                    helperText="Select tags to categorize your game"
+                    fullWidth
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {tagsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
                 )}
               />
 

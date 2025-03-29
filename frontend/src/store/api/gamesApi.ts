@@ -64,6 +64,11 @@ export const gamesApi = apiSlice.injectEndpoints({
           : [{ type: 'Game', id: 'LIST' }],
     }),
 
+    fetchAllowedTags: builder.query<APIResponse<string[]>, void>({
+      query: () => '/games/tags',
+      transformResponse: (response: APIResponse<string[]>) => response,
+    }),
+
     getGame: builder.query<APIResponse<GameDetailsResponse>, string>({
       query: (id) => `/games/${id}`,
       providesTags: (_, __, id) => [{ type: 'Game', id }],
@@ -128,4 +133,5 @@ export const {
   useDeleteGameMutation,
   useRateGameMutation,
   useGetGameGroupLibrariesQuery,
+  useFetchAllowedTagsQuery,
 } = gamesApi
