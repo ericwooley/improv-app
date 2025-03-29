@@ -17,3 +17,6 @@ export { default as Breadcrumb } from './Breadcrumb'
 
 export * from './GroupCard'
 export { GroupsList } from './GroupsList'
+
+// Group Details Components
+export * from './group-details'
