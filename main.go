@@ -118,12 +118,12 @@ func main() {
 	api.HandleFunc("/groups/{id}/events", middleware.RequireAuthAPI(sqlDB, eventHandler.List)).Methods("GET", "POST")
 
 	// Game routes
-	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET", "POST")
+	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET")
+	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.Create)).Methods("POST")
 	api.HandleFunc("/games/tags", middleware.RequireAuthAPI(sqlDB, gameHandler.GetAllowedTags)).Methods("GET")
 	api.HandleFunc("/games/{id}", middleware.RequireAuthAPI(sqlDB, gameHandler.Get)).Methods("GET")
 	api.HandleFunc("/games/{id}/rate", middleware.RequireAuthAPI(sqlDB, gameHandler.RateGame)).Methods("POST")
 	api.HandleFunc("/games/{id}/libraries", middleware.RequireAuthAPI(sqlDB, gameHandler.GetGameGroupLibraries)).Methods("GET")
-
 
 	// Serve frontend static files in production
 	fs := http.FileServer(http.Dir("./frontend/dist"))
