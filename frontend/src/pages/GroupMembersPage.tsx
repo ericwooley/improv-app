@@ -15,10 +15,6 @@ import {
   Paper,
   Button,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   MenuItem,
   CircularProgress,
@@ -37,7 +33,7 @@ import {
   MoreVert as MoreVertIcon,
   FileDownload as FileDownloadIcon,
 } from '@mui/icons-material'
-import { PageHeader, Breadcrumb } from '../components'
+import { PageHeader, Breadcrumb, Modal } from '../components'
 import {
   useGetGroupQuery,
   useGetGroupMembersQuery,
@@ -331,80 +327,71 @@ const GroupMembersPage = () => {
       </Menu>
 
       {/* Invite Member Dialog */}
-      <Dialog open={openInviteDialog} onClose={handleCloseDialogs}>
-        <DialogTitle>Invite New Member</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Email Address"
-              fullWidth
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter email address to invite"
-            />
-            <TextField select label="Role" fullWidth value={role} onChange={(e) => setRole(e.target.value)}>
-              {roleOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-        </DialogContent>
-        <DialogActions>
+      <Modal open={openInviteDialog} onClose={handleCloseDialogs} title="Invite New Member">
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            label="Email Address"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter email address to invite"
+          />
+          <TextField select label="Role" fullWidth value={role} onChange={(e) => setRole(e.target.value)}>
+            {roleOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={handleCloseDialogs}>Cancel</Button>
           <Button onClick={handleSendInvitation} variant="contained" color="primary">
             Send Invitation
           </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Modal>
 
       {/* Edit Role Dialog */}
-      <Dialog open={openEditDialog} onClose={handleCloseDialogs}>
-        <DialogTitle>Change Member Role</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <Typography variant="body2" gutterBottom>
-              Changing role for: {selectedMember?.firstName} {selectedMember?.lastName}
-            </Typography>
-            <TextField
-              select
-              label="Role"
-              fullWidth
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              sx={{ mt: 2 }}>
-              {roleOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-        </DialogContent>
-        <DialogActions>
+      <Modal open={openEditDialog} onClose={handleCloseDialogs} title="Change Member Role">
+        <Box>
+          <Typography variant="body2" gutterBottom>
+            Changing role for: {selectedMember?.firstName} {selectedMember?.lastName}
+          </Typography>
+          <TextField
+            select
+            label="Role"
+            fullWidth
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            sx={{ mt: 2 }}>
+            {roleOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={handleCloseDialogs}>Cancel</Button>
           <Button onClick={handleUpdateRole} variant="contained" color="primary">
             Update Role
           </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Modal>
 
       {/* Delete Member Dialog */}
-      <Dialog open={openDeleteDialog} onClose={handleCloseDialogs}>
-        <DialogTitle>Remove Member</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to remove {selectedMember?.firstName} {selectedMember?.lastName} from the group?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
+      <Modal open={openDeleteDialog} onClose={handleCloseDialogs} title="Remove Member">
+        <Typography>
+          Are you sure you want to remove {selectedMember?.firstName} {selectedMember?.lastName} from the group?
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={handleCloseDialogs}>Cancel</Button>
           <Button onClick={handleRemoveMember} variant="contained" color="error">
             Remove
           </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Modal>
 
       <Snackbar
         open={showAlert}

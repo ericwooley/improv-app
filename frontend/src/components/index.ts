@@ -5,6 +5,7 @@ export { default as PageHeader } from './PageHeader'
 export { default as TagList } from './TagList'
 export { formatDate, formatTime } from './DateTimeFormatter'
 export { default as GameCard, type Game } from './GameCard'
+export { default as Modal } from './Modal'
 
 // Form Components
 export { default as FormField } from './FormField'
