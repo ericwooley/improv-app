@@ -7,16 +7,15 @@ import {
   FormGroup,
   FormControlLabel,
   Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Switch,
   IconButton,
   Tooltip,
+  Tabs,
+  Tab,
 } from '@mui/material'
-import { useParams, useNavigate } from 'react-router-dom'
-import { PageHeader, Breadcrumb } from '../components'
-import GameCard from '../components/GameCard'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { PageHeader, Breadcrumb, TabPanel, a11yProps } from '../components'
+import GameCard, { Game } from '../components/GameCard'
 import { useGetGameQuery, useGetGameGroupLibrariesQuery } from '../store/api/gamesApi'
 import {
   useGetGroupsQuery,
@@ -24,9 +23,26 @@ import {
   useRemoveGameFromLibraryMutation,
 } from '../store/api/groupsApi'
 import { useState, useEffect, useCallback } from 'react'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
+import InfoIcon from '@mui/icons-material/Info'
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
+
+// Define tab values for URL sync
+enum TabValue {
+  Details = 'details',
+  Libraries = 'libraries',
+}
+
+const tabValueToIndex: Record<string, number> = {
+  [TabValue.Details]: 0,
+  [TabValue.Libraries]: 1,
+}
+
+const indexToTabValue: Record<number, string> = {
+  0: TabValue.Details,
+  1: TabValue.Libraries,
+}
 
 // Component to manage group libraries
 const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
@@ -124,78 +140,176 @@ const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
   if (!adminGroups.length) return null
 
   return (
-    <Accordion sx={{ mb: 3 }}>
-      <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
-        aria-controls="group-libraries-content"
-        id="group-libraries-header">
-        <Typography variant="h6">Manage Group Libraries</Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <FormControl component="fieldset" fullWidth>
-          <FormGroup>
-            {adminGroups.map((group) => {
-              const inLibrary = isGroupInLibrary(group.ID)
-              const isPending = pendingGroups[group.ID]
-              const status = statusMessage[group.ID]
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        Manage Group Libraries
+      </Typography>
+      <FormControl component="fieldset" fullWidth>
+        <FormGroup>
+          {adminGroups.map((group) => {
+            const inLibrary = isGroupInLibrary(group.ID)
+            const isPending = pendingGroups[group.ID]
+            const status = statusMessage[group.ID]
 
-              return (
-                <Box
-                  key={group.ID}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    py: 1,
-                    borderBottom: '1px solid #eee',
-                  }}>
-                  <Typography>
-                    {group.Name}{' '}
-                    <Typography component="span" color="text.secondary">
-                      ({group.userRole})
-                    </Typography>
+            return (
+              <Box
+                key={group.ID}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  py: 1,
+                  borderBottom: '1px solid #eee',
+                }}>
+                <Typography>
+                  {group.Name}{' '}
+                  <Typography component="span" color="text.secondary">
+                    ({group.userRole})
                   </Typography>
+                </Typography>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {status && (
-                      <Tooltip title={status.message}>
-                        <IconButton size="small" color={status.success ? 'success' : 'error'}>
-                          {status.success ? <CheckCircleIcon fontSize="small" /> : <ErrorIcon fontSize="small" />}
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {status && (
+                    <Tooltip title={status.message}>
+                      <IconButton size="small" color={status.success ? 'success' : 'error'}>
+                        {status.success ? <CheckCircleIcon fontSize="small" /> : <ErrorIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
 
-                    {isPending ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={inLibrary}
-                            onChange={() => handleGroupToggle(group.ID, inLibrary)}
-                            color="primary"
-                          />
-                        }
-                        label={inLibrary ? 'In Library' : 'Not In Library'}
-                        labelPlacement="start"
-                        sx={{ ml: 0, mr: 0 }}
-                      />
-                    )}
-                  </Box>
+                  {isPending ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={inLibrary}
+                          onChange={() => handleGroupToggle(group.ID, inLibrary)}
+                          color="primary"
+                        />
+                      }
+                      label={inLibrary ? 'In Library' : 'Not In Library'}
+                      labelPlacement="start"
+                      sx={{ ml: 0, mr: 0 }}
+                    />
+                  )}
                 </Box>
-              )
-            })}
-          </FormGroup>
-        </FormControl>
-      </AccordionDetails>
-    </Accordion>
+              </Box>
+            )
+          })}
+        </FormGroup>
+      </FormControl>
+    </Box>
   )
+}
+
+// Game Details Tab content
+const GameDetailsTab = ({ game }: { game: Game }) => {
+  return <GameCard game={game} showViewButton={false} />
+}
+
+// Read-only view for libraries
+const ReadOnlyLibraries = ({ gameId }: { gameId: string }) => {
+  const { data: gameLibrariesData, isLoading } = useGetGameGroupLibrariesQuery(gameId)
+
+  if (isLoading) {
+    return <CircularProgress size={24} />
+  }
+
+  const libraries = gameLibrariesData?.data || []
+
+  if (libraries.length === 0) {
+    return (
+      <Box sx={{ my: 2 }}>
+        <Alert severity="info">This game is not in any group libraries.</Alert>
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={{ my: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        This game is in the following group libraries:
+      </Typography>
+      {libraries.map((group) => (
+        <Box
+          key={group.id}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            p: 2,
+            mb: 1,
+            borderRadius: 1,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+          }}>
+          <Typography>{group.name}</Typography>
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+// Libraries Tab content with role-based access
+const LibrariesTab = ({ gameId }: { gameId: string }) => {
+  const { data: groupsData, isLoading } = useGetGroupsQuery()
+  const [hasModifyAccess, setHasModifyAccess] = useState(false)
+
+  useEffect(() => {
+    if (groupsData?.data) {
+      // Check if user has admin or organizer role in any group
+      const checkAccess = async () => {
+        const accessChecks = groupsData.data.map(async (group) => {
+          try {
+            const response = await fetch(`/api/groups/${group.ID}`, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`,
+              },
+            })
+            const details = await response.json()
+            return details.data?.userRole === 'admin' || details.data?.userRole === 'organizer'
+          } catch (error) {
+            console.error('Error checking group access:', error)
+            return false
+          }
+        })
+
+        const results = await Promise.all(accessChecks)
+        setHasModifyAccess(results.some(Boolean))
+      }
+      checkAccess()
+    }
+  }, [groupsData])
+
+  if (isLoading) {
+    return <CircularProgress />
+  }
+
+  return hasModifyAccess ? <GroupLibraryManager gameId={gameId} /> : <ReadOnlyLibraries gameId={gameId} />
 }
 
 const GameDetailsPage = () => {
   const { gameId } = useParams<{ gameId: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: gameData, isLoading, error } = useGetGameQuery(gameId || '')
+
+  // Get tab from URL params or default to details
+  const tabFromUrl = searchParams.get('tab-game') || TabValue.Details
+  const [tabValue, setTabValue] = useState(tabValueToIndex[tabFromUrl] || 0)
+
+  // Sync URL when tab changes
+  useEffect(() => {
+    const currentTabValue = indexToTabValue[tabValue]
+    if (searchParams.get('tab-game') !== currentTabValue) {
+      setSearchParams({ 'tab-game': currentTabValue })
+    }
+  }, [tabValue, searchParams, setSearchParams])
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
+  }
 
   // Extract data from response
   const game = gameData?.data?.game
@@ -244,9 +358,25 @@ const GameDetailsPage = () => {
 
       <PageHeader title="Game Details" subtitle="" />
 
-      {gameId && <GroupLibraryManager gameId={gameId} />}
+      {/* Tab navigation */}
+      <Box sx={{ width: '100%', mt: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="game details tabs" variant="fullWidth">
+            <Tab icon={<InfoIcon />} label="Details" {...a11yProps(0)} iconPosition="start" />
+            <Tab icon={<LibraryBooksIcon />} label="Group Libraries" {...a11yProps(1)} iconPosition="start" />
+          </Tabs>
+        </Box>
 
-      <GameCard game={game} showViewButton={false} />
+        {/* Details Tab */}
+        <TabPanel value={tabValue} index={0}>
+          <GameDetailsTab game={game} />
+        </TabPanel>
+
+        {/* Libraries Tab */}
+        <TabPanel value={tabValue} index={1}>
+          {gameId && <LibrariesTab gameId={gameId} />}
+        </TabPanel>
+      </Box>
     </Box>
   )
 }
