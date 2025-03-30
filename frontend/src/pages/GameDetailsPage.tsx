@@ -12,6 +12,7 @@ import {
   Tooltip,
   Tabs,
   Tab,
+  Paper,
 } from '@mui/material'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader, Breadcrumb, TabPanel, a11yProps } from '../components'
@@ -374,7 +375,11 @@ const GameDetailsPage = () => {
 
         {/* Libraries Tab */}
         <TabPanel value={tabValue} index={1}>
-          {gameId && <LibrariesTab gameId={gameId} />}
+          {gameId && (
+            <Paper sx={{ p: 2 }}>
+              <LibrariesTab gameId={gameId} />
+            </Paper>
+          )}
         </TabPanel>
       </Box>
     </Box>
