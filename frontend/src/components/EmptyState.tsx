@@ -9,6 +9,7 @@ interface EmptyStateProps {
   actionIcon?: string
   secondaryMessage?: string
   secondaryAction?: ReactNode
+  onActionClick?: () => void
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
@@ -18,6 +19,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   actionIcon = 'fas fa-plus',
   secondaryMessage,
   secondaryAction,
+  onActionClick,
 }) => {
   return (
     <Paper
@@ -31,11 +33,12 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         {message}
       </Typography>
 
-      {actionLink && actionText && (
+      {actionText && (actionLink || onActionClick) && (
         <Button
-          component={Link}
+          component={actionLink ? Link : 'button'}
           to={actionLink}
           variant="contained"
+          onClick={onActionClick}
           startIcon={actionIcon ? <i className={actionIcon} /> : null}>
           {actionText}
         </Button>

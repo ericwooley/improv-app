@@ -118,6 +118,9 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		games = append(games, game)
 	}
+	if games == nil {
+		games = []models.Game{}
+	}
 
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,

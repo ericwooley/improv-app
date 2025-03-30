@@ -56,8 +56,14 @@ export interface RateGameRequest {
 
 export const gamesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getGames: builder.query<APIResponse<Game[]>, void>({
-      query: () => '/games',
+    getGames: builder.query<APIResponse<Game[]>, { tag?: string } | void>({
+      query: (filters = {}) => {
+        const params = new URLSearchParams()
+        if (filters && 'tag' in filters && filters.tag) {
+          params.append('tag', filters.tag)
+        }
+        return `/games${params.toString() ? `?${params.toString()}` : ''}`
+      },
       providesTags: (result) =>
         result
           ? [...result.data.map(({ id }) => ({ type: 'Game' as const, id })), { type: 'Game', id: 'LIST' }]
