@@ -6,7 +6,7 @@ alwaysApply: true
 
 Check the [README.md](mdc:README.md) for information about the project.
 
-Check [main.go](mdc:main.go) for api routes.
+Check [main.go](mdc:main.go) for api routes, and keep routes up to date there whenever you modify the messages
 
 the web uses vite to proxy localhost:5173 to localhost:4080 for the api. 
 
