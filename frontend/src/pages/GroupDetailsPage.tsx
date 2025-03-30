@@ -1,11 +1,19 @@
 import { useParams, useSearchParams } from 'react-router-dom'
-import { useGetGroupQuery, useGetGroupLibraryGamesQuery, useGetGroupOwnedGamesQuery } from '../store/api/groupsApi'
+import {
+  useGetGroupQuery,
+  useGetGroupLibraryGamesQuery,
+  useGetGroupOwnedGamesQuery,
+  useGetGroupInviteLinksQuery,
+  useCreateGroupInviteLinkMutation,
+  useUpdateGroupInviteLinkStatusMutation,
+} from '../store/api/groupsApi'
 import {
   PageHeader,
   Breadcrumb,
   GroupInfoTab,
   GroupMembersTab,
   GroupGamesTab,
+  GroupInvitesTab,
   TabPanel,
   a11yProps,
   TabValue,
@@ -32,6 +40,7 @@ import {
   CalendarMonth as CalendarIcon,
   SportsEsports as GamepadIcon,
   People as PeopleIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material'
 import { useState, useEffect } from 'react'
 
@@ -41,6 +50,9 @@ const GroupDetailsPage = () => {
   const { data: groupResponse, isLoading, error } = useGetGroupQuery(groupId || '')
   const { data: libraryGamesResponse, isLoading: libraryLoading } = useGetGroupLibraryGamesQuery(groupId || '')
   const { data: ownedGamesResponse, isLoading: ownedLoading } = useGetGroupOwnedGamesQuery(groupId || '')
+  const { data: inviteLinksResponse } = useGetGroupInviteLinksQuery(groupId || '')
+  const [createInviteLink] = useCreateGroupInviteLinkMutation()
+  const [updateInviteLinkStatus] = useUpdateGroupInviteLinkStatusMutation()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
   // Get tab from URL params or default to info
@@ -67,6 +79,25 @@ const GroupDetailsPage = () => {
     setMainTabValue(newValue)
   }
 
+  const handleCreateInviteLink = (description: string, expiresAt: string) => {
+    if (groupId) {
+      createInviteLink({
+        groupId,
+        data: { description, expiresAt },
+      })
+    }
+  }
+
+  const handleUpdateInviteLinkStatus = (linkId: string, active: boolean) => {
+    if (groupId) {
+      updateInviteLinkStatus({
+        groupId,
+        linkId,
+        data: { active },
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
@@ -87,6 +118,7 @@ const GroupDetailsPage = () => {
   const isAdmin = userRole === 'admin'
   const libraryGames = libraryGamesResponse?.data || []
   const ownedGames = ownedGamesResponse?.data || []
+  const inviteLinks = inviteLinksResponse?.data || []
 
   return (
     <Box sx={{ p: 3 }}>
@@ -144,6 +176,7 @@ const GroupDetailsPage = () => {
             <Tab icon={<InfoIcon />} label="Information" {...a11yProps(0)} iconPosition="start" />
             <Tab icon={<GroupIcon />} label="Members" {...a11yProps(1)} iconPosition="start" />
             <Tab icon={<GamepadIcon />} label="Games" {...a11yProps(2)} iconPosition="start" />
+            <Tab icon={<LinkIcon />} label="Invites" {...a11yProps(3)} iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -166,6 +199,17 @@ const GroupDetailsPage = () => {
             ownedGames={ownedGames}
             libraryLoading={libraryLoading}
             ownedLoading={ownedLoading}
+          />
+        </TabPanel>
+
+        {/* Invites Tab */}
+        <TabPanel value={mainTabValue} index={3}>
+          <GroupInvitesTab
+            groupId={group.ID}
+            userRole={userRole}
+            inviteLinks={inviteLinks}
+            onCreateInviteLink={handleCreateInviteLink}
+            onUpdateInviteLinkStatus={handleUpdateInviteLinkStatus}
           />
         </TabPanel>
       </Box>

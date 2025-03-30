@@ -173,5 +173,22 @@ func InitDB() *sql.DB {
 	db.Exec(`ALTER TABLE group_game_libraries ADD COLUMN added_by TEXT REFERENCES users(id);`)
 	// Ignore error - it will fail if column already exists, which is fine
 
+	// Add group invite links table if it doesn't exist
+	db.Exec(`
+		CREATE TABLE IF NOT EXISTS group_invite_links (
+			id TEXT PRIMARY KEY,
+			group_id TEXT NOT NULL,
+			description TEXT NOT NULL,
+			code TEXT UNIQUE NOT NULL,
+			expires_at TIMESTAMP NOT NULL,
+			active BOOLEAN NOT NULL DEFAULT TRUE,
+			created_by TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
+			FOREIGN KEY (created_by) REFERENCES users(id)
+		);
+	`)
+	// Ignore error - it will fail if table already exists, which is fine
+
 	return db
 }

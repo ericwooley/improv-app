@@ -101,6 +101,12 @@ func main() {
 	// Invitation verification route (no auth required)
 	api.HandleFunc("/groups/invites/verify", invitationHandler.VerifyInvitation).Methods("GET")
 
+	// Group invite link routes
+	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.ListInviteLinks)).Methods("GET")
+	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.CreateInviteLink)).Methods("POST")
+	api.HandleFunc("/groups/{id}/invites/{linkId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateInviteLinkStatus)).Methods("PATCH")
+	api.HandleFunc("/join/{code}", middleware.RequireAuthAPI(sqlDB, groupHandler.JoinViaInviteLink)).Methods("POST")
+
 	// Group routes
 	api.HandleFunc("/groups", middleware.RequireAuthAPI(sqlDB, groupHandler.List)).Methods("GET")
 	api.HandleFunc("/groups", middleware.RequireAuth(sqlDB, groupHandler.Create)).Methods("POST")

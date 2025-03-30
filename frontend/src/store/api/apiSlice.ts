@@ -7,6 +7,17 @@ export const apiSlice = createApi({
     baseUrl: '/api',
     credentials: 'include', // Include cookies for auth
   }),
-  tagTypes: ['User', 'Game', 'Group', 'Event', 'Invitation', 'Groups', 'Events', 'Games', 'Invitations'],
+  tagTypes: [
+    'User',
+    'Game',
+    'Group',
+    'Event',
+    'Invitation',
+    'Groups',
+    'Events',
+    'Games',
+    'Invitations',
+    'GroupInvites',
+  ],
   endpoints: () => ({}),
 })

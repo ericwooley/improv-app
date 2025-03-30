@@ -909,3 +909,342 @@ func (h *GroupHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		Message: "Member removed successfully",
 	})
 }
+
+// GroupInviteLink represents an invite link for a group
+type GroupInviteLink struct {
+	ID          string    `json:"id"`
+	GroupID     string    `json:"groupId"`
+	Description string    `json:"description"`
+	Code        string    `json:"code"`
+	ExpiresAt   string    `json:"expiresAt"`
+	Active      bool      `json:"active"`
+	CreatedBy   string    `json:"createdBy"`
+	CreatedAt   string    `json:"createdAt"`
+}
+
+// CreateInviteLink handles creating a new invite link for a group
+func (h *GroupHandler) CreateInviteLink(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user has admin or organizer role in the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		fmt.Printf("Not a member of group: %v\n", err)
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" && role != "organizer" {
+		fmt.Printf("User not admin or organizer (role=%s)\n", role)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can create invite links")
+		return
+	}
+
+	var inviteRequest struct {
+		Description string `json:"description" validate:"required,max=100"`
+		ExpiresAt   string `json:"expiresAt" validate:"required"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&inviteRequest); err != nil {
+		fmt.Printf("Invalid request payload: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Trim whitespace
+	inviteRequest.Description = strings.TrimSpace(inviteRequest.Description)
+
+	// Validate the request
+	validate := validator.New()
+	if err := validate.Struct(inviteRequest); err != nil {
+		fmt.Printf("Validation error: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request data")
+		return
+	}
+
+	// Generate a unique code
+	code := uuid.New().String()[:8]
+
+	// Create the invite link
+	inviteLinkID := uuid.New().String()
+	_, err = h.db.Exec(`
+		INSERT INTO group_invite_links (id, group_id, description, code, expires_at, active, created_by)
+		VALUES ($1, $2, $3, $4, $5, true, $6)
+	`, inviteLinkID, groupID, inviteRequest.Description, code, inviteRequest.ExpiresAt, user.ID)
+	if err != nil {
+		fmt.Printf("Error creating invite link: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error creating invite link")
+		return
+	}
+
+	// Get the created invite link
+	var inviteLink GroupInviteLink
+	err = h.db.QueryRow(`
+		SELECT id, group_id, description, code, expires_at, active, created_by, created_at
+		FROM group_invite_links
+		WHERE id = $1
+	`, inviteLinkID).Scan(
+		&inviteLink.ID, &inviteLink.GroupID, &inviteLink.Description,
+		&inviteLink.Code, &inviteLink.ExpiresAt, &inviteLink.Active,
+		&inviteLink.CreatedBy, &inviteLink.CreatedAt,
+	)
+	if err != nil {
+		fmt.Printf("Error fetching created invite link: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching created invite link")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusCreated, ApiResponse{
+		Success: true,
+		Message: "Invite link created successfully",
+		Data:    inviteLink,
+	})
+}
+
+// ListInviteLinks handles fetching all invite links for a group
+func (h *GroupHandler) ListInviteLinks(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+
+	// Check if user has admin or organizer role in the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		fmt.Printf("Not a member of group: %v\n", err)
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" && role != "organizer" {
+		fmt.Printf("User not admin or organizer (role=%s)\n", role)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can view invite links")
+		return
+	}
+
+	// Fetch all invite links for the group
+	rows, err := h.db.Query(`
+		SELECT id, group_id, description, code, expires_at, active, created_by, created_at
+		FROM group_invite_links
+		WHERE group_id = $1
+		ORDER BY created_at DESC
+	`, groupID)
+	if err != nil {
+		fmt.Printf("Error fetching invite links: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching invite links")
+		return
+	}
+	defer rows.Close()
+
+	inviteLinks := []GroupInviteLink{}
+	for rows.Next() {
+		var link GroupInviteLink
+		err := rows.Scan(
+			&link.ID, &link.GroupID, &link.Description,
+			&link.Code, &link.ExpiresAt, &link.Active,
+			&link.CreatedBy, &link.CreatedAt,
+		)
+		if err != nil {
+			fmt.Printf("Error scanning invite link: %v\n", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning invite link")
+			return
+		}
+		inviteLinks = append(inviteLinks, link)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    inviteLinks,
+	})
+}
+
+// UpdateInviteLinkStatus handles updating the active status of an invite link
+func (h *GroupHandler) UpdateInviteLinkStatus(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	groupID := vars["id"]
+	linkID := vars["linkId"]
+
+	// Check if user has admin or organizer role in the group
+	var role string
+	err := h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil {
+		fmt.Printf("Not a member of group: %v\n", err)
+		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != "admin" && role != "organizer" {
+		fmt.Printf("User not admin or organizer (role=%s)\n", role)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can update invite links")
+		return
+	}
+
+	var statusRequest struct {
+		Active bool `json:"active"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&statusRequest); err != nil {
+		fmt.Printf("Invalid request payload: %v\n", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Update the invite link status
+	_, err = h.db.Exec(`
+		UPDATE group_invite_links
+		SET active = $1
+		WHERE id = $2 AND group_id = $3
+	`, statusRequest.Active, linkID, groupID)
+	if err != nil {
+		fmt.Printf("Error updating invite link status: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating invite link status")
+		return
+	}
+
+	// Get the updated invite link
+	var inviteLink GroupInviteLink
+	err = h.db.QueryRow(`
+		SELECT id, group_id, description, code, expires_at, active, created_by, created_at
+		FROM group_invite_links
+		WHERE id = $1
+	`, linkID).Scan(
+		&inviteLink.ID, &inviteLink.GroupID, &inviteLink.Description,
+		&inviteLink.Code, &inviteLink.ExpiresAt, &inviteLink.Active,
+		&inviteLink.CreatedBy, &inviteLink.CreatedAt,
+	)
+	if err != nil {
+		fmt.Printf("Error fetching updated invite link: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated invite link")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Invite link status updated successfully",
+		Data:    inviteLink,
+	})
+}
+
+// JoinViaInviteLink handles processing a join request through an invite link
+func (h *GroupHandler) JoinViaInviteLink(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	code := vars["code"]
+
+	// Find the invite link by code
+	var linkID, groupID string
+	var active bool
+	var expiresAt string
+	err := h.db.QueryRow(`
+		SELECT id, group_id, active, expires_at
+		FROM group_invite_links
+		WHERE code = $1
+	`, code).Scan(&linkID, &groupID, &active, &expiresAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Printf("Invalid invite code: %s\n", code)
+			RespondWithError(w, http.StatusNotFound, "Invalid invite code")
+			return
+		}
+		fmt.Printf("Error finding invite link: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error finding invite link")
+		return
+	}
+
+	// Check if the link is active
+	if !active {
+		fmt.Printf("Invite link is inactive: %s\n", linkID)
+		RespondWithError(w, http.StatusForbidden, "This invite link is no longer active")
+		return
+	}
+
+	// Check if the link has expired
+	var expired bool
+	err = h.db.QueryRow(`
+		SELECT expires_at < NOW()
+		FROM group_invite_links
+		WHERE id = $1
+	`, linkID).Scan(&expired)
+	if err != nil {
+		fmt.Printf("Error checking link expiration: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking link expiration")
+		return
+	}
+
+	if expired {
+		fmt.Printf("Invite link has expired: %s\n", linkID)
+		RespondWithError(w, http.StatusForbidden, "This invite link has expired")
+		return
+	}
+
+	// Check if user is already a member
+	var isMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, user.ID).Scan(&isMember)
+	if err != nil {
+		fmt.Printf("Error checking membership: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking membership")
+		return
+	}
+
+	if isMember {
+		fmt.Printf("User %s is already a member of group %s\n", user.ID, groupID)
+		RespondWithError(w, http.StatusBadRequest, "You are already a member of this group")
+		return
+	}
+
+	// Add user to the group as a member
+	_, err = h.db.Exec(`
+		INSERT INTO group_members (group_id, user_id, role)
+		VALUES ($1, $2, 'member')
+	`, groupID, user.ID)
+	if err != nil {
+		fmt.Printf("Error adding member: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error adding you to the group")
+		return
+	}
+
+	// Get the group info
+	var group ImprovGroup
+	err = h.db.QueryRow(`
+		SELECT id, name, description, created_at, created_by
+		FROM improv_groups
+		WHERE id = $1
+	`, groupID).Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy)
+	if err != nil {
+		fmt.Printf("Error fetching group: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group information")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: fmt.Sprintf("You have successfully joined %s", group.Name),
+		Data:    group,
+	})
+}
