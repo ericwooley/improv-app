@@ -299,7 +299,7 @@ const GroupMembersPage = () => {
                           size="small"
                           onClick={(e) => handleMenuOpen(e, member)}
                           disabled={member.id === groupData.data.group.CreatedBy}>
-                          <EditIcon fontSize="small" />
+                          <MoreVertIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
                     )}
