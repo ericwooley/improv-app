@@ -13,6 +13,10 @@ import {
   Tabs,
   Tab,
   Paper,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader, Breadcrumb, TabPanel, a11yProps } from '../components'
@@ -28,6 +32,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import InfoIcon from '@mui/icons-material/Info'
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
+import EditIcon from '@mui/icons-material/Edit'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 
 // Define tab values for URL sync
 enum TabValue {
@@ -295,10 +301,36 @@ const GameDetailsPage = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { data: gameData, isLoading, error } = useGetGameQuery(gameId || '')
+  const [canEdit, setCanEdit] = useState(false)
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
 
   // Get tab from URL params or default to details
   const tabFromUrl = searchParams.get('tab-game') || TabValue.Details
   const [tabValue, setTabValue] = useState(tabValueToIndex[tabFromUrl] || 0)
+
+  // Check if user has edit permissions
+  useEffect(() => {
+    const checkEditPermission = async () => {
+      if (gameData?.data?.game) {
+        const game = gameData.data.game
+        try {
+          const response = await fetch(`/api/groups/${game.groupId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          })
+          const groupData = await response.json()
+          const userRole = groupData.data?.userRole
+          setCanEdit(userRole === 'admin' || userRole === 'organizer')
+        } catch (error) {
+          console.error('Error checking group access:', error)
+          setCanEdit(false)
+        }
+      }
+    }
+
+    checkEditPermission()
+  }, [gameData])
 
   // Sync URL when tab changes
   useEffect(() => {
@@ -306,10 +338,23 @@ const GameDetailsPage = () => {
     if (searchParams.get('tab-game') !== currentTabValue) {
       setSearchParams({ 'tab-game': currentTabValue })
     }
-  }, [tabValue, searchParams, setSearchParams])
+  }, [tabValue, searchParams, setSearchParams, navigate, gameId])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
+  }
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMenuAnchorEl(event.currentTarget)
+  }
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null)
+  }
+
+  const handleEditGame = () => {
+    handleMenuClose()
+    navigate(`/games/${gameId}/edit`)
   }
 
   // Extract data from response
@@ -357,7 +402,38 @@ const GameDetailsPage = () => {
         ]}
       />
 
-      <PageHeader title="Game Details" subtitle="" />
+      <PageHeader
+        title="Game Details"
+        subtitle=""
+        actions={
+          canEdit && (
+            <IconButton onClick={handleMenuOpen} size="small">
+              <MoreVertIcon />
+            </IconButton>
+          )
+        }
+      />
+
+      {/* Options Menu */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}>
+        <MenuItem onClick={handleEditGame}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit Game</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* Tab navigation */}
       <Box sx={{ width: '100%', mt: 3 }}>

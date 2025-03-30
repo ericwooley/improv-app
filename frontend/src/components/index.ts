@@ -21,3 +21,6 @@ export { GroupsList } from './GroupsList'
 
 // Group Details Components
 export * from './group-details'
+
+export { default as TabPanel, a11yProps } from './TabPanel'
+export { default as GameForm } from './games/GameForm'
