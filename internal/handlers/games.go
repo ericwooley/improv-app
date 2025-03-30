@@ -558,3 +558,158 @@ func (h *GameHandler) GetAllowedTags(w http.ResponseWriter, r *http.Request) {
 		Data:    allowedTags,
 	})
 }
+
+// Update handles updating an existing game
+func (h *GameHandler) Update(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	gameID := vars["id"]
+
+	// Parse JSON request
+	var gameRequest struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		MinPlayers  int      `json:"minPlayers"`
+		MaxPlayers  int      `json:"maxPlayers"`
+		Tags        []string `json:"tags"`
+		Public      bool     `json:"public"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&gameRequest); err != nil {
+		log.Printf("Error decoding game update request: %v", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Check if game exists and user has permission to edit
+	var groupID string
+	var createdBy string
+	err := h.db.QueryRow(`
+		SELECT group_id, created_by
+		FROM games
+		WHERE id = $1
+	`, gameID).Scan(&groupID, &createdBy)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			RespondWithError(w, http.StatusNotFound, "Game not found")
+			return
+		}
+		log.Printf("Error finding game: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error finding game")
+		return
+	}
+
+	// Check if user has permission (is admin/owner of group or created the game)
+	var role string
+	err = h.db.QueryRow(`
+		SELECT role
+		FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+
+	hasPermission := (err == nil && (role == "admin" || role == "owner")) || createdBy == user.ID
+	if !hasPermission {
+		RespondWithError(w, http.StatusForbidden, "You don't have permission to update this game")
+		return
+	}
+
+	// Validate request
+	if gameRequest.Name == "" {
+		RespondWithError(w, http.StatusBadRequest, "Game name is required")
+		return
+	}
+	if gameRequest.MinPlayers < 1 {
+		RespondWithError(w, http.StatusBadRequest, "Minimum players must be at least 1")
+		return
+	}
+	if gameRequest.MaxPlayers < gameRequest.MinPlayers {
+		RespondWithError(w, http.StatusBadRequest, "Maximum players must be greater than or equal to minimum players")
+		return
+	}
+
+	// Update game details
+	_, err = h.db.Exec(`
+		UPDATE games
+		SET name = $1, description = $2, min_players = $3, max_players = $4, public = $5
+		WHERE id = $6
+	`, gameRequest.Name, gameRequest.Description, gameRequest.MinPlayers, gameRequest.MaxPlayers, gameRequest.Public, gameID)
+	if err != nil {
+		log.Printf("Error updating game: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game")
+		return
+	}
+
+	// Remove old tag associations
+	_, err = h.db.Exec(`
+		DELETE FROM game_tag_associations
+		WHERE game_id = $1
+	`, gameID)
+	if err != nil {
+		log.Printf("Error removing old tag associations: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game tags")
+		return
+	}
+
+	// Create new tag associations
+	for _, tag := range gameRequest.Tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+
+		var tagID string
+		err = h.db.QueryRow(`
+			INSERT INTO game_tags (id, name)
+			VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+			RETURNING id
+		`, uuid.New().String(), tag).Scan(&tagID)
+		if err != nil {
+			log.Printf("Error creating tag '%s': %v", tag, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error creating tag")
+			return
+		}
+
+		_, err = h.db.Exec(`
+			INSERT INTO game_tag_associations (game_id, tag_id)
+			VALUES ($1, $2)
+			ON CONFLICT DO NOTHING
+		`, gameID, tagID)
+		if err != nil {
+			log.Printf("Error associating tag '%s' with game '%s': %v", tag, gameID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error associating tag")
+			return
+		}
+	}
+
+	// Fetch the updated game with tags
+	var game models.Game
+	var tagsStr sql.NullString
+	err = h.db.QueryRow(`
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+				GROUP_CONCAT(DISTINCT t.name) as tags
+		FROM games g
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		WHERE g.id = $1
+		GROUP BY g.id
+	`, gameID).Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
+	if err != nil {
+		log.Printf("Error fetching updated game: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated game")
+		return
+	}
+	if tagsStr.Valid {
+		game.Tags = strings.Split(tagsStr.String, ",")
+	} else {
+		game.Tags = []string{}
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Game updated successfully",
+		Data:    game,
+	})
+}
