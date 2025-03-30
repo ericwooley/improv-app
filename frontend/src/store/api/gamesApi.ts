@@ -56,11 +56,17 @@ export interface RateGameRequest {
 
 export const gamesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getGames: builder.query<APIResponse<Game[]>, { tag?: string } | void>({
+    getGames: builder.query<APIResponse<Game[]>, { tag?: string; library?: string; ownedByGroup?: string } | void>({
       query: (filters = {}) => {
         const params = new URLSearchParams()
         if (filters && 'tag' in filters && filters.tag) {
           params.append('tag', filters.tag)
+        }
+        if (filters && 'library' in filters && filters.library) {
+          params.append('library', filters.library)
+        }
+        if (filters && 'ownedByGroup' in filters && filters.ownedByGroup) {
+          params.append('ownedByGroup', filters.ownedByGroup)
         }
         return `/games${params.toString() ? `?${params.toString()}` : ''}`
       },

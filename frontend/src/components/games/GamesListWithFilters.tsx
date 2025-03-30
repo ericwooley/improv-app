@@ -4,7 +4,12 @@ import { GamesList } from './GamesList'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-export const GamesListWithFilters = () => {
+interface GamesListWithFiltersProps {
+  groupLibrary?: string
+  groupOwner?: string
+}
+
+export const GamesListWithFilters = ({ groupLibrary, groupOwner }: GamesListWithFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTag, setSelectedTag] = useState<string>(searchParams.get('tag') || 'All Tags')
 
@@ -15,8 +20,23 @@ export const GamesListWithFilters = () => {
     } else {
       searchParams.delete('tag')
     }
+
+    // Add group library filter to URL if provided
+    if (groupLibrary) {
+      searchParams.set('library', groupLibrary)
+    } else {
+      searchParams.delete('library')
+    }
+
+    // Add group owner filter to URL if provided
+    if (groupOwner) {
+      searchParams.set('ownedByGroup', groupOwner)
+    } else {
+      searchParams.delete('ownedByGroup')
+    }
+
     setSearchParams(searchParams)
-  }, [selectedTag, searchParams, setSearchParams])
+  }, [selectedTag, searchParams, setSearchParams, groupLibrary, groupOwner])
 
   const handleTagChange = (newTag: string) => {
     setSelectedTag(newTag)
@@ -25,7 +45,12 @@ export const GamesListWithFilters = () => {
   return (
     <Box>
       <GameFilters selectedTag={selectedTag} onTagChange={handleTagChange} />
-      <GamesList selectedTag={selectedTag} onClearFilter={() => handleTagChange('All Tags')} />
+      <GamesList
+        selectedTag={selectedTag}
+        onClearFilter={() => handleTagChange('All Tags')}
+        groupLibrary={groupLibrary}
+        groupOwner={groupOwner}
+      />
     </Box>
   )
 }

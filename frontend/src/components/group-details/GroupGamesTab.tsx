@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
-import { Box, Card, CardContent, Tabs, Tab, Typography, Grid, CircularProgress, CardActionArea } from '@mui/material'
+import React, { useState, useEffect } from 'react'
+import { Box, Card, CardContent, Tabs, Tab, Typography, Grid, CardActionArea } from '@mui/material'
 import { Bookmarks as LibraryIcon, Inventory as OwnedIcon, Add as AddIcon } from '@mui/icons-material'
-import { GameCard, Game } from '..'
+import { Game } from '..'
+import { GamesListWithFilters } from '../games/GamesListWithFilters'
+import { useSearchParams } from 'react-router-dom'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -40,16 +42,16 @@ interface GroupGamesTabProps {
   groupId: string
 }
 
-const GroupGamesTab: React.FC<GroupGamesTabProps> = ({
-  libraryGames,
-  ownedGames,
-  libraryLoading,
-  ownedLoading,
-  userRole,
-  groupId,
-}) => {
-  const [gamesTabValue, setGamesTabValue] = useState(0)
+const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ userRole, groupId }) => {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab-group-games') ? parseInt(searchParams.get('tab-group-games') || '0') : 0
+  const [gamesTabValue, setGamesTabValue] = useState(initialTab)
   const isAdminOrOrganizer = userRole === 'admin' || userRole === 'organizer'
+
+  useEffect(() => {
+    searchParams.set('tab-group-games', gamesTabValue.toString())
+    setSearchParams(searchParams)
+  }, [gamesTabValue, setSearchParams, searchParams])
 
   const handleGamesTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setGamesTabValue(newValue)
@@ -73,29 +75,7 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({
             </Typography>
           </Box>
 
-          {libraryLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : libraryGames.length > 0 ? (
-            <Grid container spacing={2}>
-              {libraryGames.map((game) => (
-                <Grid
-                  size={{
-                    xs: 12,
-                    sm: 6,
-                    md: 4,
-                  }}
-                  key={game.id}>
-                  <GameCard game={game} />
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">No games in library. Add some games to get started!</Typography>
-            </Box>
-          )}
+          <GamesListWithFilters groupLibrary={groupId} />
         </TabPanel>
 
         <TabPanel value={gamesTabValue} index={1}>
@@ -106,74 +86,43 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({
             </Typography>
           </Box>
 
-          {ownedLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Grid container spacing={2}>
-              {isAdminOrOrganizer && groupId && (
-                <Grid
-                  size={{
-                    xs: 12,
-                    sm: 6,
-                    md: 4,
-                  }}
-                  key="add-game-card">
-                  <Card
+          {isAdminOrOrganizer && groupId && (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid
+                size={{
+                  xs: 12,
+                }}
+                key="add-game-card">
+                <Card
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    border: '2px dashed',
+                    borderColor: 'primary.main',
+                    bgcolor: 'background.paper',
+                  }}>
+                  <CardActionArea
+                    component="a"
+                    href={`/games/new?groupId=${groupId}`}
                     sx={{
-                      height: '100%',
                       display: 'flex',
-                      border: '2px dashed',
-                      borderColor: 'primary.main',
-                      bgcolor: 'background.paper',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      p: 3,
+                      height: '100%',
                     }}>
-                    <CardActionArea
-                      component="a"
-                      href={`/games/new?groupId=${groupId}`}
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        p: 3,
-                        height: '100%',
-                      }}>
-                      <AddIcon color="primary" sx={{ fontSize: 40, mb: 2 }} />
-                      <Typography variant="h6" color="primary" align="center">
-                        Add New Game
-                      </Typography>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
-              )}
-              {ownedGames.map((game) => (
-                <Grid
-                  size={{
-                    xs: 12,
-                    sm: 6,
-                    md: 4,
-                  }}
-                  key={game.id}>
-                  <GameCard game={game} />
-                </Grid>
-              ))}
+                    <AddIcon color="primary" sx={{ fontSize: 40, mb: 2 }} />
+                    <Typography variant="h6" color="primary" align="center">
+                      Add New Game
+                    </Typography>
+                  </CardActionArea>
+                </Card>
+              </Grid>
             </Grid>
           )}
-          {!ownedLoading && ownedGames.length === 0 && !isAdminOrOrganizer && (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">
-                This group hasn't added any games yet. Contact an organizer to add some games!
-              </Typography>
-            </Box>
-          )}
-          {!ownedLoading && ownedGames.length === 0 && isAdminOrOrganizer && (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">
-                This group hasn't added any games yet. Use the card above to add your first game!
-              </Typography>
-            </Box>
-          )}
+
+          <GamesListWithFilters groupOwner={groupId} />
         </TabPanel>
       </CardContent>
     </Card>

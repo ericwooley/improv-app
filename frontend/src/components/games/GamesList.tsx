@@ -5,14 +5,30 @@ import { EmptyState, GameCard } from '../../components'
 interface GamesListProps {
   selectedTag: string
   onClearFilter: () => void
+  groupLibrary?: string
+  groupOwner?: string
 }
 
-export const GamesList = ({ selectedTag, onClearFilter }: GamesListProps) => {
+export const GamesList = ({ selectedTag, onClearFilter, groupLibrary, groupOwner }: GamesListProps) => {
+  const queryParams: { tag?: string; library?: string; ownedByGroup?: string } = {}
+
+  if (selectedTag !== 'All Tags') {
+    queryParams.tag = selectedTag
+  }
+
+  if (groupLibrary) {
+    queryParams.library = groupLibrary
+  }
+
+  if (groupOwner) {
+    queryParams.ownedByGroup = groupOwner
+  }
+
   const {
     data: gamesData,
     isLoading,
     error,
-  } = useGetGamesQuery(selectedTag !== 'All Tags' ? { tag: selectedTag } : undefined)
+  } = useGetGamesQuery(Object.keys(queryParams).length > 0 ? queryParams : undefined)
 
   const games = gamesData?.data || []
 
@@ -33,11 +49,19 @@ export const GamesList = ({ selectedTag, onClearFilter }: GamesListProps) => {
   }
 
   if (games.length === 0) {
+    let message = 'No games have been added yet.'
+
+    if (selectedTag !== 'All Tags') {
+      message = `No games found with tag '${selectedTag}'`
+    } else if (groupLibrary) {
+      message = "No games found in this group's library"
+    } else if (groupOwner) {
+      message = 'No games owned by this group'
+    }
+
     return (
       <EmptyState
-        message={
-          selectedTag !== 'All Tags' ? `No games found with tag '${selectedTag}'` : 'No games have been added yet.'
-        }
+        message={message}
         actionText={selectedTag !== 'All Tags' ? 'Clear Filter' : 'Add Your First Game'}
         actionLink={selectedTag !== 'All Tags' ? undefined : '/games/new'}
         actionIcon={selectedTag !== 'All Tags' ? 'fas fa-times' : 'fas fa-plus'}
