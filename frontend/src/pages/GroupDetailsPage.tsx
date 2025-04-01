@@ -116,6 +116,8 @@ const GroupDetailsPage = () => {
 
   const { group, members, userRole } = groupResponse.data
   const isAdmin = userRole === 'admin'
+  const isOrganizer = userRole === 'organizer'
+  const canManageInvites = isAdmin || isOrganizer
   const libraryGames = libraryGamesResponse?.data || []
   const ownedGames = ownedGamesResponse?.data || []
   const inviteLinks = inviteLinksResponse?.data || []
@@ -176,7 +178,7 @@ const GroupDetailsPage = () => {
             <Tab icon={<InfoIcon />} label="Information" {...a11yProps(0)} iconPosition="start" />
             <Tab icon={<GroupIcon />} label="Members" {...a11yProps(1)} iconPosition="start" />
             <Tab icon={<GamepadIcon />} label="Games" {...a11yProps(2)} iconPosition="start" />
-            <Tab icon={<LinkIcon />} label="Invites" {...a11yProps(3)} iconPosition="start" />
+            {canManageInvites && <Tab icon={<LinkIcon />} label="Invites" {...a11yProps(3)} iconPosition="start" />}
           </Tabs>
         </Box>
 
@@ -203,15 +205,17 @@ const GroupDetailsPage = () => {
         </TabPanel>
 
         {/* Invites Tab */}
-        <TabPanel value={mainTabValue} index={3}>
-          <GroupInvitesTab
-            groupId={group.ID}
-            userRole={userRole}
-            inviteLinks={inviteLinks}
-            onCreateInviteLink={handleCreateInviteLink}
-            onUpdateInviteLinkStatus={handleUpdateInviteLinkStatus}
-          />
-        </TabPanel>
+        {canManageInvites && (
+          <TabPanel value={mainTabValue} index={3}>
+            <GroupInvitesTab
+              groupId={group.ID}
+              userRole={userRole}
+              inviteLinks={inviteLinks}
+              onCreateInviteLink={handleCreateInviteLink}
+              onUpdateInviteLinkStatus={handleUpdateInviteLinkStatus}
+            />
+          </TabPanel>
+        )}
       </Box>
     </Box>
   )
