@@ -18,6 +18,7 @@ import EditEventPage from './pages/EditEventPage'
 import NewGamePage from './pages/NewGamePage'
 import GameDetailsPage from './pages/GameDetailsPage'
 import EditGamePage from './pages/EditGamePage'
+import JoinGroupPage from './pages/JoinGroupPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 const AppRoutes = () => {
@@ -50,6 +51,7 @@ const AppRoutes = () => {
       <Route path="/events/new" element={<NewEventPage />} />
       <Route path="/events/:eventId" element={<EventDetailsPage />} />
       <Route path="/events/:eventId/edit" element={<EditEventPage />} />
+      <Route path="/join/:code" element={<JoinGroupPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

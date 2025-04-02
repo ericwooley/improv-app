@@ -1181,7 +1181,7 @@ func (h *GroupHandler) JoinViaInviteLink(w http.ResponseWriter, r *http.Request)
 	// Check if the link has expired
 	var expired bool
 	err = h.db.QueryRow(`
-		SELECT expires_at < NOW()
+		SELECT expires_at < datetime('now')
 		FROM group_invite_links
 		WHERE id = $1
 	`, linkID).Scan(&expired)
@@ -1245,6 +1245,76 @@ func (h *GroupHandler) JoinViaInviteLink(w http.ResponseWriter, r *http.Request)
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Message: fmt.Sprintf("You have successfully joined %s", group.Name),
+		Data:    group,
+	})
+}
+
+// VerifyInviteLink handles verifying an invite link without joining
+func (h *GroupHandler) VerifyInviteLink(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["code"]
+
+	// Find the invite link by code
+	var linkID, groupID string
+	var active bool
+	var expiresAt string
+	err := h.db.QueryRow(`
+		SELECT id, group_id, active, expires_at
+		FROM group_invite_links
+		WHERE code = $1
+	`, code).Scan(&linkID, &groupID, &active, &expiresAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Printf("Invalid invite code: %s\n", code)
+			RespondWithError(w, http.StatusNotFound, "Invalid invite code")
+			return
+		}
+		fmt.Printf("Error finding invite link: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error finding invite link")
+		return
+	}
+
+	// Check if the link is active
+	if !active {
+		fmt.Printf("Invite link is inactive: %s\n", linkID)
+		RespondWithError(w, http.StatusForbidden, "This invite link is no longer active")
+		return
+	}
+
+	// Check if the link has expired
+	var expired bool
+	err = h.db.QueryRow(`
+		SELECT expires_at < datetime('now')
+		FROM group_invite_links
+		WHERE id = $1
+	`, linkID).Scan(&expired)
+	if err != nil {
+		fmt.Printf("Error checking link expiration: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking link expiration")
+		return
+	}
+
+	if expired {
+		fmt.Printf("Invite link has expired: %s\n", linkID)
+		RespondWithError(w, http.StatusForbidden, "This invite link has expired")
+		return
+	}
+
+	// Get the group info
+	var group ImprovGroup
+	err = h.db.QueryRow(`
+		SELECT id, name, description, created_at, created_by
+		FROM improv_groups
+		WHERE id = $1
+	`, groupID).Scan(&group.ID, &group.Name, &group.Description, &group.CreatedAt, &group.CreatedBy)
+	if err != nil {
+		fmt.Printf("Error fetching group: %v\n", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group information")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
 		Data:    group,
 	})
 }

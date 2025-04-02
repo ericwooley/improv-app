@@ -239,6 +239,10 @@ export const groupsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Groups'],
     }),
+
+    verifyInviteLink: builder.query<APIResponse<Group>, string>({
+      query: (code: string) => `/join/${code}`,
+    }),
   }),
 })
 
@@ -260,4 +264,5 @@ export const {
   useCreateGroupInviteLinkMutation,
   useUpdateGroupInviteLinkStatusMutation,
   useJoinGroupViaInviteMutation,
+  useVerifyInviteLinkQuery,
 } = groupsApi
