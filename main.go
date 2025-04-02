@@ -94,7 +94,7 @@ func main() {
 	api.HandleFunc("/groups/invites/accept", middleware.RequireAuthAPI(sqlDB, invitationHandler.AcceptInvitation)).Methods("POST")
 	api.HandleFunc("/groups/invites/reject", middleware.RequireAuthAPI(sqlDB, invitationHandler.RejectInvitation)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members", middleware.RequireAuthAPI(sqlDB, groupHandler.ListMembers)).Methods("GET")
-	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, invitationHandler.InviteMember)).Methods("POST")
+	api.HandleFunc("/groups/{id}/members/invite", middleware.RequireAuthAPI(sqlDB, invitationHandler.InviteMember)).Methods("POST")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateMemberRole)).Methods("PUT")
 	api.HandleFunc("/groups/{id}/members/{userId}", middleware.RequireAuthAPI(sqlDB, groupHandler.RemoveMember)).Methods("DELETE")
 
@@ -105,7 +105,7 @@ func main() {
 	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.ListInviteLinks)).Methods("GET")
 	api.HandleFunc("/groups/{id}/invites", middleware.RequireAuthAPI(sqlDB, groupHandler.CreateInviteLink)).Methods("POST")
 	api.HandleFunc("/groups/{id}/invites/{linkId}", middleware.RequireAuthAPI(sqlDB, groupHandler.UpdateInviteLinkStatus)).Methods("PATCH")
-	api.HandleFunc("/join/{code}", middleware.RequireAuthAPI(sqlDB, groupHandler.JoinViaInviteLink)).Methods("POST")
+	api.HandleFunc("/join/{code}", middleware.RequireAuthAPI(sqlDB, groupHandler.JoinViaInviteLink)).Methods("GET")
 
 	// Group routes
 	api.HandleFunc("/groups", middleware.RequireAuthAPI(sqlDB, groupHandler.List)).Methods("GET")

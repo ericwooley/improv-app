@@ -206,11 +206,13 @@ export const groupsApi = apiSlice.injectEndpoints({
       APIResponse<GroupInviteLink>,
       { groupId: string; data: CreateGroupInviteLinkRequest }
     >({
-      query: ({ groupId, data }: { groupId: string; data: CreateGroupInviteLinkRequest }) => ({
-        url: `/groups/${groupId}/invites`,
-        method: 'POST',
-        body: data,
-      }),
+      query: ({ groupId, data }: { groupId: string; data: CreateGroupInviteLinkRequest }) => {
+        return {
+          url: `/groups/${groupId}/invites`,
+          method: 'POST',
+          body: data,
+        }
+      },
       invalidatesTags: (_result: unknown, _error: unknown, { groupId }: { groupId: string }) => [
         { type: 'GroupInvites', id: groupId },
       ],

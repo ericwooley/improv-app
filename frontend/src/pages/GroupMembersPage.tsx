@@ -114,7 +114,7 @@ const GroupMembersPage = () => {
 
   const handleSendInvitation = async () => {
     try {
-      const response = await fetch(`/api/groups/${groupId}/invites`, {
+      const response = await fetch(`/api/groups/${groupId}/members/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
