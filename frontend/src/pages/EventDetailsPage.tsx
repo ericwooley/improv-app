@@ -24,7 +24,7 @@ import {
   MoreVert as MoreVertIcon,
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
-import { useGetEventQuery, useDeleteEventMutation, Event } from '../store/api/eventsApi'
+import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
 
 const EventDetailsPage = () => {
   const { eventId } = useParams<{ eventId: string }>()
@@ -37,14 +37,14 @@ const EventDetailsPage = () => {
   const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation()
 
   // Format event data from API response
-  const event: Event | undefined = eventResponse?.data
+  const { event, groupName } = eventResponse?.data || {}
 
   // Check if user has permissions to manage this event
   useEffect(() => {
-    if (event?.groupId) {
+    if (event?.GroupID) {
       const checkGroupPermissions = async () => {
         try {
-          const response = await fetch(`/api/groups/${event.groupId}`, {
+          const response = await fetch(`/api/groups/${event.GroupID}`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
@@ -121,21 +121,20 @@ const EventDetailsPage = () => {
   }
 
   // Format event dates
-  const startDate = new Date(event.startTime)
-  const endDate = new Date(event.endTime)
+  const startDate = new Date(event.StartTime)
+  const endDate = new Date(event.EndTime)
 
   return (
     <Box>
       <Breadcrumb
         items={[
           { label: 'Events', to: '/events' },
-          ...(event.groupName ? [{ label: event.groupName, to: `/groups/${event.groupId}` }] : []),
-          { label: event.title, active: true },
+          ...(groupName ? [{ label: groupName, to: `/groups/${event.GroupID}` }] : []),
+          { label: event.Title, active: true },
         ]}
       />
-
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-        <PageHeader title={event.title} subtitle="Event Details" />
+        <PageHeader title={event.Title} subtitle="Event Details" />
 
         {canManageEvent && (
           <>
@@ -179,15 +178,15 @@ const EventDetailsPage = () => {
               Event Details
             </Typography>
 
-            {event.description && (
+            {event.Description && (
               <Typography paragraph sx={{ mb: 3 }}>
-                {event.description}
+                {event.Description}
               </Typography>
             )}
 
             <Box sx={{ mb: 3 }}>
               <InfoItem icon={<LocationIcon />}>
-                <Typography>{event.location}</Typography>
+                <Typography>{event.Location}</Typography>
               </InfoItem>
 
               <InfoItem icon={<TimeIcon />}>
@@ -196,10 +195,10 @@ const EventDetailsPage = () => {
                 </Typography>
               </InfoItem>
 
-              {event.groupName && (
+              {groupName && (
                 <InfoItem icon={<PeopleIcon />}>
                   <Typography>
-                    Organized by <Link to={`/groups/${event.groupId}`}>{event.groupName}</Link>
+                    Organized by <Link to={`/groups/${event.GroupID}`}>{groupName}</Link>
                   </Typography>
                 </InfoItem>
               )}

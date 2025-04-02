@@ -12,6 +12,24 @@ export interface Event {
   groupName?: string
 }
 
+
+export interface EventDetailsResponse {
+  event: {
+    ID: string
+    GroupID: string
+    Title: string
+    Description: string
+    Location: string
+    StartTime: string
+    EndTime: string
+    CreatedAt: string
+    CreatedBy: string
+  }
+  groupName: string
+  rsvps: unknown
+  games: unknown
+}
+
 export interface CreateEventRequest {
   title: string
   description: string
@@ -33,7 +51,7 @@ export const eventsApi = apiSlice.injectEndpoints({
       },
     }),
 
-    getEvent: builder.query<APIResponse<Event>, string>({
+    getEvent: builder.query<APIResponse<EventDetailsResponse>, string>({
       query: (id) => `/events/${id}`,
       providesTags: (_, __, id) => [{ type: 'Event', id }],
     }),
