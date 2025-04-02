@@ -13,6 +13,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Link as MuiLink,
 } from '@mui/material'
 import {
   Event as EventIcon,
@@ -25,6 +26,11 @@ import {
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
+
+// Helper function to create Google Maps link
+const createGoogleMapsLink = (location: string) => {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
+}
 
 const EventDetailsPage = () => {
   const { eventId } = useParams<{ eventId: string }>()
@@ -186,7 +192,15 @@ const EventDetailsPage = () => {
 
             <Box sx={{ mb: 3 }}>
               <InfoItem icon={<LocationIcon />}>
-                <Typography>{event.Location}</Typography>
+                <Typography>
+                  {event.Location ? (
+                    <MuiLink href={createGoogleMapsLink(event.Location)} target="_blank" rel="noopener noreferrer">
+                      {event.Location}
+                    </MuiLink>
+                  ) : (
+                    'No location specified'
+                  )}
+                </Typography>
               </InfoItem>
 
               <InfoItem icon={<TimeIcon />}>

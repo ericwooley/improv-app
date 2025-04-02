@@ -10,6 +10,7 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Link as MuiLink,
 } from '@mui/material'
 import { Link } from 'react-router-dom'
 import {
@@ -30,6 +31,11 @@ interface Event {
   endTime: Date
   groupId: string
   groupName?: string
+}
+
+// Helper function to create Google Maps link
+const createGoogleMapsLink = (location: string) => {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
 }
 
 const EventsPage = () => {
@@ -89,7 +95,15 @@ const EventsPage = () => {
 
                   <InfoItem icon={<PeopleIcon />}>{event.groupName || 'No Group'}</InfoItem>
 
-                  <InfoItem icon={<LocationIcon />}>{event.location}</InfoItem>
+                  <InfoItem icon={<LocationIcon />}>
+                    {event.location ? (
+                      <MuiLink href={createGoogleMapsLink(event.location)} target="_blank" rel="noopener noreferrer">
+                        {event.location}
+                      </MuiLink>
+                    ) : (
+                      'No location specified'
+                    )}
+                  </InfoItem>
 
                   <InfoItem icon={<CalendarIcon />}>{formatDate(event.startTime)}</InfoItem>
 
