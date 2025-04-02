@@ -14,6 +14,7 @@ import EditGroupPage from './pages/EditGroupPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
 import EventDetailsPage from './pages/EventDetailsPage'
+import EditEventPage from './pages/EditEventPage'
 import NewGamePage from './pages/NewGamePage'
 import GameDetailsPage from './pages/GameDetailsPage'
 import EditGamePage from './pages/EditGamePage'
@@ -48,6 +49,7 @@ const AppRoutes = () => {
       <Route path="/events" element={<EventsPage />} />
       <Route path="/events/new" element={<NewEventPage />} />
       <Route path="/events/:eventId" element={<EventDetailsPage />} />
+      <Route path="/events/:eventId/edit" element={<EditEventPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

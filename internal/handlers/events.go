@@ -317,3 +317,101 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Data:    eventData,
 	})
 }
+
+// Update handles updating an existing event
+func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// Parse JSON request
+	var eventRequest struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Location    string `json:"location"`
+		StartTime   string `json:"startTime"`
+		EndTime     string `json:"endTime"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&eventRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// First, check if the event exists and get its group ID
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT group_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Verify user is an admin or organizer of the group
+	var role string
+	err = h.db.QueryRow(`
+		SELECT role FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil || (role != "admin" && role != "organizer") {
+		RespondWithError(w, http.StatusForbidden, "You do not have permission to update this event")
+		return
+	}
+
+	startTime, err := time.Parse(time.RFC3339, eventRequest.StartTime)
+	if err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid start time format")
+		return
+	}
+
+	endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
+	if err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
+		return
+	}
+
+	// Update the event
+	_, err = h.db.Exec(`
+		UPDATE events
+		SET title = $1, description = $2, location = $3, start_time = $4, end_time = $5
+		WHERE id = $6
+	`, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, eventID)
+
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error updating event")
+		return
+	}
+
+	// Fetch the updated event details
+	var event Event
+	var groupName string
+	err = h.db.QueryRow(`
+		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
+			g.name as group_name
+		FROM events e
+		JOIN improv_groups g ON e.group_id = g.id
+		WHERE e.id = $1
+	`, eventID).Scan(
+		&event.ID, &event.GroupID, &event.Title, &event.Description,
+		&event.Location, &event.StartTime, &event.EndTime,
+		&event.CreatedAt, &event.CreatedBy, &groupName,
+	)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated event")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Event updated successfully",
+		Data:    event,
+	})
+}

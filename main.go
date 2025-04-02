@@ -121,6 +121,7 @@ func main() {
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.ListAll)).Methods("GET")
 	api.HandleFunc("/events", middleware.RequireAuthAPI(sqlDB, eventHandler.Create)).Methods("POST")
 	api.HandleFunc("/events/{id}", middleware.RequireAuthAPI(sqlDB, eventHandler.Get)).Methods("GET")
+	api.HandleFunc("/events/{id}", middleware.RequireAuthAPI(sqlDB, eventHandler.Update)).Methods("PUT")
 	api.HandleFunc("/groups/{id}/events", middleware.RequireAuthAPI(sqlDB, eventHandler.List)).Methods("GET", "POST")
 
 	// Game routes
