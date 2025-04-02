@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import {
   useGetGroupQuery,
   useGetGroupLibraryGamesQuery,
@@ -6,6 +6,7 @@ import {
   useGetGroupInviteLinksQuery,
   useCreateGroupInviteLinkMutation,
   useUpdateGroupInviteLinkStatusMutation,
+  useRemoveMemberMutation,
 } from '../store/api/groupsApi'
 import {
   PageHeader,
@@ -31,6 +32,12 @@ import {
   ListItemText,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
 } from '@mui/material'
 import {
   Info as InfoIcon,
@@ -41,19 +48,34 @@ import {
   SportsEsports as GamepadIcon,
   People as PeopleIcon,
   Link as LinkIcon,
+  ExitToApp as ExitToAppIcon,
 } from '@mui/icons-material'
 import { useState, useEffect } from 'react'
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { data: groupResponse, isLoading, error } = useGetGroupQuery(groupId || '')
   const { data: libraryGamesResponse, isLoading: libraryLoading } = useGetGroupLibraryGamesQuery(groupId || '')
   const { data: ownedGamesResponse, isLoading: ownedLoading } = useGetGroupOwnedGamesQuery(groupId || '')
-  const { data: inviteLinksResponse } = useGetGroupInviteLinksQuery(groupId || '')
+
+  // Determine if user can manage invites based on role
+  const userRole = groupResponse?.data?.userRole || ''
+  const isAdmin = userRole === 'admin'
+  const isOrganizer = userRole === 'organizer'
+  const canManageInvites = isAdmin || isOrganizer
+
+  // Only fetch invite links if user has permission to manage them
+  const { data: inviteLinksResponse } = useGetGroupInviteLinksQuery(groupId || '', {
+    skip: !canManageInvites || !groupId,
+  })
+
   const [createInviteLink] = useCreateGroupInviteLinkMutation()
   const [updateInviteLinkStatus] = useUpdateGroupInviteLinkStatusMutation()
+  const [removeMember] = useRemoveMemberMutation()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
 
   // Get tab from URL params or default to info
   const tabFromUrl = searchParams.get('tab') || TabValue.Info
@@ -98,6 +120,31 @@ const GroupDetailsPage = () => {
     }
   }
 
+  const handleLeaveGroupClick = () => {
+    setLeaveDialogOpen(true)
+    handleMenuClose()
+  }
+
+  const handleLeaveDialogClose = () => {
+    setLeaveDialogOpen(false)
+  }
+
+  const handleLeaveGroupConfirm = async () => {
+    if (groupId && groupResponse?.data?.userRole) {
+      try {
+        const userId = groupResponse.data.members.find((member) => member.role === groupResponse.data.userRole)?.id
+
+        if (userId) {
+          await removeMember({ groupId, userId }).unwrap()
+          navigate('/groups')
+        }
+      } catch (error) {
+        console.error('Failed to leave group:', error)
+      }
+    }
+    setLeaveDialogOpen(false)
+  }
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
@@ -114,10 +161,7 @@ const GroupDetailsPage = () => {
     )
   }
 
-  const { group, members, userRole } = groupResponse.data
-  const isAdmin = userRole === 'admin'
-  const isOrganizer = userRole === 'organizer'
-  const canManageInvites = isAdmin || isOrganizer
+  const { group, members } = groupResponse.data
   const libraryGames = libraryGamesResponse?.data || []
   const ownedGames = ownedGamesResponse?.data || []
   const inviteLinks = inviteLinksResponse?.data || []
@@ -134,42 +178,76 @@ const GroupDetailsPage = () => {
       <PageHeader
         title={group.Name}
         actions={
-          isAdmin && (
-            <IconButton onClick={handleMenuOpen} aria-label="group actions">
-              <MoreVertIcon />
-            </IconButton>
-          )
+          <IconButton onClick={handleMenuOpen} aria-label="group actions">
+            <MoreVertIcon />
+          </IconButton>
         }
       />
-      {isAdmin && (
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-          <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
-            <ListItemIcon>
-              <CalendarIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Create Event</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
-            <ListItemIcon>
-              <GamepadIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Create Game</ListItemText>
-          </MenuItem>
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        {isAdmin && (
+          <>
+            <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
+              <ListItemIcon>
+                <CalendarIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Create Event</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
+              <ListItemIcon>
+                <GamepadIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Create Game</ListItemText>
+            </MenuItem>
 
-          <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit Group</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
-            <ListItemIcon>
-              <PeopleIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Manage Members</ListItemText>
-          </MenuItem>
-        </Menu>
-      )}
+            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
+              <ListItemIcon>
+                <EditIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Edit Group</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
+              <ListItemIcon>
+                <PeopleIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Manage Members</ListItemText>
+            </MenuItem>
+          </>
+        )}
+        {/* Leave Group option (available to all members) */}
+        <MenuItem onClick={handleLeaveGroupClick}>
+          <ListItemIcon>
+            <ExitToAppIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Leave Group</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Leave Group Confirmation Dialog */}
+      <Dialog
+        open={leaveDialogOpen}
+        onClose={handleLeaveDialogClose}
+        aria-labelledby="leave-group-dialog-title"
+        aria-describedby="leave-group-dialog-description">
+        <DialogTitle id="leave-group-dialog-title">Leave Group</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="leave-group-dialog-description">
+            Are you sure you want to leave {group.Name}? This action cannot be undone.
+            {isAdmin && members.filter((m) => m.role === 'admin').length <= 1 && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                You are the last admin of this group. Leaving will mean no one can manage the group!
+              </Alert>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLeaveDialogClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleLeaveGroupConfirm} color="error" autoFocus>
+            Leave Group
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Main tabs */}
       <Box sx={{ width: '100%', mt: 3 }}>
