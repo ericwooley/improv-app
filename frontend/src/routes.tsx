@@ -13,6 +13,7 @@ import GroupMembersPage from './pages/GroupMembersPage'
 import EditGroupPage from './pages/EditGroupPage'
 import EventsPage from './pages/EventsPage'
 import NewEventPage from './pages/NewEventPage'
+import EventDetailsPage from './pages/EventDetailsPage'
 import NewGamePage from './pages/NewGamePage'
 import GameDetailsPage from './pages/GameDetailsPage'
 import EditGamePage from './pages/EditGamePage'
@@ -46,6 +47,7 @@ const AppRoutes = () => {
       <Route path="/groups/:groupId/members" element={<GroupMembersPage />} />
       <Route path="/events" element={<EventsPage />} />
       <Route path="/events/new" element={<NewEventPage />} />
+      <Route path="/events/:eventId" element={<EventDetailsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
