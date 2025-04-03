@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader, Breadcrumb, EventForm } from '../components'
 import { useGetEventQuery, useUpdateEventMutation } from '../store/api/eventsApi'
 import { EventFormData } from '../components/events/EventForm'
-import { Box, CircularProgress, Alert, Paper } from '@mui/material'
+import { Box, CircularProgress, Alert } from '@mui/material'
 
 const EditEventPage = () => {
   const { eventId } = useParams<{ eventId: string }>()
@@ -102,16 +102,14 @@ const EditEventPage = () => {
 
       <PageHeader title="Edit Event" subtitle="Update event details" />
 
-      <Paper sx={{ p: 3 }}>
-        <EventForm
-          initialData={initialData}
-          onSubmit={handleSubmit}
-          isLoading={isUpdating}
-          submitButtonText="Update Event"
-          cancelUrl={`/events/${eventId}`}
-          disableGroupSelect={true}
-        />
-      </Paper>
+      <EventForm
+        initialData={initialData}
+        onSubmit={handleSubmit}
+        isLoading={isUpdating}
+        submitButtonText="Update Event"
+        cancelUrl={`/events/${eventId}`}
+        disableGroupSelect={true}
+      />
     </div>
   )
 }
