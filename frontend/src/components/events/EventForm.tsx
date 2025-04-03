@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react'
 import { FormContainer, InputField, TextareaField, SelectField, FormActions, ActionButton } from '../index'
 import { Box, CircularProgress, Alert, Grid, Stack } from '@mui/material'
 import { useGetGroupsQuery } from '../../store/api/groupsApi'
+import { useGetGroupMembersQuery } from '../../store/api/groupsApi'
 
 interface Group {
   ID: string
   Name: string
+}
+
+interface Member {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  role: string
 }
 
 export interface EventFormData {
@@ -15,6 +24,7 @@ export interface EventFormData {
   groupId: string
   startTime: string
   endTime: string
+  mcId?: string
 }
 
 interface EventFormProps {
@@ -38,6 +48,7 @@ const EventForm = ({
 }: EventFormProps) => {
   const [formData, setFormData] = useState<EventFormData>(initialData)
   const { data: groupsResponse, isLoading: groupsLoading } = useGetGroupsQuery()
+  const { data: membersResponse } = useGetGroupMembersQuery(formData.groupId, { skip: !formData.groupId })
 
   // Pre-select the group if provided
   useEffect(() => {
@@ -61,6 +72,13 @@ const EventForm = ({
     groupsResponse?.data?.map((group: Group) => ({
       value: group.ID,
       label: group.Name,
+    })) || []
+
+  // Convert members to options for MC SelectField
+  const memberOptions =
+    membersResponse?.data?.map((member: Member) => ({
+      value: member.id,
+      label: `${member.firstName} ${member.lastName}`,
     })) || []
 
   if (groupsLoading) {
@@ -114,7 +132,21 @@ const EventForm = ({
             required
             icon="fas fa-users"
             placeholder="Select a group..."
-            onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, groupId: e.target.value, mcId: '' })
+            }}
+          />
+        )}
+
+        {formData.groupId && (
+          <SelectField
+            id="mc_id"
+            label="Master of Ceremonies (MC)"
+            value={formData.mcId || ''}
+            options={memberOptions}
+            icon="fas fa-microphone"
+            placeholder="Select an MC (optional)..."
+            onChange={(e) => setFormData({ ...formData, mcId: e.target.value })}
           />
         )}
 

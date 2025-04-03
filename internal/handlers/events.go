@@ -14,6 +14,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Event represents an event in the database
+type Event struct {
+	ID          string
+	GroupID     string
+	Title       string
+	Description string
+	Location    string
+	StartTime   time.Time
+	EndTime     time.Time
+	CreatedAt   time.Time
+	CreatedBy   string
+	MCID        *string
+}
+
 type EventHandler struct {
 	db *sql.DB
 }
@@ -42,7 +56,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	// GET: List events for the group
 	rows, err := h.db.Query(`
-		SELECT id, title, description, location, start_time, end_time, created_at, created_by
+		SELECT id, title, description, location, start_time, end_time, created_at, created_by, mc_id
 		FROM events
 		WHERE group_id = $1
 		ORDER BY start_time DESC
@@ -56,7 +70,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 	events := []Event{}
 	for rows.Next() {
 		var event Event
-		err := rows.Scan(&event.ID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+		err := rows.Scan(&event.ID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy, &event.MCID)
 		if err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning events")
 			return
@@ -90,6 +104,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Location    string `json:"location"`
 		StartTime   string `json:"startTime"`
 		EndTime     string `json:"endTime"`
+		MCID        string `json:"mcId,omitempty"` // Optional MC ID
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -122,12 +137,37 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If MC is provided, verify they are a member of the group
+	if eventRequest.MCID != "" {
+		var isMember bool
+		err = h.db.QueryRow(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_members
+				WHERE group_id = $1 AND user_id = $2
+			)
+		`, eventRequest.GroupID, eventRequest.MCID).Scan(&isMember)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error checking MC membership")
+			return
+		}
+		if !isMember {
+			RespondWithError(w, http.StatusBadRequest, "Selected MC is not a member of this group")
+			return
+		}
+	}
+
 	eventID := uuid.New().String()
+	// Support nullable MC_ID field
+	var mcID interface{} = nil
+	if eventRequest.MCID != "" {
+		mcID = eventRequest.MCID
+	}
+
 	err = h.db.QueryRow(`
-		INSERT INTO events (id, group_id, title, description, location, start_time, end_time, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO events (id, group_id, title, description, location, start_time, end_time, created_by, mc_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
-	`, eventID, eventRequest.GroupID, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, user.ID).Scan(&eventID)
+	`, eventID, eventRequest.GroupID, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, user.ID, mcID).Scan(&eventID)
 	if err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "Error creating event")
 		return
@@ -136,10 +176,10 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// Fetch the newly created event
 	var event Event
 	err = h.db.QueryRow(`
-		SELECT id, group_id, title, description, location, start_time, end_time, created_at, created_by
+		SELECT id, group_id, title, description, location, start_time, end_time, created_at, created_by, mc_id
 		FROM events
 		WHERE id = $1
-	`, eventID).Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy)
+	`, eventID).Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy, &event.MCID)
 	if err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching created event")
 		return
@@ -158,7 +198,7 @@ func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.db.Query(`
 		SELECT DISTINCT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
-		       g.name as group_name
+		       g.name as group_name, e.mc_id
 		FROM events e
 		JOIN improv_groups g ON e.group_id = g.id
 		LEFT JOIN group_members m ON e.group_id = m.group_id AND m.user_id = $1
@@ -184,6 +224,7 @@ func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		EndTime     time.Time `json:"endTime"`
 		CreatedAt   time.Time `json:"createdAt"`
 		CreatedBy   string    `json:"createdBy"`
+		MCID        *string   `json:"mcId,omitempty"`
 	}
 
 	var events []EventWithGroup
@@ -192,7 +233,7 @@ func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		err := rows.Scan(
 			&event.ID, &event.GroupID, &event.Title, &event.Description,
 			&event.Location, &event.StartTime, &event.EndTime,
-			&event.CreatedAt, &event.CreatedBy, &event.GroupName,
+			&event.CreatedAt, &event.CreatedBy, &event.GroupName, &event.MCID,
 		)
 		if err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning events")
@@ -215,17 +256,22 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	var event Event
 	var groupName string
+	var mcFirstName, mcLastName sql.NullString
 	err := h.db.QueryRow(`
 		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
-		       g.name as group_name
+		       g.name as group_name, e.mc_id,
+		       CASE WHEN e.mc_id IS NOT NULL THEN mc.first_name ELSE NULL END as mc_first_name,
+		       CASE WHEN e.mc_id IS NOT NULL THEN mc.last_name ELSE NULL END as mc_last_name
 		FROM events e
 		JOIN improv_groups g ON e.group_id = g.id
 		JOIN group_members m ON e.group_id = m.group_id
+		LEFT JOIN users mc ON e.mc_id = mc.id
 		WHERE e.id = $1 AND m.user_id = $2
 	`, eventID, user.ID).Scan(
 		&event.ID, &event.GroupID, &event.Title, &event.Description,
 		&event.Location, &event.StartTime, &event.EndTime,
-		&event.CreatedAt, &event.CreatedBy, &groupName,
+		&event.CreatedAt, &event.CreatedBy, &groupName, &event.MCID,
+		&mcFirstName, &mcLastName,
 	)
 	if err != nil {
 		RespondWithError(w, http.StatusNotFound, "Event not found")
@@ -300,17 +346,35 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		games = append(games, game)
 	}
 
+	// MC data
+	type MCInfo struct {
+		ID        string `json:"id,omitempty"`
+		FirstName string `json:"firstName,omitempty"`
+		LastName  string `json:"lastName,omitempty"`
+	}
+
+	var mc *MCInfo
+	if event.MCID != nil {
+		mc = &MCInfo{
+			ID:        *event.MCID,
+			FirstName: mcFirstName.String,
+			LastName:  mcLastName.String,
+		}
+	}
+
 	// Include the member data in the response
 	eventData := struct {
-		Event     Event           `json:"event"`
-		GroupName string          `json:"groupName"`
-		RSVPs     []RSVP          `json:"rsvps"`
+		Event     Event          `json:"event"`
+		GroupName string         `json:"groupName"`
+		RSVPs     []RSVP         `json:"rsvps"`
 		Games     []GameWithOrder `json:"games"`
+		MC        *MCInfo        `json:"mc,omitempty"`
 	}{
 		Event:     event,
 		GroupName: groupName,
 		RSVPs:     rsvps,
 		Games:     games,
+		MC:        mc,
 	}
 
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
@@ -332,6 +396,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Location    string `json:"location"`
 		StartTime   string `json:"startTime"`
 		EndTime     string `json:"endTime"`
+		MCID        string `json:"mcId,omitempty"` // Optional MC ID
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -379,12 +444,37 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If MC is provided, verify they are a member of the group
+	if eventRequest.MCID != "" {
+		var isMember bool
+		err = h.db.QueryRow(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_members
+				WHERE group_id = $1 AND user_id = $2
+			)
+		`, groupID, eventRequest.MCID).Scan(&isMember)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Error checking MC membership")
+			return
+		}
+		if !isMember {
+			RespondWithError(w, http.StatusBadRequest, "Selected MC is not a member of this group")
+			return
+		}
+	}
+
+	// Support nullable MC_ID field
+	var mcID interface{} = nil
+	if eventRequest.MCID != "" {
+		mcID = eventRequest.MCID
+	}
+
 	// Update the event
 	_, err = h.db.Exec(`
 		UPDATE events
-		SET title = $1, description = $2, location = $3, start_time = $4, end_time = $5
-		WHERE id = $6
-	`, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, eventID)
+		SET title = $1, description = $2, location = $3, start_time = $4, end_time = $5, mc_id = $6
+		WHERE id = $7
+	`, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, mcID, eventID)
 
 	if err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "Error updating event")
@@ -396,14 +486,14 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var groupName string
 	err = h.db.QueryRow(`
 		SELECT e.id, e.group_id, e.title, e.description, e.location, e.start_time, e.end_time, e.created_at, e.created_by,
-			g.name as group_name
+			g.name as group_name, e.mc_id
 		FROM events e
 		JOIN improv_groups g ON e.group_id = g.id
 		WHERE e.id = $1
 	`, eventID).Scan(
 		&event.ID, &event.GroupID, &event.Title, &event.Description,
 		&event.Location, &event.StartTime, &event.EndTime,
-		&event.CreatedAt, &event.CreatedBy, &groupName,
+		&event.CreatedAt, &event.CreatedBy, &groupName, &event.MCID,
 	)
 	if err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated event")

@@ -171,6 +171,7 @@ func InitDB() *sql.DB {
 
 	// Add columns to existing tables if needed (for database schema evolution)
 	db.Exec(`ALTER TABLE group_game_libraries ADD COLUMN added_by TEXT REFERENCES users(id);`)
+	db.Exec(`ALTER TABLE events ADD COLUMN mc_id TEXT REFERENCES users(id);`)
 	// Ignore error - it will fail if column already exists, which is fine
 
 	// Add group invite links table if it doesn't exist

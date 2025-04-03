@@ -10,18 +10,6 @@ type ImprovGroup struct {
 	CreatedBy   string
 }
 
-type Event struct {
-	ID          string
-	GroupID     string
-	Title       string
-	Description string
-	Location    string
-	StartTime   time.Time
-	EndTime     time.Time
-	CreatedAt   time.Time
-	CreatedBy   string
-}
-
 type Game struct {
 	ID          string
 	Name        string
