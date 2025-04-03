@@ -68,7 +68,6 @@ function a11yProps(index: number) {
 
 export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => {
   const { eventId } = useParams<{ eventId: string }>()
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -105,21 +104,15 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
   // Extract game IDs for filtering
   const eventGameIds = eventGames.map((game) => game.id)
 
-  // Handle game selection from the GamesList component
-  const handleGameSelect = (gameId: string) => {
-    setSelectedGameId(gameId)
-  }
-
-  // Add selected game to event
-  const handleAddGame = async () => {
-    if (!selectedGameId || !eventId) return
+  // Add game to event
+  const handleAddGame = async (gameId: string) => {
+    if (!eventId) return
 
     try {
       await addEventGame({
         eventId,
-        gameId: selectedGameId,
+        gameId,
       }).unwrap()
-      setSelectedGameId(null)
       refetchEventGames()
     } catch (error) {
       console.error('Failed to add game to event:', error)
@@ -220,50 +213,6 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
     )
   }
 
-  // Render the group library games
-  const renderLibraryGames = () => {
-    const emptyLibraryMessage = (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" gutterBottom>
-          No remaining games in your library
-        </Typography>
-        <Typography variant="body1" paragraph>
-          You've already added all games from your library to this event or your library is empty.
-        </Typography>
-        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
-          <Button variant="contained" component={Link} to={`/games/new?groupId=${groupId}`} startIcon={<AddIcon />}>
-            Create a New Game
-          </Button>
-          <Button variant="outlined" component={Link} to="/games">
-            Browse Public Games
-          </Button>
-        </Box>
-      </Box>
-    )
-
-    return (
-      <>
-        <Box sx={{ border: '1px solid #eee', borderRadius: 1 }}>
-          <GamesListWithFilters
-            groupLibrary={groupId}
-            onGameSelect={handleGameSelect}
-            selectedGameId={selectedGameId}
-            excludeIds={eventGameIds}
-            customEmptyState={emptyLibraryMessage}
-          />
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          disabled={!selectedGameId}
-          onClick={handleAddGame}
-          sx={{ mt: 2 }}>
-          Add Selected Game
-        </Button>
-      </>
-    )
-  }
-
   // Mobile view with tabs
   const renderMobileView = () => {
     if (!isMC) {
@@ -358,6 +307,39 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
           </Paper>
         </Box>
       </>
+    )
+  }
+
+  // Render the group library games
+  const renderLibraryGames = () => {
+    const emptyLibraryMessage = (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" gutterBottom>
+          No remaining games in your library
+        </Typography>
+        <Typography variant="body1" paragraph>
+          You've already added all games from your library to this event or your library is empty.
+        </Typography>
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+          <Button variant="contained" component={Link} to={`/games/new?groupId=${groupId}`} startIcon={<AddIcon />}>
+            Create a New Game
+          </Button>
+          <Button variant="outlined" component={Link} to="/games">
+            Browse Public Games
+          </Button>
+        </Box>
+      </Box>
+    )
+
+    return (
+      <Box sx={{ border: '1px solid #eee', borderRadius: 1 }}>
+        <GamesListWithFilters
+          groupLibrary={groupId}
+          onAddGame={handleAddGame}
+          excludeIds={eventGameIds}
+          customEmptyState={emptyLibraryMessage}
+        />
+      </Box>
     )
   }
 

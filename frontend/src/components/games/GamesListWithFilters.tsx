@@ -12,6 +12,7 @@ interface GamesListWithFiltersProps {
   selectedGameId?: string | null
   excludeIds?: string[]
   customEmptyState?: ReactNode
+  onAddGame?: (gameId: string) => void
 }
 
 export const GamesListWithFilters = ({
@@ -21,6 +22,7 @@ export const GamesListWithFilters = ({
   selectedGameId,
   excludeIds,
   customEmptyState,
+  onAddGame,
 }: GamesListWithFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTag, setSelectedTag] = useState<string>(searchParams.get('tag') || 'All Tags')
@@ -66,6 +68,7 @@ export const GamesListWithFilters = ({
         selectedGameId={selectedGameId}
         excludeIds={excludeIds}
         customEmptyState={customEmptyState}
+        onAddGame={onAddGame}
       />
     </Box>
   )

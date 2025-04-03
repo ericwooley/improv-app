@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardActions, Button, Typography, Box, Divider } from '@mui/material'
+import { Card, CardContent, CardHeader, CardActions, Button, Typography, Box, Divider, IconButton } from '@mui/material'
 import { Link } from 'react-router-dom'
 import InfoItem from './InfoItem'
 import TagList from './TagList'
@@ -7,6 +7,7 @@ import {
   Public as PublicIcon,
   CheckCircle as CheckCircleIcon,
   ArrowForward as ArrowForwardIcon,
+  Add as AddIcon,
 } from '@mui/icons-material'
 
 export interface Game {
@@ -25,9 +26,10 @@ interface GameCardProps {
   showViewButton?: boolean
   onClick?: () => void
   isSelected?: boolean
+  onAddGame?: () => void
 }
 
-const GameCard = ({ game, showViewButton = true, onClick, isSelected }: GameCardProps) => {
+const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
   return (
     <Card
       variant="outlined"
@@ -44,8 +46,34 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected }: GameCard
               boxShadow: 1,
             }
           : {},
+        position: 'relative',
       }}
       onClick={onClick}>
+      {onAddGame && (
+        <IconButton
+          size="small"
+          color="primary"
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            bgcolor: 'background.paper',
+            boxShadow: 1,
+            '&:hover': {
+              bgcolor: 'primary.light',
+              color: 'primary.contrastText',
+            },
+            zIndex: 1,
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onAddGame()
+          }}
+          aria-label="add game to event">
+          <AddIcon />
+        </IconButton>
+      )}
+
       <CardHeader
         title={game.name}
         sx={{

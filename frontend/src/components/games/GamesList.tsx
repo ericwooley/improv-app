@@ -13,6 +13,7 @@ interface GamesListProps {
   showViewButton?: boolean
   excludeIds?: string[]
   customEmptyState?: ReactNode
+  onAddGame?: (gameId: string) => void
 }
 
 export const GamesList = ({
@@ -25,6 +26,7 @@ export const GamesList = ({
   selectedGameId,
   excludeIds = [],
   customEmptyState,
+  onAddGame,
 }: GamesListProps) => {
   const queryParams: { tag?: string; library?: string; ownedByGroup?: string } = {}
 
@@ -107,6 +109,7 @@ export const GamesList = ({
             showViewButton={showViewButton}
             onClick={onGameSelect ? () => onGameSelect(game.id) : undefined}
             isSelected={onGameSelect ? selectedGameId === game.id : undefined}
+            onAddGame={onAddGame ? () => onAddGame(game.id) : undefined}
           />
         </Grid>
       ))}
