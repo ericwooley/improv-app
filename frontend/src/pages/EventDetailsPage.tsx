@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import {
   Box,
   Paper,
@@ -29,6 +30,7 @@ import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../com
 import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
 import { isAdminRole } from '../constants/roles'
 import { EventGamesManager } from '../components/events/EventGamesManager'
+import { RootState } from '../store'
 
 // Helper function to create Google Maps link
 const createGoogleMapsLink = (location: string) => {
@@ -40,6 +42,9 @@ const EventDetailsPage = () => {
   const navigate = useNavigate()
   const [canManageEvent, setCanManageEvent] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+
+  // Get current user from Redux store
+  const currentUser = useSelector((state: RootState) => state.auth.user)
 
   const { data: eventResponse, isLoading, error } = useGetEventQuery(eventId || '')
 
@@ -104,8 +109,7 @@ const EventDetailsPage = () => {
   }
 
   // Determine if current user is the MC
-  const userId = localStorage.getItem('userId')
-  const isMC = Boolean(mc && mc.id === userId)
+  const isMC = Boolean(mc && currentUser && mc.id === currentUser.id)
 
   // Show loading state
   if (isLoading) {

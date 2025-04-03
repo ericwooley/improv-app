@@ -96,7 +96,22 @@ export const eventsApi = apiSlice.injectEndpoints({
     }),
 
     // Event games endpoints
-    getEventGames: builder.query<APIResponse<unknown>, string>({
+    getEventGames: builder.query<
+      {
+        success: boolean
+        data: {
+          games: Array<{
+            id: string
+            name: string
+            description: string
+            minPlayers: number
+            maxPlayers: number
+            orderIndex: number
+          }>
+        }
+      },
+      string
+    >({
       query: (eventId) => `/events/${eventId}/games`,
     }),
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Box,
   Typography,
@@ -39,7 +39,6 @@ interface EventGamesManagerProps {
 export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => {
   const { eventId } = useParams<{ eventId: string }>()
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
-  const [selectedTab, setSelectedTab] = useState('available')
 
   // API hooks
   const {
@@ -53,7 +52,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
   const [updateGameOrder] = useUpdateEventGameOrderMutation()
 
   // Event games from API
-  const eventGames = eventGamesResponse?.data?.games || []
+  const eventGames: Game[] = eventGamesResponse?.data?.games || []
 
   // Handle game selection from the GamesList component
   const handleGameSelect = (gameId: string) => {
@@ -172,7 +171,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
               <Alert severity="info">No games added to this event yet.</Alert>
             ) : (
               <List>
-                {eventGames.map((game, index) => (
+                {eventGames.map((game: Game, index: number) => (
                   <Box key={game.id}>
                     {index > 0 && <Divider />}
                     <ListItem>

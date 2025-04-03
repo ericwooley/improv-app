@@ -644,3 +644,313 @@ func (h *EventHandler) AddGameToEvent(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		GameID string `json:"gameId"`
 	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error parsing request body: %v", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	// Verify the event exists and get group ID
+	var groupID string
+	var mcID sql.NullString
+	err = h.db.QueryRow(`
+		SELECT group_id, mc_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID, &mcID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if the user is the MC for this event
+	if !mcID.Valid || mcID.String != user.ID {
+		log.Printf("User %s is not the MC for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event's MC can manage games")
+		return
+	}
+
+	// Verify the game exists and belongs to the group or its library
+	var gameExists bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM games g
+			LEFT JOIN group_game_libraries l ON g.id = l.game_id
+			WHERE g.id = $1 AND (g.group_id = $2 OR l.group_id = $2)
+		)
+	`, request.GameID, groupID).Scan(&gameExists)
+	if err != nil {
+		log.Printf("Error checking game existence: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking game existence")
+		return
+	}
+
+	if !gameExists {
+		log.Printf("Game %s does not exist or is not in group %s library", request.GameID, groupID)
+		RespondWithError(w, http.StatusBadRequest, "Game does not exist or is not in your group's library")
+		return
+	}
+
+	// Get the maximum order index for this event
+	var maxOrderIndex int
+	err = h.db.QueryRow(`
+		SELECT COALESCE(MAX(order_index), -1) FROM event_games
+		WHERE event_id = $1
+	`, eventID).Scan(&maxOrderIndex)
+	if err != nil {
+		log.Printf("Error getting max order index: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error calculating game order")
+		return
+	}
+
+	// Check if game is already added to the event
+	var gameAlreadyAdded bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM event_games
+			WHERE event_id = $1 AND game_id = $2
+		)
+	`, eventID, request.GameID).Scan(&gameAlreadyAdded)
+	if err != nil {
+		log.Printf("Error checking if game is already added: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking event games")
+		return
+	}
+
+	if gameAlreadyAdded {
+		log.Printf("Game %s is already added to event %s", request.GameID, eventID)
+		RespondWithError(w, http.StatusBadRequest, "This game is already added to the event")
+		return
+	}
+
+	// Add the game to the event
+	_, err = h.db.Exec(`
+		INSERT INTO event_games (event_id, game_id, order_index)
+		VALUES ($1, $2, $3)
+	`, eventID, request.GameID, maxOrderIndex+1)
+	if err != nil {
+		log.Printf("Error adding game to event: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error adding game to event")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Game added to event successfully",
+	})
+}
+
+// RemoveGameFromEvent removes a game from an event
+func (h *EventHandler) RemoveGameFromEvent(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+	gameID := vars["gameId"]
+
+	// Verify the event exists and get MC ID
+	var mcID sql.NullString
+	err := h.db.QueryRow(`
+		SELECT mc_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&mcID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if the user is the MC for this event
+	if !mcID.Valid || mcID.String != user.ID {
+		log.Printf("User %s is not the MC for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event's MC can manage games")
+		return
+	}
+
+	// Remove the game from the event
+	_, err = h.db.Exec(`
+		DELETE FROM event_games
+		WHERE event_id = $1 AND game_id = $2
+	`, eventID, gameID)
+	if err != nil {
+		log.Printf("Error removing game from event: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error removing game from event")
+		return
+	}
+
+	// Reorder the remaining games to ensure they are sequential
+	_, err = h.db.Exec(`
+		WITH ranked_games AS (
+			SELECT game_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 as new_index
+			FROM event_games
+			WHERE event_id = $1
+		)
+		UPDATE event_games
+		SET order_index = ranked_games.new_index
+		FROM ranked_games
+		WHERE event_games.event_id = $1 AND event_games.game_id = ranked_games.game_id
+	`, eventID)
+	if err != nil {
+		log.Printf("Error reordering games after removal: %v", err)
+		// Don't return an error to the client, just log it
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Game removed from event successfully",
+	})
+}
+
+// UpdateGameOrder updates a game's order in an event
+func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+	gameID := vars["gameId"]
+
+	// Parse request body
+	var request struct {
+		OrderIndex int `json:"orderIndex"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error parsing request body: %v", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	// Verify the event exists and get MC ID
+	var mcID sql.NullString
+	err = h.db.QueryRow(`
+		SELECT mc_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&mcID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if the user is the MC for this event
+	if !mcID.Valid || mcID.String != user.ID {
+		log.Printf("User %s is not the MC for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event's MC can manage games")
+		return
+	}
+
+	// Get the current order index for the game
+	var currentIndex int
+	err = h.db.QueryRow(`
+		SELECT order_index FROM event_games
+		WHERE event_id = $1 AND game_id = $2
+	`, eventID, gameID).Scan(&currentIndex)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Game %s not found in event %s", gameID, eventID)
+			RespondWithError(w, http.StatusNotFound, "Game not found in event")
+		} else {
+			log.Printf("Error getting current order index: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error retrieving game order")
+		}
+		return
+	}
+
+	// Get the count of games in the event
+	var gameCount int
+	err = h.db.QueryRow(`
+		SELECT COUNT(*) FROM event_games
+		WHERE event_id = $1
+	`, eventID).Scan(&gameCount)
+	if err != nil {
+		log.Printf("Error counting games in event: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error counting games")
+		return
+	}
+
+	// Validate the new index
+	if request.OrderIndex < 0 || request.OrderIndex >= gameCount {
+		log.Printf("Invalid order index: %d (must be between 0 and %d)", request.OrderIndex, gameCount-1)
+		RespondWithError(w, http.StatusBadRequest, "Invalid order index")
+		return
+	}
+
+	// Begin a transaction
+	tx, err := h.db.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+	defer tx.Rollback()
+
+	// Update game order - first make space for the new position
+	if currentIndex < request.OrderIndex {
+		// Moving down - decrement indexes in between
+		_, err = tx.Exec(`
+			UPDATE event_games
+			SET order_index = order_index - 1
+			WHERE event_id = $1 AND order_index > $2 AND order_index <= $3
+		`, eventID, currentIndex, request.OrderIndex)
+	} else if currentIndex > request.OrderIndex {
+		// Moving up - increment indexes in between
+		_, err = tx.Exec(`
+			UPDATE event_games
+			SET order_index = order_index + 1
+			WHERE event_id = $1 AND order_index >= $2 AND order_index < $3
+		`, eventID, request.OrderIndex, currentIndex)
+	} else {
+		// No change needed
+		tx.Commit()
+		RespondWithJSON(w, http.StatusOK, ApiResponse{
+			Success: true,
+			Message: "Game order unchanged",
+		})
+		return
+	}
+
+	if err != nil {
+		log.Printf("Error updating intermediate indexes: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+		return
+	}
+
+	// Now move the target game to its new position
+	_, err = tx.Exec(`
+		UPDATE event_games
+		SET order_index = $3
+		WHERE event_id = $1 AND game_id = $2
+	`, eventID, gameID, request.OrderIndex)
+	if err != nil {
+		log.Printf("Error updating game index: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+		return
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Game order updated successfully",
+	})
+}
