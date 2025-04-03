@@ -9,6 +9,7 @@ interface GamesListWithFiltersProps {
   groupOwner?: string
   onGameSelect?: (gameId: string) => void
   selectedGameId?: string | null
+  excludeIds?: string[]
 }
 
 export const GamesListWithFilters = ({
@@ -16,6 +17,7 @@ export const GamesListWithFilters = ({
   groupOwner,
   onGameSelect,
   selectedGameId,
+  excludeIds,
 }: GamesListWithFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTag, setSelectedTag] = useState<string>(searchParams.get('tag') || 'All Tags')
@@ -59,6 +61,7 @@ export const GamesListWithFilters = ({
         groupOwner={groupOwner}
         onGameSelect={onGameSelect}
         selectedGameId={selectedGameId}
+        excludeIds={excludeIds}
       />
     </Box>
   )

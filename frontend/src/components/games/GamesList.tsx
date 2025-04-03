@@ -10,6 +10,7 @@ interface GamesListProps {
   onGameSelect?: (gameId: string) => void
   selectedGameId?: string | null
   showViewButton?: boolean
+  excludeIds?: string[]
 }
 
 export const GamesList = ({
@@ -20,6 +21,7 @@ export const GamesList = ({
   showViewButton,
   onGameSelect,
   selectedGameId,
+  excludeIds = [],
 }: GamesListProps) => {
   const queryParams: { tag?: string; library?: string; ownedByGroup?: string } = {}
 
@@ -41,7 +43,9 @@ export const GamesList = ({
     error,
   } = useGetGamesQuery(Object.keys(queryParams).length > 0 ? queryParams : undefined)
 
-  const games = gamesData?.data || []
+  const allGames = gamesData?.data || []
+  // Filter out excluded games
+  const games = excludeIds.length > 0 ? allGames.filter((game) => !excludeIds.includes(game.id)) : allGames
 
   if (isLoading) {
     return (
@@ -68,6 +72,8 @@ export const GamesList = ({
       message = "No games found in this group's library"
     } else if (groupOwner) {
       message = 'No games owned by this group'
+    } else if (excludeIds.length > 0) {
+      message = 'All available games have been added to the event'
     }
 
     return (

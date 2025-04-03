@@ -102,6 +102,9 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
   // Event games from API
   const eventGames: Game[] = eventGamesResponse?.data?.games || []
 
+  // Extract game IDs for filtering
+  const eventGameIds = eventGames.map((game) => game.id)
+
   // Handle game selection from the GamesList component
   const handleGameSelect = (gameId: string) => {
     setSelectedGameId(gameId)
@@ -226,6 +229,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
             groupLibrary={groupId}
             onGameSelect={handleGameSelect}
             selectedGameId={selectedGameId}
+            excludeIds={eventGameIds}
           />
         </Box>
         <Button
