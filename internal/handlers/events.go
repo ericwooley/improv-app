@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -37,6 +38,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 	if err != nil {
+		log.Printf("Error verifying group membership for user %s in group %s: %v", user.ID, groupID, err)
 		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
 		return
 	}
@@ -49,6 +51,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		ORDER BY start_time DESC
 	`, groupID)
 	if err != nil {
+		log.Printf("Error fetching events for group %s: %v", groupID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching events")
 		return
 	}
@@ -59,6 +62,7 @@ func (h *EventHandler) List(w http.ResponseWriter, r *http.Request) {
 		var event Event
 		err := rows.Scan(&event.ID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy, &event.MCID)
 		if err != nil {
+			log.Printf("Error scanning events row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning events")
 			return
 		}
@@ -96,6 +100,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&eventRequest); err != nil {
+		log.Printf("Error decoding event request: %v", err)
 		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
@@ -108,18 +113,21 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		WHERE group_id = $1 AND user_id = $2
 	`, eventRequest.GroupID, user.ID).Scan(&role)
 	if err != nil {
+		log.Printf("Error verifying group membership for create event - user %s, group %s: %v", user.ID, eventRequest.GroupID, err)
 		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
 		return
 	}
 
 	startTime, err := time.Parse(time.RFC3339, eventRequest.StartTime)
 	if err != nil {
+		log.Printf("Error parsing start time %s: %v", eventRequest.StartTime, err)
 		RespondWithError(w, http.StatusBadRequest, "Invalid start time format")
 		return
 	}
 
 	endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
 	if err != nil {
+		log.Printf("Error parsing end time %s: %v", eventRequest.EndTime, err)
 		RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
 		return
 	}
@@ -134,10 +142,12 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 			)
 		`, eventRequest.GroupID, eventRequest.MCID).Scan(&isMember)
 		if err != nil {
+			log.Printf("Error checking MC membership for user %s in group %s: %v", eventRequest.MCID, eventRequest.GroupID, err)
 			RespondWithError(w, http.StatusInternalServerError, "Error checking MC membership")
 			return
 		}
 		if !isMember {
+			log.Printf("MC %s is not a member of group %s", eventRequest.MCID, eventRequest.GroupID)
 			RespondWithError(w, http.StatusBadRequest, "Selected MC is not a member of this group")
 			return
 		}
@@ -156,6 +166,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		RETURNING id
 	`, eventID, eventRequest.GroupID, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, user.ID, mcID).Scan(&eventID)
 	if err != nil {
+		log.Printf("Error creating event: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error creating event")
 		return
 	}
@@ -168,6 +179,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 	`, eventID).Scan(&event.ID, &event.GroupID, &event.Title, &event.Description, &event.Location, &event.StartTime, &event.EndTime, &event.CreatedAt, &event.CreatedBy, &event.MCID)
 	if err != nil {
+		log.Printf("Error fetching created event %s: %v", eventID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching created event")
 		return
 	}
@@ -195,6 +207,7 @@ func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		ORDER BY e.start_time DESC
 	`, user.ID)
 	if err != nil {
+		log.Printf("Error fetching all events for user %s: %v", user.ID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching events")
 		return
 	}
@@ -223,6 +236,7 @@ func (h *EventHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 			&event.CreatedAt, &event.CreatedBy, &event.GroupName, &event.MCID,
 		)
 		if err != nil {
+			log.Printf("Error scanning event row in ListAll: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning events")
 			return
 		}
@@ -261,6 +275,7 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&mcFirstName, &mcLastName,
 	)
 	if err != nil {
+		log.Printf("Error fetching event %s for user %s: %v", eventID, user.ID, err)
 		RespondWithError(w, http.StatusNotFound, "Event not found")
 		return
 	}
@@ -273,6 +288,7 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WHERE r.event_id = $1
 	`, eventID)
 	if err != nil {
+		log.Printf("Error fetching RSVPs for event %s: %v", eventID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching RSVPs")
 		return
 	}
@@ -290,6 +306,7 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var rsvp RSVP
 		err := rsvpRows.Scan(&rsvp.UserID, &rsvp.FirstName, &rsvp.LastName, &rsvp.Status)
 		if err != nil {
+			log.Printf("Error scanning RSVP row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning RSVPs")
 			return
 		}
@@ -305,6 +322,7 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ORDER BY eg.order_index
 	`, eventID)
 	if err != nil {
+		log.Printf("Error fetching games for event %s: %v", eventID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching games")
 		return
 	}
@@ -327,6 +345,7 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex,
 		)
 		if err != nil {
+			log.Printf("Error scanning game row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
 			return
 		}
@@ -388,6 +407,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&eventRequest); err != nil {
+		log.Printf("Error decoding event update request for event %s: %v", eventID, err)
 		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
@@ -401,8 +421,10 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 	`, eventID).Scan(&groupID)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			log.Printf("Event not found during update: %s", eventID)
 			RespondWithError(w, http.StatusNotFound, "Event not found")
 		} else {
+			log.Printf("Error fetching event %s during update: %v", eventID, err)
 			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
 		}
 		return
@@ -415,18 +437,21 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 	if err != nil || (role != auth.RoleAdmin && role != auth.RoleOrganizer) {
+		log.Printf("User %s not authorized to update event %s (role: %s, error: %v)", user.ID, eventID, role, err)
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can update events")
 		return
 	}
 
 	startTime, err := time.Parse(time.RFC3339, eventRequest.StartTime)
 	if err != nil {
+		log.Printf("Error parsing start time during update %s: %v", eventRequest.StartTime, err)
 		RespondWithError(w, http.StatusBadRequest, "Invalid start time format")
 		return
 	}
 
 	endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
 	if err != nil {
+		log.Printf("Error parsing end time during update %s: %v", eventRequest.EndTime, err)
 		RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
 		return
 	}
@@ -441,10 +466,12 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 			)
 		`, groupID, eventRequest.MCID).Scan(&isMember)
 		if err != nil {
+			log.Printf("Error checking MC membership for update - MC %s, group %s: %v", eventRequest.MCID, groupID, err)
 			RespondWithError(w, http.StatusInternalServerError, "Error checking MC membership")
 			return
 		}
 		if !isMember {
+			log.Printf("MC %s is not a member of group %s for event update", eventRequest.MCID, groupID)
 			RespondWithError(w, http.StatusBadRequest, "Selected MC is not a member of this group")
 			return
 		}
@@ -464,6 +491,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 	`, eventRequest.Title, eventRequest.Description, eventRequest.Location, startTime, endTime, mcID, eventID)
 
 	if err != nil {
+		log.Printf("Error updating event %s: %v", eventID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating event")
 		return
 	}
@@ -483,6 +511,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		&event.CreatedAt, &event.CreatedBy, &groupName, &event.MCID,
 	)
 	if err != nil {
+		log.Printf("Error fetching updated event %s: %v", eventID, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated event")
 		return
 	}
