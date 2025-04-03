@@ -25,6 +25,11 @@ export interface EventDetailsResponse {
   groupName: string
   rsvps: unknown
   games: unknown
+  mc?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
 }
 
 export interface CreateEventRequest {

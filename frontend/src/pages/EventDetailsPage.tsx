@@ -23,6 +23,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
+  Mic as MicIcon,
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
@@ -213,6 +214,14 @@ const EventDetailsPage = () => {
                 <InfoItem icon={<PeopleIcon />}>
                   <Typography>
                     Organized by <Link to={`/groups/${event.GroupID}`}>{groupName}</Link>
+                  </Typography>
+                </InfoItem>
+              )}
+
+              {eventResponse?.data?.mc && (
+                <InfoItem icon={<MicIcon />}>
+                  <Typography>
+                    MC: {eventResponse.data.mc.firstName} {eventResponse.data.mc.lastName}
                   </Typography>
                 </InfoItem>
               )}
