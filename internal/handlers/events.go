@@ -94,7 +94,7 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Description string `json:"description"`
 		Location    string `json:"location"`
 		StartTime   string `json:"startTime"`
-		EndTime     string `json:"endTime"`
+		EndTime     string `json:"endTime,omitempty"` // Make EndTime optional
 		MCID        string `json:"mcId,omitempty"` // Optional MC ID
 	}
 
@@ -125,11 +125,20 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
-	if err != nil {
-		log.Printf("Error parsing end time %s: %v", eventRequest.EndTime, err)
-		RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
-		return
+	// Use startTime as endTime if endTime is not provided or empty
+	var endTime time.Time
+	if eventRequest.EndTime == "" {
+		// If EndTime is not provided, use the same value as StartTime
+		endTime = startTime
+		log.Printf("EndTime not provided for new event, using StartTime instead")
+	} else {
+		var err error
+		endTime, err = time.Parse(time.RFC3339, eventRequest.EndTime)
+		if err != nil {
+			log.Printf("Error parsing end time %s: %v", eventRequest.EndTime, err)
+			RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
+			return
+		}
 	}
 
 	// If MC is provided, verify they are a member of the group
@@ -401,7 +410,7 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Description string `json:"description"`
 		Location    string `json:"location"`
 		StartTime   string `json:"startTime"`
-		EndTime     string `json:"endTime"`
+		EndTime     string `json:"endTime,omitempty"` // Make EndTime optional
 		MCID        string `json:"mcId,omitempty"` // Optional MC ID
 	}
 
@@ -449,11 +458,20 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endTime, err := time.Parse(time.RFC3339, eventRequest.EndTime)
-	if err != nil {
-		log.Printf("Error parsing end time during update %s: %v", eventRequest.EndTime, err)
-		RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
-		return
+	// Use startTime as endTime if endTime is not provided or empty
+	var endTime time.Time
+	if eventRequest.EndTime == "" {
+		// If EndTime is not provided, use the same value as StartTime
+		endTime = startTime
+		log.Printf("EndTime not provided for event %s, using StartTime instead", eventID)
+	} else {
+		var err error
+		endTime, err = time.Parse(time.RFC3339, eventRequest.EndTime)
+		if err != nil {
+			log.Printf("Error parsing end time during update %s: %v", eventRequest.EndTime, err)
+			RespondWithError(w, http.StatusBadRequest, "Invalid end time format")
+			return
+		}
 	}
 
 	// If MC is provided, verify they are a member of the group
