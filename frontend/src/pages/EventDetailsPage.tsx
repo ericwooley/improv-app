@@ -129,7 +129,6 @@ const EventDetailsPage = () => {
 
   // Format event dates
   const startDate = new Date(event.StartTime)
-  const endDate = new Date(event.EndTime)
 
   return (
     <Box>
@@ -206,7 +205,7 @@ const EventDetailsPage = () => {
 
               <InfoItem icon={<TimeIcon />}>
                 <Typography>
-                  {formatDate(startDate)}, {formatTime(startDate)} - {formatTime(endDate)}
+                  {formatDate(startDate)}, {formatTime(startDate)}
                 </Typography>
               </InfoItem>
 

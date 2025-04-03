@@ -7,11 +7,9 @@ export interface Event {
   description: string
   location: string
   startTime: string
-  endTime: string
   groupId: string
   groupName?: string
 }
-
 
 export interface EventDetailsResponse {
   event: {
@@ -21,7 +19,6 @@ export interface EventDetailsResponse {
     Description: string
     Location: string
     StartTime: string
-    EndTime: string
     CreatedAt: string
     CreatedBy: string
   }
@@ -35,7 +32,6 @@ export interface CreateEventRequest {
   description: string
   location: string
   startTime: string
-  endTime: string
   groupId: string
 }
 

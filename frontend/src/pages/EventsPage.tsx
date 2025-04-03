@@ -28,7 +28,6 @@ interface Event {
   description: string
   location: string
   startTime: Date
-  endTime: Date
   groupId: string
   groupName?: string
 }
@@ -46,7 +45,6 @@ const EventsPage = () => {
     return events.map((event) => ({
       ...event,
       startTime: new Date(event.startTime),
-      endTime: new Date(event.endTime),
     }))
   }
 
@@ -107,9 +105,7 @@ const EventsPage = () => {
 
                   <InfoItem icon={<CalendarIcon />}>{formatDate(event.startTime)}</InfoItem>
 
-                  <InfoItem icon={<ClockIcon />}>
-                    {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                  </InfoItem>
+                  <InfoItem icon={<ClockIcon />}>{formatTime(event.startTime)}</InfoItem>
                 </CardContent>
 
                 <CardActions>

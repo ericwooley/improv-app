@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FormContainer, InputField, TextareaField, SelectField, FormActions, ActionButton } from '../index'
-import { Box, CircularProgress, Alert, Grid, Stack } from '@mui/material'
+import { Box, CircularProgress, Alert, Stack } from '@mui/material'
 import { useGetGroupsQuery } from '../../store/api/groupsApi'
 import { useGetGroupMembersQuery } from '../../store/api/groupsApi'
 
@@ -23,7 +23,6 @@ export interface EventFormData {
   location: string
   groupId: string
   startTime: string
-  endTime: string
   mcId?: string
 }
 
@@ -168,30 +167,15 @@ const EventForm = ({
           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
         />
 
-        <Grid container spacing={2}>
-          <Grid size={6}>
-            <InputField
-              id="start_time"
-              label="Start Time"
-              type="datetime-local"
-              value={formData.startTime}
-              required
-              icon="fas fa-clock"
-              onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-            />
-          </Grid>
-          <Grid size={6}>
-            <InputField
-              id="end_time"
-              label="End Time"
-              type="datetime-local"
-              value={formData.endTime}
-              required
-              icon="fas fa-clock"
-              onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-            />
-          </Grid>
-        </Grid>
+        <InputField
+          id="start_time"
+          label="Start Time"
+          type="datetime-local"
+          value={formData.startTime}
+          required
+          icon="fas fa-clock"
+          onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+        />
       </Stack>
 
       <FormActions>
