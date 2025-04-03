@@ -7,9 +7,16 @@ import { useSearchParams } from 'react-router-dom'
 interface GamesListWithFiltersProps {
   groupLibrary?: string
   groupOwner?: string
+  onGameSelect?: (gameId: string) => void
+  selectedGameId?: string | null
 }
 
-export const GamesListWithFilters = ({ groupLibrary, groupOwner }: GamesListWithFiltersProps) => {
+export const GamesListWithFilters = ({
+  groupLibrary,
+  groupOwner,
+  onGameSelect,
+  selectedGameId,
+}: GamesListWithFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTag, setSelectedTag] = useState<string>(searchParams.get('tag') || 'All Tags')
 
@@ -50,6 +57,8 @@ export const GamesListWithFilters = ({ groupLibrary, groupOwner }: GamesListWith
         onClearFilter={() => handleTagChange('All Tags')}
         groupLibrary={groupLibrary}
         groupOwner={groupOwner}
+        onGameSelect={onGameSelect}
+        selectedGameId={selectedGameId}
       />
     </Box>
   )

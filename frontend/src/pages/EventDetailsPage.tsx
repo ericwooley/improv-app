@@ -28,6 +28,7 @@ import {
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
 import { isAdminRole } from '../constants/roles'
+import { EventGamesManager } from '../components/events/EventGamesManager'
 
 // Helper function to create Google Maps link
 const createGoogleMapsLink = (location: string) => {
@@ -45,7 +46,7 @@ const EventDetailsPage = () => {
   const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation()
 
   // Format event data from API response
-  const { event, groupName } = eventResponse?.data || {}
+  const { event, groupName, mc } = eventResponse?.data || {}
 
   // Check if user has permissions to manage this event
   useEffect(() => {
@@ -101,6 +102,10 @@ const EventDetailsPage = () => {
 
     handleMenuClose()
   }
+
+  // Determine if current user is the MC
+  const userId = localStorage.getItem('userId')
+  const isMC = Boolean(mc && mc.id === userId)
 
   // Show loading state
   if (isLoading) {
@@ -218,10 +223,10 @@ const EventDetailsPage = () => {
                 </InfoItem>
               )}
 
-              {eventResponse?.data?.mc && (
+              {mc && (
                 <InfoItem icon={<MicIcon />}>
                   <Typography>
-                    MC: {eventResponse.data.mc.firstName} {eventResponse.data.mc.lastName}
+                    MC: {mc.firstName} {mc.lastName}
                   </Typography>
                 </InfoItem>
               )}
@@ -253,6 +258,9 @@ const EventDetailsPage = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      {/* Games Manager (only shown to the MC) */}
+      <EventGamesManager groupId={event.GroupID} isMC={isMC} />
     </Box>
   )
 }

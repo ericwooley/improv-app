@@ -7,9 +7,18 @@ interface GamesListProps {
   onClearFilter: () => void
   groupLibrary?: string
   groupOwner?: string
+  onGameSelect?: (gameId: string) => void
+  selectedGameId?: string | null
 }
 
-export const GamesList = ({ selectedTag, onClearFilter, groupLibrary, groupOwner }: GamesListProps) => {
+export const GamesList = ({
+  selectedTag,
+  onClearFilter,
+  groupLibrary,
+  groupOwner,
+  onGameSelect,
+  selectedGameId,
+}: GamesListProps) => {
   const queryParams: { tag?: string; library?: string; ownedByGroup?: string } = {}
 
   if (selectedTag !== 'All Tags') {
@@ -78,7 +87,11 @@ export const GamesList = ({ selectedTag, onClearFilter, groupLibrary, groupOwner
             xs: 12,
           }}
           key={game.id}>
-          <GameCard game={game} />
+          <GameCard
+            game={game}
+            onClick={onGameSelect ? () => onGameSelect(game.id) : undefined}
+            isSelected={onGameSelect ? selectedGameId === game.id : undefined}
+          />
         </Grid>
       ))}
     </Grid>

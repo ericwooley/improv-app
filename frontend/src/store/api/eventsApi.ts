@@ -94,6 +94,34 @@ export const eventsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Event', id: 'LIST' }],
     }),
+
+    // Event games endpoints
+    getEventGames: builder.query<APIResponse<unknown>, string>({
+      query: (eventId) => `/events/${eventId}/games`,
+    }),
+
+    addEventGame: builder.mutation<APIResponse<void>, { eventId: string; gameId: string }>({
+      query: ({ eventId, gameId }) => ({
+        url: `/events/${eventId}/games`,
+        method: 'POST',
+        body: { gameId },
+      }),
+    }),
+
+    removeEventGame: builder.mutation<APIResponse<void>, { eventId: string; gameId: string }>({
+      query: ({ eventId, gameId }) => ({
+        url: `/events/${eventId}/games/${gameId}`,
+        method: 'DELETE',
+      }),
+    }),
+
+    updateEventGameOrder: builder.mutation<APIResponse<void>, { eventId: string; gameId: string; newIndex: number }>({
+      query: ({ eventId, gameId, newIndex }) => ({
+        url: `/events/${eventId}/games/${gameId}/order`,
+        method: 'PUT',
+        body: { orderIndex: newIndex },
+      }),
+    }),
   }),
 })
 
@@ -104,4 +132,8 @@ export const {
   useCreateEventMutation,
   useUpdateEventMutation,
   useDeleteEventMutation,
+  useGetEventGamesQuery,
+  useAddEventGameMutation,
+  useRemoveEventGameMutation,
+  useUpdateEventGameOrderMutation,
 } = eventsApi

@@ -124,6 +124,11 @@ func main() {
 	api.HandleFunc("/events/{id}", middleware.RequireAuthAPI(sqlDB, eventHandler.Get)).Methods("GET")
 	api.HandleFunc("/events/{id}", middleware.RequireAuthAPI(sqlDB, eventHandler.Update)).Methods("PUT")
 	api.HandleFunc("/groups/{id}/events", middleware.RequireAuthAPI(sqlDB, eventHandler.List)).Methods("GET", "POST")
+	// Event game management routes
+	api.HandleFunc("/events/{id}/games", middleware.RequireAuthAPI(sqlDB, eventHandler.GetEventGames)).Methods("GET")
+	api.HandleFunc("/events/{id}/games", middleware.RequireAuthAPI(sqlDB, eventHandler.AddGameToEvent)).Methods("POST")
+	api.HandleFunc("/events/{id}/games/{gameId}", middleware.RequireAuthAPI(sqlDB, eventHandler.RemoveGameFromEvent)).Methods("DELETE")
+	api.HandleFunc("/events/{id}/games/{gameId}/order", middleware.RequireAuthAPI(sqlDB, eventHandler.UpdateGameOrder)).Methods("PUT")
 
 	// Game routes
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET")

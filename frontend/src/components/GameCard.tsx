@@ -23,9 +23,11 @@ export interface Game {
 interface GameCardProps {
   game: Game
   showViewButton?: boolean
+  onClick?: () => void
+  isSelected?: boolean
 }
 
-const GameCard = ({ game, showViewButton = true }: GameCardProps) => {
+const GameCard = ({ game, showViewButton = true, onClick, isSelected }: GameCardProps) => {
   return (
     <Card
       variant="outlined"
@@ -33,8 +35,17 @@ const GameCard = ({ game, showViewButton = true }: GameCardProps) => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-
-      }}>
+        cursor: onClick ? 'pointer' : 'default',
+        border: isSelected ? '2px solid' : '1px solid',
+        borderColor: isSelected ? 'primary.main' : 'divider',
+        '&:hover': onClick
+          ? {
+              borderColor: 'primary.main',
+              boxShadow: 1,
+            }
+          : {},
+      }}
+      onClick={onClick}>
       <CardHeader
         title={game.name}
         sx={{
@@ -90,7 +101,8 @@ const GameCard = ({ game, showViewButton = true }: GameCardProps) => {
               color="primary"
               size="small"
               variant="contained"
-              endIcon={<ArrowForwardIcon />}>
+              endIcon={<ArrowForwardIcon />}
+              onClick={(e) => e.stopPropagation()}>
               View
             </Button>
           </CardActions>

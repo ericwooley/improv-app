@@ -540,3 +540,107 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Data:    event,
 	})
 }
+
+// GetEventGames gets all games associated with an event
+func (h *EventHandler) GetEventGames(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// First, check if the event exists and get its group ID
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT group_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user has access to this event (is a member of the group)
+	var isGroupMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, user.ID).Scan(&isGroupMember)
+	if err != nil {
+		log.Printf("Error checking group membership for user %s in group %s: %v", user.ID, groupID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
+		return
+	}
+
+	if !isGroupMember {
+		log.Printf("User %s is not a member of group %s", user.ID, groupID)
+		RespondWithError(w, http.StatusForbidden, "You are not a member of this group")
+		return
+	}
+
+	// Get assigned games
+	gameRows, err := h.db.Query(`
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, eg.order_index
+		FROM event_games eg
+		JOIN games g ON eg.game_id = g.id
+		WHERE eg.event_id = $1
+		ORDER BY eg.order_index
+	`, eventID)
+	if err != nil {
+		log.Printf("Error fetching games for event %s: %v", eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching games")
+		return
+	}
+	defer gameRows.Close()
+
+	type GameWithOrder struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		MinPlayers  int    `json:"minPlayers"`
+		MaxPlayers  int    `json:"maxPlayers"`
+		OrderIndex  int    `json:"orderIndex"`
+	}
+
+	var games []GameWithOrder
+	for gameRows.Next() {
+		var game GameWithOrder
+		err := gameRows.Scan(
+			&game.ID, &game.Name, &game.Description,
+			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex,
+		)
+		if err != nil {
+			log.Printf("Error scanning game row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
+			return
+		}
+		games = append(games, game)
+	}
+
+	// Return response
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data: struct {
+			Games []GameWithOrder `json:"games"`
+		}{
+			Games: games,
+		},
+	})
+}
+
+// AddGameToEvent adds a game to an event
+func (h *EventHandler) AddGameToEvent(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// Parse request body
+	var request struct {
+		GameID string `json:"gameId"`
+	}

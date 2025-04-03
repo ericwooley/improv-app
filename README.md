@@ -102,6 +102,7 @@ This project uses [Air](https://github.com/cosmtrek/air) for hot-reloading durin
 - Order games within an event
 - Track user preferences for game selection
 - Filter games by tags, player count, or popularity
+- MCs can manage games for their events, selecting them from the group library
 
 ## Database Schema
 
@@ -154,6 +155,7 @@ erDiagram
         timestamp start_time
         timestamp end_time
         string created_by FK
+        string mc_id FK
         string visibility
         timestamp created_at
     }
@@ -190,6 +192,7 @@ erDiagram
     group_game_libraries {
         string group_id PK,FK
         string game_id PK,FK
+        string added_by FK
         timestamp added_at
     }
 
@@ -212,7 +215,6 @@ erDiagram
         string email
         string invited_by FK
         string role
-        string token
         string status
         timestamp expires_at
         timestamp created_at
@@ -228,6 +230,7 @@ erDiagram
     improv_groups ||--o{ group_invitations : "has"
     improv_groups ||--|{ events : "schedules"
     users ||--o{ events : "creates"
+    users ||--o{ events : "MCs"
     events ||--o{ event_rsvps : "receives"
     users ||--o{ event_rsvps : "submits"
     users ||--o{ games : "creates"
@@ -236,6 +239,7 @@ erDiagram
     game_tags ||--o{ game_tag_associations : "applied to"
     improv_groups ||--o{ group_game_libraries : "has in library"
     games ||--o{ group_game_libraries : "included in"
+    users ||--o{ group_game_libraries : "adds to library"
     events ||--o{ event_games : "includes"
     games ||--o{ event_games : "featured in"
     users ||--o{ user_game_preferences : "rates"
