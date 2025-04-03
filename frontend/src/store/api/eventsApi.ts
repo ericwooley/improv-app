@@ -9,6 +9,7 @@ export interface Event {
   startTime: string
   groupId: string
   groupName?: string
+  mcId?: string | null
 }
 
 export interface EventDetailsResponse {

@@ -18,17 +18,17 @@ const EditEventPage = () => {
     location: '',
     groupId: '',
     startTime: '',
-    endTime: '',
+    mcId: '',
   })
 
   // When event data is loaded, populate the form
   useEffect(() => {
     if (eventResponse?.data?.event) {
       const event = eventResponse.data.event
+      const mc = eventResponse.data.mc
 
       // Format ISO dates to local datetime format for input fields
       const startDate = new Date(event.StartTime)
-      const endDate = new Date(event.EndTime)
 
       const formatDateForInput = (date: Date) => {
         return date.toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:MM
@@ -40,7 +40,7 @@ const EditEventPage = () => {
         location: event.Location || '',
         groupId: event.GroupID || '',
         startTime: formatDateForInput(startDate),
-        endTime: formatDateForInput(endDate),
+        mcId: mc?.id || '',
       })
     }
   }, [eventResponse])
@@ -55,7 +55,7 @@ const EditEventPage = () => {
         description: formData.description,
         location: formData.location,
         startTime: new Date(formData.startTime).toISOString(),
-        endTime: new Date(formData.endTime).toISOString(),
+        mcId: formData.mcId || null,
         // Not sending groupId since we don't want to change it
       }).unwrap()
 
