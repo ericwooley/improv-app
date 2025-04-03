@@ -15,6 +15,8 @@ import {
   ListItemIcon,
   ListItemText,
   Link as MuiLink,
+  Tabs,
+  Tab,
 } from '@mui/material'
 import {
   Event as EventIcon,
@@ -25,8 +27,11 @@ import {
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
   Mic as MicIcon,
+  Info as InfoIcon,
+  Games as GamesIcon,
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
+import TabPanel, { a11yProps } from '../components/TabPanel'
 import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
 import { isAdminRole } from '../constants/roles'
 import { EventGamesManager } from '../components/events/EventGamesManager'
@@ -42,6 +47,7 @@ const EventDetailsPage = () => {
   const navigate = useNavigate()
   const [canManageEvent, setCanManageEvent] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [tabValue, setTabValue] = useState(0)
 
   // Get current user from Redux store
   const currentUser = useSelector((state: RootState) => state.auth.user)
@@ -106,6 +112,11 @@ const EventDetailsPage = () => {
     }
 
     handleMenuClose()
+  }
+
+  // Handle tab change
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
   }
 
   // Determine if current user is the MC
@@ -187,84 +198,103 @@ const EventDetailsPage = () => {
         )}
       </Box>
 
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Grid container spacing={3}>
-          <Grid size={8}>
-            <Typography variant="h6" gutterBottom>
-              Event Details
-            </Typography>
+      <Paper sx={{ mb: 4 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="Event tabs" variant="fullWidth">
+            <Tab label="Event Details" icon={<InfoIcon />} iconPosition="start" {...a11yProps(0, 'event')} />
+            <Tab
+              label="Games"
+              icon={<GamesIcon />}
+              iconPosition="start"
+              {...a11yProps(1, 'event')}
+              disabled={
+                !isMC &&
+                (!eventResponse?.data?.games ||
+                  !Array.isArray(eventResponse?.data?.games) ||
+                  eventResponse?.data?.games?.length === 0)
+              }
+            />
+          </Tabs>
+        </Box>
 
-            {event.Description && (
-              <Typography paragraph sx={{ mb: 3 }}>
-                {event.Description}
-              </Typography>
-            )}
+        <TabPanel value={tabValue} index={0} id="event">
+          <Box sx={{ p: 3 }}>
+            <Grid container spacing={3}>
+              <Grid size={8}>
+                {event.Description && (
+                  <Typography paragraph sx={{ mb: 3 }}>
+                    {event.Description}
+                  </Typography>
+                )}
 
-            <Box sx={{ mb: 3 }}>
-              <InfoItem icon={<LocationIcon />}>
-                <Typography>
-                  {event.Location ? (
-                    <MuiLink href={createGoogleMapsLink(event.Location)} target="_blank" rel="noopener noreferrer">
-                      {event.Location}
-                    </MuiLink>
-                  ) : (
-                    'No location specified'
+                <Box sx={{ mb: 3 }}>
+                  <InfoItem icon={<LocationIcon />}>
+                    <Typography>
+                      {event.Location ? (
+                        <MuiLink href={createGoogleMapsLink(event.Location)} target="_blank" rel="noopener noreferrer">
+                          {event.Location}
+                        </MuiLink>
+                      ) : (
+                        'No location specified'
+                      )}
+                    </Typography>
+                  </InfoItem>
+
+                  <InfoItem icon={<TimeIcon />}>
+                    <Typography>
+                      {formatDate(startDate)}, {formatTime(startDate)}
+                    </Typography>
+                  </InfoItem>
+
+                  {groupName && (
+                    <InfoItem icon={<PeopleIcon />}>
+                      <Typography>
+                        Organized by <Link to={`/groups/${event.GroupID}`}>{groupName}</Link>
+                      </Typography>
+                    </InfoItem>
                   )}
-                </Typography>
-              </InfoItem>
 
-              <InfoItem icon={<TimeIcon />}>
-                <Typography>
-                  {formatDate(startDate)}, {formatTime(startDate)}
-                </Typography>
-              </InfoItem>
+                  {mc && (
+                    <InfoItem icon={<MicIcon />}>
+                      <Typography>
+                        MC: {mc.firstName} {mc.lastName}
+                      </Typography>
+                    </InfoItem>
+                  )}
+                </Box>
+              </Grid>
 
-              {groupName && (
-                <InfoItem icon={<PeopleIcon />}>
-                  <Typography>
-                    Organized by <Link to={`/groups/${event.GroupID}`}>{groupName}</Link>
+              <Grid size={4}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Actions
                   </Typography>
-                </InfoItem>
-              )}
 
-              {mc && (
-                <InfoItem icon={<MicIcon />}>
-                  <Typography>
-                    MC: {mc.firstName} {mc.lastName}
-                  </Typography>
-                </InfoItem>
-              )}
-            </Box>
-          </Grid>
+                  <Button variant="contained" color="primary" fullWidth startIcon={<EventIcon />} sx={{ mb: 2 }}>
+                    RSVP to Event
+                  </Button>
 
-          <Grid size={4}>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Actions
-              </Typography>
+                  {canManageEvent && (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      fullWidth
+                      component={Link}
+                      to={`/events/${eventId}/edit`}
+                      startIcon={<EditIcon />}>
+                      Edit Event
+                    </Button>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+        </TabPanel>
 
-              <Button variant="contained" color="primary" fullWidth startIcon={<EventIcon />} sx={{ mb: 2 }}>
-                RSVP to Event
-              </Button>
-
-              {canManageEvent && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  fullWidth
-                  component={Link}
-                  to={`/events/${eventId}/edit`}
-                  startIcon={<EditIcon />}>
-                  Edit Event
-                </Button>
-              )}
-            </Box>
-          </Grid>
-        </Grid>
+        <TabPanel value={tabValue} index={1} id="event">
+          <EventGamesManager groupId={event.GroupID} isMC={isMC} />
+        </TabPanel>
       </Paper>
-
-      {/* Games Manager (only shown to the MC) */}
-      <EventGamesManager groupId={event.GroupID} isMC={isMC} />
     </Box>
   )
 }
