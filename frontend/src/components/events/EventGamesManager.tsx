@@ -14,7 +14,7 @@ import {
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward } from '@mui/icons-material'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { GamesList } from '../games/GamesList'
+import { GamesListWithFilters } from '../games/GamesListWithFilters'
 import GameCard from '../GameCard'
 import {
   useGetEventGamesQuery,
@@ -69,7 +69,6 @@ function a11yProps(index: number) {
 export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => {
   const { eventId } = useParams<{ eventId: string }>()
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
-  const [selectedTag, setSelectedTag] = useState<string>('All Tags')
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -106,11 +105,6 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
   // Handle game selection from the GamesList component
   const handleGameSelect = (gameId: string) => {
     setSelectedGameId(gameId)
-  }
-
-  // Handle tag selection clear
-  const handleClearFilter = () => {
-    setSelectedTag('All Tags')
   }
 
   // Add selected game to event
@@ -227,10 +221,8 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
   const renderLibraryGames = () => {
     return (
       <>
-        <Box sx={{ height: '400px', overflow: 'auto', border: '1px solid #eee', borderRadius: 1 }}>
-          <GamesList
-            selectedTag={selectedTag}
-            onClearFilter={handleClearFilter}
+        <Box sx={{ border: '1px solid #eee', borderRadius: 1 }}>
+          <GamesListWithFilters
             groupLibrary={groupId}
             onGameSelect={handleGameSelect}
             selectedGameId={selectedGameId}
@@ -270,23 +262,23 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
         <Box sx={{ width: '100%' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="event games tabs" variant="fullWidth">
-              <Tab label="Event Game Lineup" {...a11yProps(0)} />
-              <Tab label="Group Library Games" {...a11yProps(1)} />
+              <Tab label="Group Game Library" {...a11yProps(0)} />
+              <Tab label="Event Game Lineup" {...a11yProps(1)} />
             </Tabs>
           </Box>
 
           <TabPanel value={tabValue} index={0}>
             <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-              Event Game Lineup
+              Group Game Library
             </Typography>
-            {renderEventGamesList()}
+            {renderLibraryGames()}
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
             <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-              Group Library Games
+              Event Game Lineup
             </Typography>
-            {renderLibraryGames()}
+            {renderEventGamesList()}
           </TabPanel>
         </Box>
       </>
@@ -334,7 +326,6 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
               flex: 1,
               p: 2,
               borderRadius: 2,
-              bgcolor: 'background.default',
             }}>
             <Typography variant="subtitle1" gutterBottom fontWeight="bold">
               Event Game Lineup
