@@ -51,6 +51,7 @@ import {
   ExitToApp as ExitToAppIcon,
 } from '@mui/icons-material'
 import { useState, useEffect } from 'react'
+import { ROLE_ADMIN, ROLE_ORGANIZER } from '../constants/roles'
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>()
@@ -62,8 +63,8 @@ const GroupDetailsPage = () => {
 
   // Determine if user can manage invites based on role
   const userRole = groupResponse?.data?.userRole || ''
-  const isAdmin = userRole === 'admin'
-  const isOrganizer = userRole === 'organizer'
+  const isAdmin = userRole === ROLE_ADMIN
+  const isOrganizer = userRole === ROLE_ORGANIZER
   const canManageInvites = isAdmin || isOrganizer
 
   // Only fetch invite links if user has permission to manage them
@@ -184,42 +185,41 @@ const GroupDetailsPage = () => {
         }
       />
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        {isAdmin && (
-          <>
-            <MenuItem onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
-              <ListItemIcon>
-                <CalendarIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Create Event</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
-              <ListItemIcon>
-                <GamepadIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Create Game</ListItemText>
-            </MenuItem>
-
-            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
-              <ListItemIcon>
-                <EditIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Edit Group</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
-              <ListItemIcon>
-                <PeopleIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Manage Members</ListItemText>
-            </MenuItem>
-          </>
+        {isAdmin && [
+          <MenuItem key="create-event" onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
+            <ListItemIcon>
+              <CalendarIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Create Event</ListItemText>
+          </MenuItem>,
+          <MenuItem key="create-game" onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
+            <ListItemIcon>
+              <GamepadIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Create Game</ListItemText>
+          </MenuItem>,
+          <MenuItem key="edit-group" onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit Group</ListItemText>
+          </MenuItem>,
+          <MenuItem key="manage-members" onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
+            <ListItemIcon>
+              <PeopleIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Manage Members</ListItemText>
+          </MenuItem>,
+        ]}
+        {/* Leave Group option (available to non-admin members) */}
+        {!isAdmin && (
+          <MenuItem onClick={handleLeaveGroupClick}>
+            <ListItemIcon>
+              <ExitToAppIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Leave Group</ListItemText>
+          </MenuItem>
         )}
-        {/* Leave Group option (available to all members) */}
-        <MenuItem onClick={handleLeaveGroupClick}>
-          <ListItemIcon>
-            <ExitToAppIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Leave Group</ListItemText>
-        </MenuItem>
       </Menu>
 
       {/* Leave Group Confirmation Dialog */}
@@ -232,7 +232,7 @@ const GroupDetailsPage = () => {
         <DialogContent>
           <DialogContentText id="leave-group-dialog-description">
             Are you sure you want to leave {group.Name}? This action cannot be undone.
-            {isAdmin && members.filter((m) => m.role === 'admin').length <= 1 && (
+            {isAdmin && members.filter((m) => m.role === ROLE_ADMIN).length <= 1 && (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 You are the last admin of this group. Leaving will mean no one can manage the group!
               </Alert>

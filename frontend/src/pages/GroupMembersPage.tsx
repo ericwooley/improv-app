@@ -41,11 +41,12 @@ import {
   useRemoveMemberMutation,
   GroupMember,
 } from '../store/api/groupsApi'
+import { ROLE_ADMIN, ROLE_MEMBER, ROLE_ORGANIZER } from '../constants/roles'
 
 const roleOptions = [
-  { value: 'member', label: 'Member' },
-  { value: 'organizer', label: 'Organizer' },
-  { value: 'admin', label: 'Admin' },
+  { value: ROLE_MEMBER, label: 'Member' },
+  { value: ROLE_ORGANIZER, label: 'Organizer' },
+  { value: ROLE_ADMIN, label: 'Admin' },
 ]
 
 const GroupMembersPage = () => {
@@ -64,7 +65,7 @@ const GroupMembersPage = () => {
   const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState<null | HTMLElement>(null)
 
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('member')
+  const [role, setRole] = useState(ROLE_MEMBER)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState<'success' | 'error' | 'info'>('success')
   const [showAlert, setShowAlert] = useState(false)
@@ -88,7 +89,7 @@ const GroupMembersPage = () => {
 
   const handleOpenAddDialog = () => {
     setEmail('')
-    setRole('member')
+    setRole(ROLE_MEMBER)
     setOpenInviteDialog(true)
     handleActionMenuClose()
   }
@@ -226,7 +227,7 @@ const GroupMembersPage = () => {
 
   const { group, userRole } = groupData.data
   const members = membersData?.data || []
-  const isAdmin = userRole === 'admin'
+  const isAdmin = userRole === ROLE_ADMIN
 
   return (
     <Box sx={{ p: 3 }}>
@@ -289,7 +290,9 @@ const GroupMembersPage = () => {
                     <TableCell>
                       <Chip
                         label={member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                        color={member.role === 'admin' ? 'error' : member.role === 'organizer' ? 'warning' : 'info'}
+                        color={
+                          member.role === ROLE_ADMIN ? 'error' : member.role === ROLE_ORGANIZER ? 'warning' : 'info'
+                        }
                         size="small"
                       />
                     </TableCell>

@@ -10,6 +10,8 @@ import (
 	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
+	"improv-app/internal/auth"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -86,8 +88,8 @@ func (h *GroupHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// Add creator as admin
 	_, err = h.db.Exec(`
 	INSERT INTO group_members (group_id, user_id, role)
-	VALUES ($1, $2, 'admin')
-`, groupID, user.ID)
+	VALUES ($1, $2, $3)
+`, groupID, user.ID, auth.RoleAdmin)
 	if err != nil {
 		fmt.Printf("Error adding group member: %v\n", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error adding group member")
@@ -256,7 +258,7 @@ func (h *GroupHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if role != "admin" {
+	if role != auth.RoleAdmin {
 		fmt.Printf("User not admin (role=%s)\n", role)
 		RespondWithError(w, http.StatusForbidden, "Only admins can update the group")
 		return
@@ -356,6 +358,12 @@ func (h *GroupHandler) GetLibraryGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
+		fmt.Printf("User not admin or organizer (role=%s)\n", role)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can add games to the library")
+		return
+	}
+
 	// Fetch games from the group's library
 	rows, err := h.db.Query(`
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.public, g.created_at, g.created_by,
@@ -421,6 +429,12 @@ func (h *GroupHandler) GetOwnedGames(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Printf("Not a member of group: %v\n", err)
 		RespondWithError(w, http.StatusForbidden, "Not a member of this group")
+		return
+	}
+
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
+		fmt.Printf("User not admin or organizer (role=%s)\n", role)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can remove games from the library")
 		return
 	}
 
@@ -490,9 +504,9 @@ func (h *GroupHandler) AddGameToLibrary(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if role != "admin" && role != "organizer" {
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
 		fmt.Printf("User not admin or organizer (role=%s)\n", role)
-		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can manage the group library")
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can add games to the library")
 		return
 	}
 
@@ -570,9 +584,9 @@ func (h *GroupHandler) RemoveGameFromLibrary(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if role != "admin" && role != "organizer" {
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
 		fmt.Printf("User not admin or organizer (role=%s)\n", role)
-		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can manage the group library")
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can remove games from the library")
 		return
 	}
 
@@ -693,7 +707,7 @@ func (h *GroupHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if role != "admin" {
+	if role != auth.RoleAdmin {
 		fmt.Printf("User not admin (role=%s)\n", role)
 		RespondWithError(w, http.StatusForbidden, "Only admins can update member roles")
 		return
@@ -741,15 +755,15 @@ func (h *GroupHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Prevent removing the last admin
-	if roleRequest.Role != "admin" {
+	if roleRequest.Role != auth.RoleAdmin {
 		var adminCount int
 		err = h.db.QueryRow(`
 			SELECT COUNT(*)
 			FROM group_members
-			WHERE group_id = $1 AND role = 'admin'
-		`, groupID).Scan(&adminCount)
+			WHERE group_id = $1 AND role = $2
+		`, groupID, auth.RoleAdmin).Scan(&adminCount)
 		if err != nil {
-			fmt.Printf("Error checking admin count: %v\n", err)
+			fmt.Printf("Error counting admins: %v\n", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error checking admin count")
 			return
 		}
@@ -766,7 +780,7 @@ func (h *GroupHandler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		if adminCount == 1 && currentRole == "admin" {
+		if adminCount == 1 && currentRole == auth.RoleAdmin {
 			fmt.Printf("Cannot remove last admin from group %s\n", groupID)
 			RespondWithError(w, http.StatusBadRequest, "Cannot remove the last admin")
 			return
@@ -833,7 +847,7 @@ func (h *GroupHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Allow users to remove themselves, otherwise require admin privileges
-	if targetUserID != user.ID && role != "admin" {
+	if targetUserID != user.ID && role != auth.RoleAdmin {
 		fmt.Printf("User %s with role %s attempted to remove user %s\n", user.ID, role, targetUserID)
 		RespondWithError(w, http.StatusForbidden, "Only admins can remove other members")
 		return
@@ -873,15 +887,15 @@ func (h *GroupHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if targetRole == "admin" {
+	if targetRole == auth.RoleAdmin {
 		var adminCount int
 		err = h.db.QueryRow(`
 			SELECT COUNT(*)
 			FROM group_members
-			WHERE group_id = $1 AND role = 'admin'
-		`, groupID).Scan(&adminCount)
+			WHERE group_id = $1 AND role = $2
+		`, groupID, auth.RoleAdmin).Scan(&adminCount)
 		if err != nil {
-			fmt.Printf("Error checking admin count: %v\n", err)
+			fmt.Printf("Error counting admins: %v\n", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error checking admin count")
 			return
 		}
@@ -941,7 +955,7 @@ func (h *GroupHandler) CreateInviteLink(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if role != "admin" && role != "organizer" {
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
 		fmt.Printf("User not admin or organizer (role=%s)\n", role)
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can create invite links")
 		return
@@ -1029,7 +1043,7 @@ func (h *GroupHandler) ListInviteLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if role != "admin" && role != "organizer" {
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
 		fmt.Printf("User not admin or organizer (role=%s)\n", role)
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can view invite links")
 		return
@@ -1091,7 +1105,7 @@ func (h *GroupHandler) UpdateInviteLinkStatus(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if role != "admin" && role != "organizer" {
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
 		fmt.Printf("User not admin or organizer (role=%s)\n", role)
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can update invite links")
 		return

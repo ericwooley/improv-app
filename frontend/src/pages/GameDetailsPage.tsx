@@ -34,6 +34,7 @@ import InfoIcon from '@mui/icons-material/Info'
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
 import EditIcon from '@mui/icons-material/Edit'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import { isAdminRole } from '../constants/roles'
 
 // Define tab values for URL sync
 enum TabValue {
@@ -85,7 +86,7 @@ const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
             },
           })
           const details = await response.json()
-          if (details.data?.userRole === 'admin' || details.data?.userRole === 'organizer') {
+          if (details.data?.userRole && isAdminRole(details.data.userRole)) {
             return { ...group, userRole: details.data.userRole }
           }
           return null
@@ -275,7 +276,7 @@ const LibrariesTab = ({ gameId }: { gameId: string }) => {
               },
             })
             const details = await response.json()
-            return details.data?.userRole === 'admin' || details.data?.userRole === 'organizer'
+            return details.data?.userRole && isAdminRole(details.data.userRole)
           } catch (error) {
             console.error('Error checking group access:', error)
             return false
@@ -321,7 +322,7 @@ const GameDetailsPage = () => {
           })
           const groupData = await response.json()
           const userRole = groupData.data?.userRole
-          setCanEdit(userRole === 'admin' || userRole === 'organizer')
+          setCanEdit(isAdminRole(userRole))
         } catch (error) {
           console.error('Error checking group access:', error)
           setCanEdit(false)

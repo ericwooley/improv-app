@@ -11,6 +11,7 @@ import {
   Paper,
   Chip,
 } from '@mui/material'
+import { ROLE_ADMIN } from '../../constants/roles'
 
 interface Member {
   id: string
@@ -43,7 +44,7 @@ const GroupMembersTab: React.FC<GroupMembersTabProps> = ({ members }) => {
                   <TableCell>{`${member.firstName} ${member.lastName}`}</TableCell>
                   <TableCell>{member.email}</TableCell>
                   <TableCell>
-                    <Chip label={member.role} color={member.role === 'admin' ? 'error' : 'info'} size="small" />
+                    <Chip label={member.role} color={member.role === ROLE_ADMIN ? 'error' : 'info'} size="small" />
                   </TableCell>
                 </TableRow>
               ))}

@@ -11,6 +11,8 @@ import (
 	"improv-app/internal/models"
 	"improv-app/internal/services"
 
+	"improv-app/internal/auth"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
@@ -44,7 +46,7 @@ func (h *InvitationHandler) InviteMember(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if role != "admin" && role != "organizer" {
+	if role != auth.RoleAdmin && role != auth.RoleOrganizer {
 		fmt.Printf("User not admin or organizer (role=%s)\n", role)
 		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can invite members")
 		return

@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
+import { isAdminRole } from '../constants/roles'
 
 // Helper function to create Google Maps link
 const createGoogleMapsLink = (location: string) => {
@@ -57,7 +58,7 @@ const EventDetailsPage = () => {
           })
           const groupData = await response.json()
           const userRole = groupData.data?.userRole
-          setCanManageEvent(userRole === 'admin' || userRole === 'organizer')
+          setCanManageEvent(isAdminRole(userRole))
         } catch (error) {
           console.error('Error checking group permissions:', error)
           setCanManageEvent(false)

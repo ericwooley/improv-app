@@ -4,6 +4,7 @@ import { Bookmarks as LibraryIcon, Inventory as OwnedIcon, Add as AddIcon } from
 import { Game } from '..'
 import { GamesListWithFilters } from '../games/GamesListWithFilters'
 import { useSearchParams } from 'react-router-dom'
+import { isAdminRole } from '../../constants/roles'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -46,7 +47,7 @@ const GroupGamesTab: React.FC<GroupGamesTabProps> = ({ userRole, groupId }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialTab = searchParams.get('tab-group-games') ? parseInt(searchParams.get('tab-group-games') || '0') : 0
   const [gamesTabValue, setGamesTabValue] = useState(initialTab)
-  const isAdminOrOrganizer = userRole === 'admin' || userRole === 'organizer'
+  const isAdminOrOrganizer = isAdminRole(userRole)
 
   useEffect(() => {
     searchParams.set('tab-group-games', gamesTabValue.toString())

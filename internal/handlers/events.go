@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"improv-app/internal/auth"
 	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
@@ -361,8 +362,8 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 		SELECT role FROM group_members
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
-	if err != nil || (role != "admin" && role != "organizer") {
-		RespondWithError(w, http.StatusForbidden, "You do not have permission to update this event")
+	if err != nil || (role != auth.RoleAdmin && role != auth.RoleOrganizer) {
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can update events")
 		return
 	}
 

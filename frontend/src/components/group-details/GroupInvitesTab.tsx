@@ -25,6 +25,8 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { ContentCopy as CopyIcon, Add as AddIcon } from '@mui/icons-material'
 import dayjs, { Dayjs } from 'dayjs'
+import { isAdminRole } from '../../constants/roles'
+
 type InviteLink = {
   id: string
   description: string
@@ -54,7 +56,7 @@ const GroupInvitesTab = ({
   const [expiresAt, setExpiresAt] = useState<Dayjs>(dayjs().add(7, 'day'))
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
 
-  const isAdminOrOrganizer = userRole === 'admin' || userRole === 'organizer'
+  const isAdminOrOrganizer = isAdminRole(userRole)
 
   const handleCreateDialogOpen = () => {
     setOpenCreateDialog(true)

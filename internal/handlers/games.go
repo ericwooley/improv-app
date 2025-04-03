@@ -11,6 +11,8 @@ import (
 	"improv-app/internal/middleware"
 	"improv-app/internal/models"
 
+	"improv-app/internal/auth"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -609,7 +611,7 @@ func (h *GameHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WHERE group_id = $1 AND user_id = $2
 	`, groupID, user.ID).Scan(&role)
 
-	hasPermission := (err == nil && (role == "admin" || role == "owner")) || createdBy == user.ID
+	hasPermission := (err == nil && (role == auth.RoleAdmin || role == auth.RoleOwner)) || createdBy == user.ID
 	if !hasPermission {
 		RespondWithError(w, http.StatusForbidden, "You don't have permission to update this game")
 		return
