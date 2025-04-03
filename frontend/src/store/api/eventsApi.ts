@@ -25,7 +25,15 @@ export interface EventDetailsResponse {
   }
   groupName: string
   rsvps: unknown
-  games: unknown
+  games: Array<{
+    id: string
+    name: string
+    description: string
+    minPlayers: number
+    maxPlayers: number
+    orderIndex: number
+    tags: string[]
+  }>
   mc?: {
     id: string
     firstName: string
@@ -107,6 +115,7 @@ export const eventsApi = apiSlice.injectEndpoints({
             minPlayers: number
             maxPlayers: number
             orderIndex: number
+            tags: string[]
           }>
         }
       },

@@ -188,6 +188,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
         {eventGames.map((game, index) => (
           <Grid size={12} key={game.id}>
             <Box sx={{ position: 'relative' }}>
+
               <GameCard game={game} showViewButton={true} />
               {isMC && (
                 <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>

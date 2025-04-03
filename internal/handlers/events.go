@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"improv-app/internal/auth"
@@ -324,10 +325,14 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Get assigned games
 	gameRows, err := h.db.Query(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, eg.order_index
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, eg.order_index,
+		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM event_games eg
 		JOIN games g ON eg.game_id = g.id
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
 		WHERE eg.event_id = $1
+		GROUP BY g.id
 		ORDER BY eg.order_index
 	`, eventID)
 	if err != nil {
@@ -338,26 +343,36 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 	defer gameRows.Close()
 
 	type GameWithOrder struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		MinPlayers  int    `json:"minPlayers"`
-		MaxPlayers  int    `json:"maxPlayers"`
-		OrderIndex  int    `json:"orderIndex"`
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		MinPlayers  int      `json:"minPlayers"`
+		MaxPlayers  int      `json:"maxPlayers"`
+		OrderIndex  int      `json:"orderIndex"`
+		Tags        []string `json:"tags"`
 	}
 
 	var games []GameWithOrder
 	for gameRows.Next() {
 		var game GameWithOrder
+		var tagsStr sql.NullString
 		err := gameRows.Scan(
 			&game.ID, &game.Name, &game.Description,
-			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex,
+			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex, &tagsStr,
 		)
 		if err != nil {
 			log.Printf("Error scanning game row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
 			return
 		}
+
+		// Parse tags from comma-separated string
+		if tagsStr.Valid {
+			game.Tags = strings.Split(tagsStr.String, ",")
+		} else {
+			game.Tags = []string{}
+		}
+
 		games = append(games, game)
 	}
 
@@ -584,12 +599,16 @@ func (h *EventHandler) GetEventGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get assigned games
+	// Get assigned games with tags
 	gameRows, err := h.db.Query(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, eg.order_index
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, eg.order_index,
+		       GROUP_CONCAT(DISTINCT t.name) as tags
 		FROM event_games eg
 		JOIN games g ON eg.game_id = g.id
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
 		WHERE eg.event_id = $1
+		GROUP BY g.id
 		ORDER BY eg.order_index
 	`, eventID)
 	if err != nil {
@@ -600,26 +619,36 @@ func (h *EventHandler) GetEventGames(w http.ResponseWriter, r *http.Request) {
 	defer gameRows.Close()
 
 	type GameWithOrder struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		MinPlayers  int    `json:"minPlayers"`
-		MaxPlayers  int    `json:"maxPlayers"`
-		OrderIndex  int    `json:"orderIndex"`
+		ID          string   `json:"id"`
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		MinPlayers  int      `json:"minPlayers"`
+		MaxPlayers  int      `json:"maxPlayers"`
+		OrderIndex  int      `json:"orderIndex"`
+		Tags        []string `json:"tags"`
 	}
 
 	var games []GameWithOrder
 	for gameRows.Next() {
 		var game GameWithOrder
+		var tagsStr sql.NullString
 		err := gameRows.Scan(
 			&game.ID, &game.Name, &game.Description,
-			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex,
+			&game.MinPlayers, &game.MaxPlayers, &game.OrderIndex, &tagsStr,
 		)
 		if err != nil {
 			log.Printf("Error scanning game row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
 			return
 		}
+
+		// Parse tags from comma-separated string
+		if tagsStr.Valid {
+			game.Tags = strings.Split(tagsStr.String, ",")
+		} else {
+			game.Tags = []string{}
+		}
+
 		games = append(games, game)
 	}
 
