@@ -122,13 +122,43 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
     }
   }
 
-  // If user is not MC, don't show this component
+  // Display a read-only list of games for non-MC users
   if (!isMC) {
-    return null
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Event Games
+        </Typography>
+
+        <Box sx={{ mt: 2 }}>
+          {isLoadingGames ? (
+            <Typography>Loading games...</Typography>
+          ) : eventGames.length === 0 ? (
+            <Alert severity="info">No games added to this event yet.</Alert>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                These games will be played during the event in the order shown below.
+              </Typography>
+              <List>
+                {eventGames.map((game: Game, index: number) => (
+                  <Box key={game.id}>
+                    {index > 0 && <Divider />}
+                    <ListItem>
+                      <ListItemText primary={game.name} secondary={`${game.minPlayers}-${game.maxPlayers} players`} />
+                    </ListItem>
+                  </Box>
+                ))}
+              </List>
+            </>
+          )}
+        </Box>
+      </Paper>
+    )
   }
 
   return (
-    <Paper sx={{ p: 3, mt: 4 }}>
+    <Paper sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
         Event Games Manager
       </Typography>
