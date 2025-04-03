@@ -2,6 +2,7 @@ import { Box, CircularProgress, Grid, Typography } from '@mui/material'
 import { useGetGamesQuery } from '../../store/api/gamesApi'
 import { EmptyState, GameCard } from '../../components'
 import { ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 
 interface GamesListProps {
   selectedTag: string
@@ -98,21 +99,35 @@ export const GamesList = ({
 
   return (
     <Grid container spacing={3}>
-      {games.map((game) => (
-        <Grid
-          size={{
-            xs: 12,
-          }}
-          key={game.id}>
-          <GameCard
-            game={game}
-            showViewButton={showViewButton}
-            onClick={onGameSelect ? () => onGameSelect(game.id) : undefined}
-            isSelected={onGameSelect ? selectedGameId === game.id : undefined}
-            onAddGame={onAddGame ? () => onAddGame(game.id) : undefined}
-          />
-        </Grid>
-      ))}
+      <AnimatePresence mode="popLayout">
+        {games.map((game, index) => (
+          <Grid
+            size={{
+              xs: 12,
+            }}
+            component={motion.div}
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{
+              duration: 0.3,
+              delay: index * 0.05, // Stagger effect based on index
+              type: 'spring',
+              damping: 20,
+              stiffness: 300,
+            }}
+            key={game.id}>
+            <GameCard
+              game={game}
+              showViewButton={showViewButton}
+              onClick={onGameSelect ? () => onGameSelect(game.id) : undefined}
+              isSelected={onGameSelect ? selectedGameId === game.id : undefined}
+              onAddGame={onAddGame ? () => onAddGame(game.id) : undefined}
+            />
+          </Grid>
+        ))}
+      </AnimatePresence>
     </Grid>
   )
 }

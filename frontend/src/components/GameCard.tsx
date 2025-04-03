@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardActions, Button, Typography, Box, Di
 import { Link } from 'react-router-dom'
 import InfoItem from './InfoItem'
 import TagList from './TagList'
+import { motion } from 'framer-motion'
 import {
   People as PeopleIcon,
   Public as PublicIcon,
@@ -19,6 +20,7 @@ export interface Game {
   public?: boolean
   tags?: string[]
   ownedByGroup?: boolean
+  animationDirection?: 'up' | 'down' | null
 }
 
 interface GameCardProps {
@@ -29,9 +31,12 @@ interface GameCardProps {
   onAddGame?: () => void
 }
 
+// Create a motion component using MUI Card
+const MotionCard = motion(Card)
+
 const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
   return (
-    <Card
+    <MotionCard
       variant="outlined"
       sx={{
         display: 'flex',
@@ -48,7 +53,16 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
           : {},
         position: 'relative',
       }}
-      onClick={onClick}>
+      onClick={onClick}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      layout
+      transition={{
+        type: 'spring',
+        stiffness: 300,
+        damping: 30,
+      }}>
       {onAddGame && (
         <IconButton
           size="small"
@@ -136,7 +150,7 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
           </CardActions>
         </Box>
       )}
-    </Card>
+    </MotionCard>
   )
 }
 

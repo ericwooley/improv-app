@@ -16,6 +16,7 @@ import { Add as AddIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward } from
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { GamesListWithFilters } from '../games/GamesListWithFilters'
 import GameCard from '../GameCard'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   useGetEventGamesQuery,
   useAddEventGameMutation,
@@ -30,6 +31,7 @@ interface Game {
   minPlayers: number
   maxPlayers: number
   orderIndex: number
+  animationDirection?: 'up' | 'down' | null
 }
 
 interface EventGamesManagerProps {
@@ -139,6 +141,11 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
     if (index === 0 || !eventId) return
 
     try {
+      // Set a temporary direction attribute for animation
+      const updatedGames = [...eventGames]
+      updatedGames[index] = { ...updatedGames[index], animationDirection: 'up' as const }
+      updatedGames[index - 1] = { ...updatedGames[index - 1], animationDirection: 'down' as const }
+
       await updateGameOrder({
         eventId,
         gameId: game.id,
@@ -155,6 +162,11 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
     if (index === eventGames.length - 1 || !eventId) return
 
     try {
+      // Set a temporary direction attribute for animation
+      const updatedGames = [...eventGames]
+      updatedGames[index] = { ...updatedGames[index], animationDirection: 'down' as const }
+      updatedGames[index + 1] = { ...updatedGames[index + 1], animationDirection: 'up' as const }
+
       await updateGameOrder({
         eventId,
         gameId: game.id,
@@ -178,37 +190,58 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
 
     return (
       <Grid container spacing={2}>
-        {eventGames.map((game, index) => (
-          <Grid size={12} key={game.id}>
-            <Box sx={{ position: 'relative' }}>
-              <GameCard game={game} showViewButton={true} />
-              {isMC && (
-                <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
-                  <IconButton
-                    size="small"
-                    disabled={index === 0}
-                    onClick={() => handleMoveUp(game, index)}
-                    sx={{ bgcolor: 'background.paper' }}>
-                    <ArrowUpward fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    disabled={index === eventGames.length - 1}
-                    onClick={() => handleMoveDown(game, index)}
-                    sx={{ bgcolor: 'background.paper' }}>
-                    <ArrowDownward fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleRemoveGame(game.id)}
-                    sx={{ bgcolor: 'background.paper' }}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+        <AnimatePresence mode="popLayout">
+          {eventGames.map((game, index) => {
+            // Determine animation values based on direction
+            const yInitial = game.animationDirection === 'up' ? 20 : game.animationDirection === 'down' ? -20 : 20
+            const yExit = game.animationDirection === 'up' ? -20 : game.animationDirection === 'down' ? 20 : -20
+
+            return (
+              <Grid
+                size={12}
+                key={game.id}
+                component={motion.div}
+                layout
+                initial={{ opacity: 0, y: yInitial }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: yExit }}
+                transition={{
+                  type: 'spring',
+                  damping: 20,
+                  stiffness: 300,
+                  delay: game.animationDirection ? 0 : index * 0.05, // Add staggered delay only for initial load
+                }}>
+                <Box sx={{ position: 'relative' }}>
+                  <GameCard game={game} showViewButton={true} />
+                  {isMC && (
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        disabled={index === 0}
+                        onClick={() => handleMoveUp(game, index)}
+                        sx={{ bgcolor: 'background.paper' }}>
+                        <ArrowUpward fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        disabled={index === eventGames.length - 1}
+                        onClick={() => handleMoveDown(game, index)}
+                        sx={{ bgcolor: 'background.paper' }}>
+                        <ArrowDownward fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveGame(game.id)}
+                        sx={{ bgcolor: 'background.paper' }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
                 </Box>
-              )}
-            </Box>
-          </Grid>
-        ))}
+              </Grid>
+            )
+          })}
+        </AnimatePresence>
       </Grid>
     )
   }
