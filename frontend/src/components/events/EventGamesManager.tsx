@@ -176,13 +176,19 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
             As the MC for this event, you can manage which games will be played and their order.
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+          <Box sx={{ display: 'flex', gap: 4, mt: 3 }}>
             {/* Left side: Available games */}
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" gutterBottom>
+            <Paper
+              elevation={2}
+              sx={{
+                flex: 1,
+                p: 2,
+                borderRadius: 2,
+              }}>
+              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
                 Group Library Games
               </Typography>
-              <Box sx={{ height: '400px', overflow: 'auto', border: '1px solid #eee' }}>
+              <Box sx={{ height: '400px', overflow: 'auto', border: '1px solid #eee', borderRadius: 1 }}>
                 <GamesList
                   selectedTag={selectedTag}
                   onClearFilter={handleClearFilter}
@@ -199,15 +205,22 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
                 sx={{ mt: 2 }}>
                 Add Selected Game
               </Button>
-            </Box>
+            </Paper>
 
             {/* Right side: Games list */}
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" gutterBottom>
+            <Paper
+              elevation={2}
+              sx={{
+                flex: 1,
+                p: 2,
+                borderRadius: 2,
+                bgcolor: 'background.default',
+              }}>
+              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
                 Event Game Lineup
               </Typography>
               {renderEventGamesList()}
-            </Box>
+            </Paper>
           </Box>
         </>
       ) : (

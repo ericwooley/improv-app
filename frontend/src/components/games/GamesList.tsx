@@ -9,6 +9,7 @@ interface GamesListProps {
   groupOwner?: string
   onGameSelect?: (gameId: string) => void
   selectedGameId?: string | null
+  showViewButton?: boolean
 }
 
 export const GamesList = ({
@@ -16,6 +17,7 @@ export const GamesList = ({
   onClearFilter,
   groupLibrary,
   groupOwner,
+  showViewButton,
   onGameSelect,
   selectedGameId,
 }: GamesListProps) => {
@@ -89,6 +91,7 @@ export const GamesList = ({
           key={game.id}>
           <GameCard
             game={game}
+            showViewButton={showViewButton}
             onClick={onGameSelect ? () => onGameSelect(game.id) : undefined}
             isSelected={onGameSelect ? selectedGameId === game.id : undefined}
           />
