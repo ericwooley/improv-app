@@ -13,7 +13,7 @@ import {
   useTheme,
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, ArrowUpward, ArrowDownward } from '@mui/icons-material'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { GamesListWithFilters } from '../games/GamesListWithFilters'
 import GameCard from '../GameCard'
 import {
@@ -188,7 +188,6 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
         {eventGames.map((game, index) => (
           <Grid size={12} key={game.id}>
             <Box sx={{ position: 'relative' }}>
-
               <GameCard game={game} showViewButton={true} />
               {isMC && (
                 <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
@@ -223,6 +222,25 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
 
   // Render the group library games
   const renderLibraryGames = () => {
+    const emptyLibraryMessage = (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" gutterBottom>
+          No remaining games in your library
+        </Typography>
+        <Typography variant="body1" paragraph>
+          You've already added all games from your library to this event or your library is empty.
+        </Typography>
+        <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+          <Button variant="contained" component={Link} to={`/games/new?groupId=${groupId}`} startIcon={<AddIcon />}>
+            Create a New Game
+          </Button>
+          <Button variant="outlined" component={Link} to="/games">
+            Browse Public Games
+          </Button>
+        </Box>
+      </Box>
+    )
+
     return (
       <>
         <Box sx={{ border: '1px solid #eee', borderRadius: 1 }}>
@@ -231,6 +249,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
             onGameSelect={handleGameSelect}
             selectedGameId={selectedGameId}
             excludeIds={eventGameIds}
+            customEmptyState={emptyLibraryMessage}
           />
         </Box>
         <Button

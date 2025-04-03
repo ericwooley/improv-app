@@ -1,6 +1,7 @@
 import { Box, CircularProgress, Grid, Typography } from '@mui/material'
 import { useGetGamesQuery } from '../../store/api/gamesApi'
 import { EmptyState, GameCard } from '../../components'
+import { ReactNode } from 'react'
 
 interface GamesListProps {
   selectedTag: string
@@ -11,6 +12,7 @@ interface GamesListProps {
   selectedGameId?: string | null
   showViewButton?: boolean
   excludeIds?: string[]
+  customEmptyState?: ReactNode
 }
 
 export const GamesList = ({
@@ -22,6 +24,7 @@ export const GamesList = ({
   onGameSelect,
   selectedGameId,
   excludeIds = [],
+  customEmptyState,
 }: GamesListProps) => {
   const queryParams: { tag?: string; library?: string; ownedByGroup?: string } = {}
 
@@ -64,6 +67,10 @@ export const GamesList = ({
   }
 
   if (games.length === 0) {
+    if (customEmptyState) {
+      return <>{customEmptyState}</>
+    }
+
     let message = 'No games have been added yet.'
 
     if (selectedTag !== 'All Tags') {

@@ -3,6 +3,7 @@ import { GameFilters } from './GameFilters'
 import { GamesList } from './GamesList'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { ReactNode } from 'react'
 
 interface GamesListWithFiltersProps {
   groupLibrary?: string
@@ -10,6 +11,7 @@ interface GamesListWithFiltersProps {
   onGameSelect?: (gameId: string) => void
   selectedGameId?: string | null
   excludeIds?: string[]
+  customEmptyState?: ReactNode
 }
 
 export const GamesListWithFilters = ({
@@ -18,6 +20,7 @@ export const GamesListWithFilters = ({
   onGameSelect,
   selectedGameId,
   excludeIds,
+  customEmptyState,
 }: GamesListWithFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedTag, setSelectedTag] = useState<string>(searchParams.get('tag') || 'All Tags')
@@ -62,6 +65,7 @@ export const GamesListWithFilters = ({
         onGameSelect={onGameSelect}
         selectedGameId={selectedGameId}
         excludeIds={excludeIds}
+        customEmptyState={customEmptyState}
       />
     </Box>
   )

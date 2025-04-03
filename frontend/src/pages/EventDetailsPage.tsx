@@ -210,17 +210,7 @@ const EventDetailsPage = () => {
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="Event tabs" variant="fullWidth">
           <Tab label="Event Details" icon={<InfoIcon />} iconPosition="start" {...a11yProps(0, 'event')} />
-          <Tab
-            label="Games"
-            icon={<GamesIcon />}
-            iconPosition="start"
-            {...a11yProps(1, 'event')}
-            disabled={
-              !eventResponse?.data?.games ||
-              !Array.isArray(eventResponse?.data?.games) ||
-              eventResponse?.data?.games?.length === 0
-            }
-          />
+          <Tab label="Games" icon={<GamesIcon />} iconPosition="start" {...a11yProps(1, 'event')} />
         </Tabs>
       </Box>
 
