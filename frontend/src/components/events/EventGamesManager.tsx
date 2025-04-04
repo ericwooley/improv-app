@@ -218,7 +218,6 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
                   <GameCard game={game} showViewButton={true} />
                   {isMC && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
-                      ({game.orderIndex})
                       <IconButton
                         size="small"
                         disabled={index === 0}

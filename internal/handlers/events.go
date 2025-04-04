@@ -840,12 +840,18 @@ func (h *EventHandler) RemoveGameFromEvent(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// LogSQL is a helper function to log SQL queries with their parameters
+func LogSQL(query string, args ...interface{}) {
+	log.Printf("SQL: %s %+v", query, args)
+}
+
 // UpdateGameOrder updates a game's order in an event
 func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 	gameID := vars["gameId"]
+	log.Printf("Updating game order for event %s and game %s", eventID, gameID)
 
 	// Parse request body
 	var request struct {
@@ -857,9 +863,6 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		RespondWithError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
-
-	log.Printf("Received order update request for game %s in event %s, target index: %d",
-		gameID, eventID, request.OrderIndex)
 
 	// Verify the event exists and get MC ID
 	var mcID sql.NullString
@@ -914,7 +917,7 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the target index is adjacent to the current index
+	// Validate the target index is within bounds
 	if request.OrderIndex < 0 || request.OrderIndex >= gameCount {
 		log.Printf("Index out of bounds: %d (must be between 0 and %d)", request.OrderIndex, gameCount-1)
 		RespondWithError(w, http.StatusBadRequest, "Invalid order index")
@@ -931,147 +934,65 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simple implementation - find the game at the target position and swap positions
-	// First, find the other game that needs to move
+	// Find the game at the target position
 	var otherGameID string
 	err = h.db.QueryRow(`
 		SELECT game_id FROM event_games
 		WHERE event_id = $1 AND order_index = $2
 	`, eventID, request.OrderIndex).Scan(&otherGameID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			log.Printf("No game found at target position %d, will perform a shift operation instead", request.OrderIndex)
-			// Instead of swapping, we'll reorder all games
-			tx, err := h.db.Begin()
-			if err != nil {
-				log.Printf("Error starting transaction: %v", err)
-				RespondWithError(w, http.StatusInternalServerError, "Database error")
-				return
-			}
-			defer tx.Rollback()
-
-			// First, temporarily move our target game out of the way (to a negative index)
-			_, err = tx.Exec(`
-				UPDATE event_games
-				SET order_index = -1
-				WHERE event_id = $1 AND game_id = $2
-			`, eventID, gameID)
-			if err != nil {
-				log.Printf("Error updating game to temporary index: %v", err)
-				RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
-				return
-			}
-
-			// Then reorder all games to ensure they have sequential indices
-			_, err = tx.Exec(`
-				WITH ranked_games AS (
-					SELECT game_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 as new_index
-					FROM event_games
-					WHERE event_id = $1 AND game_id != $2
-				)
-				UPDATE event_games
-				SET order_index =
-					CASE
-						WHEN ranked_games.new_index >= $3 THEN ranked_games.new_index + 1
-						ELSE ranked_games.new_index
-					END
-				FROM ranked_games
-				WHERE event_games.event_id = $1 AND event_games.game_id = ranked_games.game_id
-			`, eventID, gameID, request.OrderIndex)
-			if err != nil {
-				log.Printf("Error reordering games: %v", err)
-				RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
-				return
-			}
-
-			// Finally, put our target game at the requested position
-			_, err = tx.Exec(`
-				UPDATE event_games
-				SET order_index = $3
-				WHERE event_id = $1 AND game_id = $2
-			`, eventID, gameID, request.OrderIndex)
-			if err != nil {
-				log.Printf("Error moving game to target position: %v", err)
-				RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
-				return
-			}
-
-			// Commit transaction
-			err = tx.Commit()
-			if err != nil {
-				log.Printf("Error committing transaction: %v", err)
-				RespondWithError(w, http.StatusInternalServerError, "Database error")
-				return
-			}
-
-			log.Printf("Successfully moved game %s to position %d", gameID, request.OrderIndex)
-
-			RespondWithJSON(w, http.StatusOK, ApiResponse{
-				Success: true,
-				Message: "Game order updated successfully",
-			})
-			return
-		}
-
 		log.Printf("Error finding game at target position %d: %v", request.OrderIndex, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error finding game at target position")
 		return
 	}
 
-	log.Printf("Swapping positions: game %s from index %d with game %s at index %d",
-		gameID, currentIndex, otherGameID, request.OrderIndex)
-
-	// Begin transaction for the swap
-	tx, err := h.db.Begin()
-	if err != nil {
-		log.Printf("Error starting transaction: %v", err)
-		RespondWithError(w, http.StatusInternalServerError, "Database error")
-		return
-	}
-	defer tx.Rollback()
-
-	// Perform the swap
-	// First update the target game to a temporary index to avoid unique constraint violations
-	_, err = tx.Exec(`
+	// Update the first game to the new position
+	result, err := h.db.Exec(`
 		UPDATE event_games
-		SET order_index = -1
-		WHERE event_id = $1 AND game_id = $2
-	`, eventID, gameID)
+		SET order_index = $1
+		WHERE game_id = $2
+	`, request.OrderIndex, gameID)
 	if err != nil {
-		log.Printf("Error updating target game to temporary index: %v", err)
+		log.Printf("Error updating first game position: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
 		return
 	}
 
-	// Move the other game to the original position
-	_, err = tx.Exec(`
-		UPDATE event_games
-		SET order_index = $3
-		WHERE event_id = $1 AND game_id = $2
-	`, eventID, otherGameID, currentIndex)
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("Error moving other game to original position: %v", err)
+		log.Printf("Error getting rows affected: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
 		return
 	}
 
-	// Move the target game to the final position
-	_, err = tx.Exec(`
-		UPDATE event_games
-		SET order_index = $3
-		WHERE event_id = $1 AND game_id = $2
-	`, eventID, gameID, request.OrderIndex)
-	if err != nil {
-		log.Printf("Error moving target game to final position: %v", err)
+	if rowsAffected != 1 {
+		log.Printf("Expected 1 row to be updated, but got %d", rowsAffected)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
 		return
 	}
 
-	// Commit the transaction
-	err = tx.Commit()
+	// Update the second game to the original position
+	result, err = h.db.Exec(`
+        UPDATE event_games
+        SET order_index = $1
+        WHERE event_games.event_id = $2 AND event_games.game_id = $3
+	`,currentIndex, eventID, otherGameID)
 	if err != nil {
-		log.Printf("Error committing transaction: %v", err)
-		RespondWithError(w, http.StatusInternalServerError, "Database error")
+		log.Printf("Error updating second game position: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+		return
+	}
+
+	rowsAffected, err = result.RowsAffected()
+	log.Printf("Rows affected: %d", rowsAffected)
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+		return
+	}
+	if rowsAffected != 1 {
+		log.Printf("Expected 1 row to be updated, but got %d", rowsAffected)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
 		return
 	}
 
