@@ -335,19 +335,6 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 		game.Tags = []string{}
 	}
 
-	// Get user's rating
-	var rating int
-	err = h.db.QueryRow(`
-		SELECT rating
-		FROM user_game_preferences
-		WHERE user_id = $1 AND game_id = $2
-	`, user.ID, gameID).Scan(&rating)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Error fetching rating for game %s and user %s: %v", gameID, user.ID, err)
-		RespondWithError(w, http.StatusInternalServerError, "Error fetching rating")
-		return
-	}
-
 	// Get upcoming events with this game
 	rows, err := h.db.Query(`
 		SELECT e.id, e.title, e.description, e.location, e.start_time, e.end_time,
@@ -395,68 +382,15 @@ func (h *GameHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	gameData := struct {
 		Game           models.Game    `json:"game"`
-		Rating         int            `json:"rating"`
 		UpcomingEvents []UpcomingEvent `json:"upcomingEvents"`
 	}{
 		Game:           game,
-		Rating:         rating,
 		UpcomingEvents: upcomingEvents,
 	}
 
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Data:    gameData,
-	})
-}
-
-// RateGame handles rating a game
-func (h *GameHandler) RateGame(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	user := r.Context().Value(middleware.UserContextKey).(*models.User)
-	vars := mux.Vars(r)
-	gameID := vars["id"]
-
-	// Parse JSON request
-	var ratingRequest struct {
-		Rating int `json:"rating"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&ratingRequest); err != nil {
-		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	defer r.Body.Close()
-
-	// Validate rating
-	if ratingRequest.Rating < 1 || ratingRequest.Rating > 5 {
-		RespondWithError(w, http.StatusBadRequest, "Rating must be between 1 and 5")
-		return
-	}
-
-	// Upsert the rating
-	_, err := h.db.Exec(`
-		INSERT INTO user_game_preferences (user_id, game_id, rating)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (user_id, game_id) DO UPDATE SET rating = $3
-	`, user.ID, gameID, ratingRequest.Rating)
-	if err != nil {
-		log.Printf("Error saving rating for game %s: %v", gameID, err)
-		RespondWithError(w, http.StatusInternalServerError, "Error saving rating")
-		return
-	}
-
-	RespondWithJSON(w, http.StatusOK, ApiResponse{
-		Success: true,
-		Message: "Rating saved successfully",
-		Data: map[string]interface{}{
-			"gameId": gameID,
-			"rating": ratingRequest.Rating,
-		},
 	})
 }
 
