@@ -131,7 +131,6 @@ func (h *EventHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if eventRequest.EndTime == "" {
 		// If EndTime is not provided, use the same value as StartTime
 		endTime = startTime
-		log.Printf("EndTime not provided for new event, using StartTime instead")
 	} else {
 		var err error
 		endTime, err = time.Parse(time.RFC3339, eventRequest.EndTime)
@@ -478,7 +477,6 @@ func (h *EventHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if eventRequest.EndTime == "" {
 		// If EndTime is not provided, use the same value as StartTime
 		endTime = startTime
-		log.Printf("EndTime not provided for event %s, using StartTime instead", eventID)
 	} else {
 		var err error
 		endTime, err = time.Parse(time.RFC3339, eventRequest.EndTime)
@@ -840,18 +838,12 @@ func (h *EventHandler) RemoveGameFromEvent(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// LogSQL is a helper function to log SQL queries with their parameters
-func LogSQL(query string, args ...interface{}) {
-	log.Printf("SQL: %s %+v", query, args)
-}
-
 // UpdateGameOrder updates a game's order in an event
 func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 	gameID := vars["gameId"]
-	log.Printf("Updating game order for event %s and game %s", eventID, gameID)
 
 	// Parse request body
 	var request struct {
@@ -926,7 +918,6 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 
 	// If indices are the same, no change needed
 	if currentIndex == request.OrderIndex {
-		log.Printf("No change in order index (%d), skipping update", currentIndex)
 		RespondWithJSON(w, http.StatusOK, ApiResponse{
 			Success: true,
 			Message: "Game order unchanged",
@@ -946,12 +937,21 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update the first game to the new position
-	result, err := h.db.Exec(`
+	// Begin transaction for the swap
+	tx, err := h.db.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+	defer tx.Rollback()
+
+	// Update the first game to the new position - adjust parameter order to match SQL
+	result, err := tx.Exec(`
 		UPDATE event_games
 		SET order_index = $1
-		WHERE game_id = $2
-	`, request.OrderIndex, gameID)
+		WHERE event_id = $2 AND game_id = $3
+	`, request.OrderIndex, eventID, gameID)
 	if err != nil {
 		log.Printf("Error updating first game position: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
@@ -971,12 +971,12 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update the second game to the original position
-	result, err = h.db.Exec(`
-        UPDATE event_games
-        SET order_index = $1
-        WHERE event_games.event_id = $2 AND event_games.game_id = $3
-	`,currentIndex, eventID, otherGameID)
+	// Update the second game to the original position - adjust parameter order to match SQL
+	result, err = tx.Exec(`
+		UPDATE event_games
+		SET order_index = $1
+		WHERE event_id = $2 AND game_id = $3
+	`, currentIndex, eventID, otherGameID)
 	if err != nil {
 		log.Printf("Error updating second game position: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
@@ -984,7 +984,6 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rowsAffected, err = result.RowsAffected()
-	log.Printf("Rows affected: %d", rowsAffected)
 	if err != nil {
 		log.Printf("Error getting rows affected: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
@@ -996,7 +995,32 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Successfully swapped positions of games %s and %s", gameID, otherGameID)
+	// Reorder the remaining games to ensure they are sequential
+	reorderQuery := `
+		WITH ranked_games AS (
+			SELECT game_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 as new_index
+			FROM event_games
+			WHERE event_id = $1
+		)
+		UPDATE event_games
+		SET order_index = ranked_games.new_index
+		FROM ranked_games
+		WHERE event_games.event_id = $1 AND event_games.game_id = ranked_games.game_id
+	`
+	_, err = tx.Exec(reorderQuery, eventID)
+	if err != nil {
+		log.Printf("Error reordering games: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error reordering games")
+		return
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Database error")
+		return
+	}
 
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
