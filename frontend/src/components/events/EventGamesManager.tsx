@@ -146,12 +146,19 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
       updatedGames[index] = { ...updatedGames[index], animationDirection: 'up' as const }
       updatedGames[index - 1] = { ...updatedGames[index - 1], animationDirection: 'down' as const }
 
+      // Simple swap - just swap with the game above (index - 1)
+      const newIndex = game.orderIndex - 1
+
+      console.log(`Swapping game ${game.id} (index ${game.orderIndex}) with game at index ${newIndex}`)
+
       await updateGameOrder({
         eventId,
         gameId: game.id,
-        newIndex: game.orderIndex - 1,
+        newIndex,
       }).unwrap()
-      refetchEventGames()
+
+      // Force immediate refetch to ensure we have the latest data
+      await refetchEventGames()
     } catch (error) {
       console.error('Failed to update game order:', error)
     }
@@ -167,12 +174,19 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
       updatedGames[index] = { ...updatedGames[index], animationDirection: 'down' as const }
       updatedGames[index + 1] = { ...updatedGames[index + 1], animationDirection: 'up' as const }
 
+      // Simple swap - just swap with the game below (index + 1)
+      const newIndex = game.orderIndex + 1
+
+      console.log(`Swapping game ${game.id} (index ${game.orderIndex}) with game at index ${newIndex}`)
+
       await updateGameOrder({
         eventId,
         gameId: game.id,
-        newIndex: game.orderIndex + 1,
+        newIndex,
       }).unwrap()
-      refetchEventGames()
+
+      // Force immediate refetch to ensure we have the latest data
+      await refetchEventGames()
     } catch (error) {
       console.error('Failed to update game order:', error)
     }

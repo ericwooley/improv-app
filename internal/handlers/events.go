@@ -858,6 +858,9 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Received order update request for game %s in event %s, target index: %d",
+		gameID, eventID, request.OrderIndex)
+
 	// Verify the event exists and get MC ID
 	var mcID sql.NullString
 	err = h.db.QueryRow(`
@@ -882,7 +885,7 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the current order index for the game
+	// Get the current order index for the target game
 	var currentIndex int
 	err = h.db.QueryRow(`
 		SELECT order_index FROM event_games
@@ -899,7 +902,7 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the count of games in the event
+	// Get the total number of games
 	var gameCount int
 	err = h.db.QueryRow(`
 		SELECT COUNT(*) FROM event_games
@@ -911,14 +914,40 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the new index
+	// Validate the target index is adjacent to the current index
 	if request.OrderIndex < 0 || request.OrderIndex >= gameCount {
-		log.Printf("Invalid order index: %d (must be between 0 and %d)", request.OrderIndex, gameCount-1)
+		log.Printf("Index out of bounds: %d (must be between 0 and %d)", request.OrderIndex, gameCount-1)
 		RespondWithError(w, http.StatusBadRequest, "Invalid order index")
 		return
 	}
 
-	// Begin a transaction
+	// If indices are the same, no change needed
+	if currentIndex == request.OrderIndex {
+		log.Printf("No change in order index (%d), skipping update", currentIndex)
+		RespondWithJSON(w, http.StatusOK, ApiResponse{
+			Success: true,
+			Message: "Game order unchanged",
+		})
+		return
+	}
+
+	// Simple implementation - find the game at the target position and swap positions
+	// First, find the other game that needs to move
+	var otherGameID string
+	err = h.db.QueryRow(`
+		SELECT game_id FROM event_games
+		WHERE event_id = $1 AND order_index = $2
+	`, eventID, request.OrderIndex).Scan(&otherGameID)
+	if err != nil {
+		log.Printf("Error finding game at target position %d: %v", request.OrderIndex, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error finding game at target position")
+		return
+	}
+
+	log.Printf("Swapping positions: game %s from index %d with game %s at index %d",
+		gameID, currentIndex, otherGameID, request.OrderIndex)
+
+	// Begin transaction for the swap
 	tx, err := h.db.Begin()
 	if err != nil {
 		log.Printf("Error starting transaction: %v", err)
@@ -927,45 +956,39 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Update game order - first make space for the new position
-	if currentIndex < request.OrderIndex {
-		// Moving down - decrement indexes in between
-		_, err = tx.Exec(`
-			UPDATE event_games
-			SET order_index = order_index - 1
-			WHERE event_id = $1 AND order_index > $2 AND order_index <= $3
-		`, eventID, currentIndex, request.OrderIndex)
-	} else if currentIndex > request.OrderIndex {
-		// Moving up - increment indexes in between
-		_, err = tx.Exec(`
-			UPDATE event_games
-			SET order_index = order_index + 1
-			WHERE event_id = $1 AND order_index >= $2 AND order_index < $3
-		`, eventID, request.OrderIndex, currentIndex)
-	} else {
-		// No change needed
-		tx.Commit()
-		RespondWithJSON(w, http.StatusOK, ApiResponse{
-			Success: true,
-			Message: "Game order unchanged",
-		})
-		return
-	}
-
+	// Perform the swap
+	// First update the target game to a temporary index to avoid unique constraint violations
+	_, err = tx.Exec(`
+		UPDATE event_games
+		SET order_index = -1
+		WHERE event_id = $1 AND game_id = $2
+	`, eventID, gameID)
 	if err != nil {
-		log.Printf("Error updating intermediate indexes: %v", err)
+		log.Printf("Error updating target game to temporary index: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
 		return
 	}
 
-	// Now move the target game to its new position
+	// Move the other game to the original position
+	_, err = tx.Exec(`
+		UPDATE event_games
+		SET order_index = $3
+		WHERE event_id = $1 AND game_id = $2
+	`, eventID, otherGameID, currentIndex)
+	if err != nil {
+		log.Printf("Error moving other game to original position: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+		return
+	}
+
+	// Move the target game to the final position
 	_, err = tx.Exec(`
 		UPDATE event_games
 		SET order_index = $3
 		WHERE event_id = $1 AND game_id = $2
 	`, eventID, gameID, request.OrderIndex)
 	if err != nil {
-		log.Printf("Error updating game index: %v", err)
+		log.Printf("Error moving target game to final position: %v", err)
 		RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
 		return
 	}
@@ -977,6 +1000,8 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		RespondWithError(w, http.StatusInternalServerError, "Database error")
 		return
 	}
+
+	log.Printf("Successfully swapped positions of games %s and %s", gameID, otherGameID)
 
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
