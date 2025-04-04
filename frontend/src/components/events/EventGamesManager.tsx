@@ -141,15 +141,10 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
     if (index === 0 || !eventId) return
 
     try {
-      // Set a temporary direction attribute for animation
-      const updatedGames = [...eventGames]
-      updatedGames[index] = { ...updatedGames[index], animationDirection: 'up' as const }
-      updatedGames[index - 1] = { ...updatedGames[index - 1], animationDirection: 'down' as const }
-
-      // Simple swap - just swap with the game above (index - 1)
+      // Use the orderIndex property for the new position
       const newIndex = game.orderIndex - 1
 
-      console.log(`Swapping game ${game.id} (index ${game.orderIndex}) with game at index ${newIndex}`)
+      console.log(`HandleMoveUp: Moving game ${game.id} from orderIndex ${game.orderIndex} to orderIndex ${newIndex}`)
 
       await updateGameOrder({
         eventId,
@@ -157,7 +152,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
         newIndex,
       }).unwrap()
 
-      // Force immediate refetch to ensure we have the latest data
+      // Add a small delay before refetching to ensure backend has completed reordering
       await refetchEventGames()
     } catch (error) {
       console.error('Failed to update game order:', error)
@@ -169,15 +164,10 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
     if (index === eventGames.length - 1 || !eventId) return
 
     try {
-      // Set a temporary direction attribute for animation
-      const updatedGames = [...eventGames]
-      updatedGames[index] = { ...updatedGames[index], animationDirection: 'down' as const }
-      updatedGames[index + 1] = { ...updatedGames[index + 1], animationDirection: 'up' as const }
-
-      // Simple swap - just swap with the game below (index + 1)
+      // Use the orderIndex property for the new position
       const newIndex = game.orderIndex + 1
 
-      console.log(`Swapping game ${game.id} (index ${game.orderIndex}) with game at index ${newIndex}`)
+      console.log(`HandleMoveDown: Moving game ${game.id} from orderIndex ${game.orderIndex} to orderIndex ${newIndex}`)
 
       await updateGameOrder({
         eventId,
@@ -185,7 +175,6 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
         newIndex,
       }).unwrap()
 
-      // Force immediate refetch to ensure we have the latest data
       await refetchEventGames()
     } catch (error) {
       console.error('Failed to update game order:', error)
@@ -229,6 +218,7 @@ export const EventGamesManager = ({ groupId, isMC }: EventGamesManagerProps) => 
                   <GameCard game={game} showViewButton={true} />
                   {isMC && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
+                      ({game.orderIndex})
                       <IconButton
                         size="small"
                         disabled={index === 0}

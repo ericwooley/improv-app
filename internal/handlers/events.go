@@ -939,6 +939,80 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 		WHERE event_id = $1 AND order_index = $2
 	`, eventID, request.OrderIndex).Scan(&otherGameID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("No game found at target position %d, will perform a shift operation instead", request.OrderIndex)
+			// Instead of swapping, we'll reorder all games
+			tx, err := h.db.Begin()
+			if err != nil {
+				log.Printf("Error starting transaction: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Database error")
+				return
+			}
+			defer tx.Rollback()
+
+			// First, temporarily move our target game out of the way (to a negative index)
+			_, err = tx.Exec(`
+				UPDATE event_games
+				SET order_index = -1
+				WHERE event_id = $1 AND game_id = $2
+			`, eventID, gameID)
+			if err != nil {
+				log.Printf("Error updating game to temporary index: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+				return
+			}
+
+			// Then reorder all games to ensure they have sequential indices
+			_, err = tx.Exec(`
+				WITH ranked_games AS (
+					SELECT game_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 as new_index
+					FROM event_games
+					WHERE event_id = $1 AND game_id != $2
+				)
+				UPDATE event_games
+				SET order_index =
+					CASE
+						WHEN ranked_games.new_index >= $3 THEN ranked_games.new_index + 1
+						ELSE ranked_games.new_index
+					END
+				FROM ranked_games
+				WHERE event_games.event_id = $1 AND event_games.game_id = ranked_games.game_id
+			`, eventID, gameID, request.OrderIndex)
+			if err != nil {
+				log.Printf("Error reordering games: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+				return
+			}
+
+			// Finally, put our target game at the requested position
+			_, err = tx.Exec(`
+				UPDATE event_games
+				SET order_index = $3
+				WHERE event_id = $1 AND game_id = $2
+			`, eventID, gameID, request.OrderIndex)
+			if err != nil {
+				log.Printf("Error moving game to target position: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error updating game order")
+				return
+			}
+
+			// Commit transaction
+			err = tx.Commit()
+			if err != nil {
+				log.Printf("Error committing transaction: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Database error")
+				return
+			}
+
+			log.Printf("Successfully moved game %s to position %d", gameID, request.OrderIndex)
+
+			RespondWithJSON(w, http.StatusOK, ApiResponse{
+				Success: true,
+				Message: "Game order updated successfully",
+			})
+			return
+		}
+
 		log.Printf("Error finding game at target position %d: %v", request.OrderIndex, err)
 		RespondWithError(w, http.StatusInternalServerError, "Error finding game at target position")
 		return
