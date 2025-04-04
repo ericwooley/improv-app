@@ -26,6 +26,7 @@ import {
   Mood as MoodIcon,
 } from '@mui/icons-material'
 import { useSetGameStatusMutation, useGetGameStatusQuery } from '../store/api/gamesApi'
+import { useEffect, useRef, useState } from 'react'
 
 export interface Game {
   id: string
@@ -51,8 +52,51 @@ interface GameCardProps {
 const MotionCard = motion(Card)
 
 const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
-  const { data: statusData } = useGetGameStatusQuery(game.id)
-  const [setGameStatus, { isLoading }] = useSetGameStatusMutation()
+  const [shouldFetchStatus, setShouldFetchStatus] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Skip the query until the card has been visible for 250ms
+  const { data: statusData, isLoading: isStatusLoading } = useGetGameStatusQuery(game.id, {
+    skip: !shouldFetchStatus,
+  })
+  const [setGameStatus, { isLoading: isUpdatingStatus }] = useSetGameStatusMutation()
+
+  // Combined loading state
+  const isStatusDisabled = isStatusLoading || isUpdatingStatus || !shouldFetchStatus
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+
+        if (entry.isIntersecting) {
+          // Start timer when card becomes visible
+          timerRef.current = setTimeout(() => {
+            setShouldFetchStatus(true)
+          }, 250)
+        } else {
+          // Clear timer if card goes out of view
+          if (timerRef.current) {
+            clearTimeout(timerRef.current)
+            timerRef.current = null
+          }
+        }
+      },
+      { threshold: 0.1 } // Consider visible when at least 10% is in view
+    )
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current)
+    }
+
+    return () => {
+      observer.disconnect()
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [])
 
   const handleStatusChange = async (event: SelectChangeEvent) => {
     const newStatus = event.target.value
@@ -77,6 +121,7 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
 
   return (
     <MotionCard
+      ref={cardRef}
       variant="outlined"
       sx={{
         display: 'flex',
@@ -177,7 +222,7 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
                   value={currentStatus}
                   onChange={handleStatusChange}
                   displayEmpty
-                  disabled={isLoading}
+                  disabled={isStatusDisabled}
                   variant="outlined"
                   size="small"
                   sx={{
