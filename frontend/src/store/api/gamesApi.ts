@@ -54,6 +54,10 @@ export interface RateGameRequest {
   rating: number
 }
 
+export interface SetGameStatusRequest {
+  status: string
+}
+
 export const gamesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getGames: builder.query<APIResponse<Game[]>, { tag?: string; library?: string; ownedByGroup?: string } | void>({
@@ -130,9 +134,29 @@ export const gamesApi = apiSlice.injectEndpoints({
       invalidatesTags: (_, __, { gameId }) => [{ type: 'Game', id: gameId }],
     }),
 
+    setGameStatus: builder.mutation<
+      APIResponse<{ gameId: string; status: string }>,
+      { gameId: string; status: string }
+    >({
+      query: ({ gameId, status }) => ({
+        url: `/games/${gameId}/status`,
+        method: 'POST',
+        body: { status },
+      }),
+      invalidatesTags: (_, __, { gameId }) => [
+        { type: 'Game', id: gameId },
+        { type: 'Game', id: `status-${gameId}` },
+      ],
+    }),
+
     getGameGroupLibraries: builder.query<APIResponse<GroupWithRole[]>, string>({
       query: (gameId) => `/games/${gameId}/libraries`,
       providesTags: (_, __, gameId) => [{ type: 'Game' as const, id: `library-${gameId}` }],
+    }),
+
+    getGameStatus: builder.query<APIResponse<{ status: string }>, string>({
+      query: (gameId) => `/games/${gameId}/status`,
+      providesTags: (_, __, gameId) => [{ type: 'Game', id: `status-${gameId}` }],
     }),
   }),
 })
@@ -144,6 +168,8 @@ export const {
   useUpdateGameMutation,
   useDeleteGameMutation,
   useRateGameMutation,
+  useSetGameStatusMutation,
   useGetGameGroupLibrariesQuery,
   useFetchAllowedTagsQuery,
+  useGetGameStatusQuery,
 } = gamesApi

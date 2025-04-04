@@ -213,7 +213,11 @@ const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
 
 // Game Details Tab content
 const GameDetailsTab = ({ game }: { game: Game }) => {
-  return <GameCard game={game} showViewButton={false} />
+  return (
+    <Box>
+      <GameCard game={game} showViewButton={false} />
+    </Box>
+  )
 }
 
 // Read-only view for libraries

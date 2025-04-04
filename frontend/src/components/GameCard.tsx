@@ -1,4 +1,18 @@
-import { Card, CardContent, CardHeader, CardActions, Button, Typography, Box, Divider, IconButton } from '@mui/material'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardActions,
+  Button,
+  Typography,
+  Box,
+  Divider,
+  IconButton,
+  FormControl,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+} from '@mui/material'
 import { Link } from 'react-router-dom'
 import InfoItem from './InfoItem'
 import TagList from './TagList'
@@ -9,7 +23,9 @@ import {
   CheckCircle as CheckCircleIcon,
   ArrowForward as ArrowForwardIcon,
   Add as AddIcon,
+  Mood as MoodIcon,
 } from '@mui/icons-material'
+import { useSetGameStatusMutation, useGetGameStatusQuery } from '../store/api/gamesApi'
 
 export interface Game {
   id: string
@@ -35,6 +51,30 @@ interface GameCardProps {
 const MotionCard = motion(Card)
 
 const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
+  const { data: statusData } = useGetGameStatusQuery(game.id)
+  const [setGameStatus, { isLoading }] = useSetGameStatusMutation()
+
+  const handleStatusChange = async (event: SelectChangeEvent) => {
+    const newStatus = event.target.value
+
+    try {
+      await setGameStatus({ gameId: game.id, status: newStatus }).unwrap()
+    } catch (error) {
+      console.error('Failed to update game status:', error)
+    }
+  }
+
+  const statusOptions = [
+    '',
+    'I Love playing this',
+    'I Need to practice this',
+    'I dont like this game',
+    'I want to try this game',
+    'No opinion on this game',
+  ]
+
+  const currentStatus = statusData?.data?.status || ''
+
   return (
     <MotionCard
       variant="outlined"
@@ -125,6 +165,38 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
               </Typography>
             </InfoItem>
           )}
+
+          <Box sx={{ mt: 2 }}>
+            <InfoItem icon={<MoodIcon />}>
+              <FormControl
+                size="small"
+                fullWidth
+                onClick={(e) => e.stopPropagation()} // Prevent card click when using dropdown
+              >
+                <Select
+                  value={currentStatus}
+                  onChange={handleStatusChange}
+                  displayEmpty
+                  disabled={isLoading}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    minWidth: 220,
+                  }}>
+                  <MenuItem value="">
+                    <em>How do you feel about this game?</em>
+                  </MenuItem>
+                  {statusOptions
+                    .filter((option) => option !== '')
+                    .map((statusOption) => (
+                      <MenuItem key={statusOption} value={statusOption}>
+                        {statusOption}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </InfoItem>
+          </Box>
         </Box>
 
         {game.tags && game.tags.length > 0 && (

@@ -460,6 +460,73 @@ func (h *GameHandler) RateGame(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SetGameStatus handles setting a status for a game by a user
+func (h *GameHandler) SetGameStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	gameID := vars["id"]
+
+	// Parse JSON request
+	var statusRequest struct {
+		Status string `json:"status"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&statusRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate status
+	validStatuses := []string{
+		"I Love playing this",
+		"I Need to practice this",
+		"I dont like this game",
+		"I want to try this game",
+		"No opinion on this game",
+	}
+
+	isValid := false
+	for _, validStatus := range validStatuses {
+		if statusRequest.Status == validStatus {
+			isValid = true
+			break
+		}
+	}
+
+	if !isValid {
+		RespondWithError(w, http.StatusBadRequest, "Invalid status value")
+		return
+	}
+
+	// Upsert the status
+	_, err := h.db.Exec(`
+		INSERT INTO user_game_preferences (user_id, game_id, status)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, game_id) DO UPDATE SET status = $3
+	`, user.ID, gameID, statusRequest.Status)
+	if err != nil {
+		log.Printf("Error saving status for game %s: %v", gameID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error saving status")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Status saved successfully",
+		Data: map[string]interface{}{
+			"gameId": gameID,
+			"status": statusRequest.Status,
+		},
+	})
+}
+
 // GetGameGroupLibraries returns all groups that have a specific game in their library
 func (h *GameHandler) GetGameGroupLibraries(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
@@ -558,6 +625,64 @@ func (h *GameHandler) GetAllowedTags(w http.ResponseWriter, r *http.Request) {
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Data:    allowedTags,
+	})
+}
+
+// GetGameStatus returns the current user's status for a specific game
+func (h *GameHandler) GetGameStatus(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	gameID := vars["id"]
+
+	// First check if the user has access to this game
+	var hasAccess bool
+	err := h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM games g
+			WHERE g.id = $1 AND (
+				g.public = TRUE
+				OR g.created_by = $2
+				OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)
+			)
+		)
+	`, gameID, user.ID).Scan(&hasAccess)
+
+	if err != nil {
+		log.Printf("Error checking game access: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking game access")
+		return
+	}
+
+	if !hasAccess {
+		log.Printf("Unauthorized access attempt to game %s by user %s", gameID, user.ID)
+		RespondWithError(w, http.StatusForbidden, "You don't have access to this game")
+		return
+	}
+
+	// Get user's status for the game
+	var status sql.NullString
+	err = h.db.QueryRow(`
+		SELECT status
+		FROM user_game_preferences
+		WHERE user_id = $1 AND game_id = $2
+	`, user.ID, gameID).Scan(&status)
+
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error fetching status for game %s and user %s: %v", gameID, user.ID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching status")
+		return
+	}
+
+	userStatus := ""
+	if status.Valid {
+		userStatus = status.String
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data: map[string]string{
+			"status": userStatus,
+		},
 	})
 }
 
