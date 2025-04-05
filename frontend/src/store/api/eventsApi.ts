@@ -12,6 +12,19 @@ export interface Event {
   mcId?: string | null
 }
 
+export interface GroupEvent {
+  ID: string
+  GroupID: string
+  Title: string
+  Description: string
+  Location: string
+  StartTime: string
+  EndTime: string
+  CreatedAt: string
+  CreatedBy: string
+  MCID: string
+}
+
 export interface EventDetailsResponse {
   event: {
     ID: string
@@ -66,11 +79,11 @@ export const eventsApi = apiSlice.injectEndpoints({
       providesTags: (_, __, id) => [{ type: 'Event', id }],
     }),
 
-    getEventsByGroup: builder.query<APIResponse<Event[]>, string>({
+    getEventsByGroup: builder.query<APIResponse<GroupEvent[]>, string>({
       query: (groupId) => `/groups/${groupId}/events`,
       providesTags: (result) =>
         result
-          ? [...result.data.map(({ id }) => ({ type: 'Event' as const, id })), { type: 'Event', id: 'LIST' }]
+          ? [...result.data.map(({ ID: id }) => ({ type: 'Event' as const, id })), { type: 'Event', id: 'LIST' }]
           : [{ type: 'Event', id: 'LIST' }],
     }),
 

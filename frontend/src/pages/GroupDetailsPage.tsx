@@ -8,6 +8,7 @@ import {
   useUpdateGroupInviteLinkStatusMutation,
   useRemoveMemberMutation,
 } from '../store/api/groupsApi'
+import { useGetEventsByGroupQuery } from '../store/api/eventsApi'
 import {
   PageHeader,
   Breadcrumb,
@@ -15,6 +16,7 @@ import {
   GroupMembersTab,
   GroupGamesTab,
   GroupInvitesTab,
+  GroupEventsTab,
   TabPanel,
   a11yProps,
   TabValue,
@@ -60,6 +62,9 @@ const GroupDetailsPage = () => {
   const { data: groupResponse, isLoading, error } = useGetGroupQuery(groupId || '')
   const { data: libraryGamesResponse, isLoading: libraryLoading } = useGetGroupLibraryGamesQuery(groupId || '')
   const { data: ownedGamesResponse, isLoading: ownedLoading } = useGetGroupOwnedGamesQuery(groupId || '')
+  const { data: eventsResponse, isLoading: eventsLoading } = useGetEventsByGroupQuery(groupId || '', {
+    skip: !groupId,
+  })
 
   // Determine if user can manage invites based on role
   const userRole = groupResponse?.data?.userRole || ''
@@ -262,8 +267,17 @@ const GroupDetailsPage = () => {
 
         {/* Information Tab */}
         <TabPanel value={mainTabValue} index={0}>
-          <GroupInfoTab group={group} userRole={userRole} />
+          <Box sx={{ mb: 2 }}>
+            <GroupInfoTab group={group} userRole={userRole} />
+          </Box>
+          <GroupEventsTab
+            groupId={group.ID}
+            userRole={userRole}
+            events={eventsResponse?.data || []}
+            isLoading={eventsLoading}
+          />
         </TabPanel>
+        {/* Events Tab */}
 
         {/* Members Tab */}
         <TabPanel value={mainTabValue} index={1}>
