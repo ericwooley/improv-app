@@ -106,20 +106,29 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
       await setGameStatus({ gameId: game.id, status: newStatus }).unwrap()
       // If this is in the unrated list on homepage, mark it for removal
       if (cardRef.current && cardRef.current.closest('[data-unrated-games-list="true"]')) {
+        // Animate out before calling onClick (which will remove from React state)
+        const cardElement = cardRef.current
+        if (cardElement) {
+          // Trigger a nice animation before removing
+          cardElement.style.transition = 'all 0.4s ease-out'
+          cardElement.style.transform = 'translateY(-20px) scale(0.9)'
+          cardElement.style.opacity = '0'
+
+          // After animation completes, call onClick to remove from list
+          setTimeout(() => {
+            if (onClick) {
+              onClick()
+            }
+          }, 300)
+
+          // Prevent event propagation so the card's onClick doesn't fire
+          event.stopPropagation()
+          return
+        }
+
         if (onClick) {
-          // If we have an onClick handler, call it to notify parent
+          // Just call onClick if we couldn't animate
           onClick()
-        } else {
-          // Otherwise try to animate out
-          const parentElement = cardRef.current.parentElement
-          if (parentElement) {
-            parentElement.style.transition = 'all 0.5s ease-out'
-            parentElement.style.opacity = '0'
-            parentElement.style.height = '0'
-            parentElement.style.overflow = 'hidden'
-            parentElement.style.margin = '0'
-            parentElement.style.padding = '0'
-          }
         }
       }
     } catch (error) {

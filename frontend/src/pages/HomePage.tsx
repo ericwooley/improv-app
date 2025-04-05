@@ -20,7 +20,7 @@ import {
   Button,
   CircularProgress,
 } from '@mui/material'
-import { Event as EventIcon, Group as GroupIcon, Settings as SettingsIcon } from '@mui/icons-material'
+import { Event as EventIcon, Group as GroupIcon, PriorityHigh as PriorityHighIcon } from '@mui/icons-material'
 import { Link } from 'react-router-dom'
 import Invitations from '../components/Invitations'
 import { GroupsList } from '../components'
@@ -73,14 +73,20 @@ const HomePage = () => {
             <Grid size={12} sx={{ mb: 3 }}>
               <Card>
                 <CardHeader
-                  title="Games Needing Your Preferences"
-                  action={
-                    <Button component={Link} to="/games" variant="outlined" startIcon={<SettingsIcon />}>
-                      View All Games
-                    </Button>
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PriorityHighIcon color="warning" sx={{ mr: 1 }} />
+                      <Typography variant="h6" component="span">
+                        Games with no play preference
+                      </Typography>
+                    </Box>
                   }
                 />
                 <CardContent>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Setting your preferences helps MCs and practice leaders assign players to games that everyone will
+                    enjoy.
+                  </Typography>
                   {unratedGamesLoading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                       <CircularProgress />
