@@ -24,6 +24,11 @@ import {
   ArrowForward as ArrowForwardIcon,
   Add as AddIcon,
   Mood as MoodIcon,
+  Favorite as FavoriteIcon,
+  AccessTime as AccessTimeIcon,
+  ThumbDown as ThumbDownIcon,
+  NewReleases as NewReleasesIcon,
+  NoAccounts as NoAccountsIcon,
 } from '@mui/icons-material'
 import { useSetGameStatusMutation, useGetGameStatusQuery } from '../store/api/gamesApi'
 import { useEffect, useRef, useState } from 'react'
@@ -147,6 +152,26 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
 
   const currentStatus = statusData?.data?.status || ''
 
+  // Status icon and color mapping
+  const getStatusIconAndColor = (status: string) => {
+    switch (status) {
+      case 'I Love playing this':
+        return { icon: <FavoriteIcon />, color: 'error.main' }
+      case 'I Need to practice this':
+        return { icon: <AccessTimeIcon />, color: 'warning.main' }
+      case 'I dont like this game':
+        return { icon: <ThumbDownIcon />, color: 'error.dark' }
+      case 'I want to try this game':
+        return { icon: <NewReleasesIcon />, color: 'info.main' }
+      case 'No opinion on this game':
+        return { icon: <NoAccountsIcon />, color: 'text.secondary' }
+      default:
+        return { icon: <MoodIcon />, color: 'text.secondary' }
+    }
+  }
+
+  const { icon: statusIcon, color: statusColor } = getStatusIconAndColor(currentStatus)
+
   return (
     <MotionCard
       ref={cardRef}
@@ -240,7 +265,12 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
           )}
 
           <Box sx={{ mt: 2 }}>
-            <InfoItem icon={<MoodIcon />}>
+            <InfoItem
+              icon={
+                <Box component="span" sx={{ color: statusColor }}>
+                  {statusIcon}
+                </Box>
+              }>
               <FormControl
                 size="small"
                 fullWidth
@@ -255,6 +285,10 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
                   size="small"
                   sx={{
                     minWidth: 220,
+                    ...(currentStatus && { '& .MuiOutlinedInput-notchedOutline': { borderColor: statusColor } }),
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: currentStatus ? statusColor : 'inherit',
+                    },
                   }}>
                   <MenuItem value="">
                     <em>How do you feel about this game?</em>
