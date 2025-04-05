@@ -132,6 +132,7 @@ export const gamesApi = apiSlice.injectEndpoints({
       invalidatesTags: (_, __, { gameId }) => [
         { type: 'Game', id: gameId },
         { type: 'Game', id: `status-${gameId}` },
+        { type: 'Game', id: 'UNRATED' },
       ],
     }),
 
@@ -143,6 +144,11 @@ export const gamesApi = apiSlice.injectEndpoints({
     getGameStatus: builder.query<APIResponse<{ status: string }>, string>({
       query: (gameId) => `/games/${gameId}/status`,
       providesTags: (_, __, gameId) => [{ type: 'Game', id: `status-${gameId}` }],
+    }),
+
+    getUnratedGames: builder.query<APIResponse<Game[]>, void>({
+      query: () => `/games/unrated`,
+      providesTags: [{ type: 'Game', id: 'UNRATED' }],
     }),
   }),
 })
@@ -157,4 +163,5 @@ export const {
   useGetGameGroupLibrariesQuery,
   useFetchAllowedTagsQuery,
   useGetGameStatusQuery,
+  useGetUnratedGamesQuery,
 } = gamesApi

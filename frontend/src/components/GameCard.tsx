@@ -38,6 +38,7 @@ export interface Game {
   tags?: string[]
   ownedByGroup?: boolean
   animationDirection?: 'up' | 'down' | null
+  isRemoving?: boolean
 }
 
 interface GameCardProps {
@@ -103,6 +104,24 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
 
     try {
       await setGameStatus({ gameId: game.id, status: newStatus }).unwrap()
+      // If this is in the unrated list on homepage, mark it for removal
+      if (cardRef.current && cardRef.current.closest('[data-unrated-games-list="true"]')) {
+        if (onClick) {
+          // If we have an onClick handler, call it to notify parent
+          onClick()
+        } else {
+          // Otherwise try to animate out
+          const parentElement = cardRef.current.parentElement
+          if (parentElement) {
+            parentElement.style.transition = 'all 0.5s ease-out'
+            parentElement.style.opacity = '0'
+            parentElement.style.height = '0'
+            parentElement.style.overflow = 'hidden'
+            parentElement.style.margin = '0'
+            parentElement.style.padding = '0'
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to update game status:', error)
     }
@@ -141,7 +160,7 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
       onClick={onClick}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
+      exit={{ opacity: 0, scale: 0.8, y: -20 }}
       layout
       transition={{
         type: 'spring',

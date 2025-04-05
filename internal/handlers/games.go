@@ -620,6 +620,60 @@ func (h *GameHandler) GetGameStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetUnratedGames returns games from user's groups that don't have a status set by the user
+func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+
+	// Get games from user's groups that don't have a status set by the user
+	rows, err := h.db.Query(`
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+			  GROUP_CONCAT(DISTINCT t.name) as tags
+		FROM games g
+		JOIN group_game_libraries ggl ON g.id = ggl.game_id
+		JOIN group_members gm ON ggl.group_id = gm.group_id
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		LEFT JOIN user_game_preferences ugp ON g.id = ugp.game_id AND ugp.user_id = ?
+		WHERE gm.user_id = ? AND ugp.status IS NULL
+		GROUP BY g.id
+		ORDER BY g.created_at DESC
+		LIMIT 10
+	`, user.ID, user.ID)
+
+	if err != nil {
+		log.Printf("Error fetching unrated games: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching unrated games")
+		return
+	}
+	defer rows.Close()
+
+	var games []models.Game
+	for rows.Next() {
+		var game models.Game
+		var tagsStr sql.NullString
+		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
+		if err != nil {
+			log.Printf("Error scanning game row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
+			return
+		}
+		if tagsStr.Valid {
+			game.Tags = strings.Split(tagsStr.String, ",")
+		} else {
+			game.Tags = []string{}
+		}
+		games = append(games, game)
+	}
+	if games == nil {
+		games = []models.Game{}
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    games,
+	})
+}
+
 // Update handles updating an existing game
 func (h *GameHandler) Update(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)

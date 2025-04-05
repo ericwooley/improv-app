@@ -134,6 +134,7 @@ func main() {
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET")
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.Create)).Methods("POST")
 	api.HandleFunc("/games/tags", middleware.RequireAuthAPI(sqlDB, gameHandler.GetAllowedTags)).Methods("GET")
+	api.HandleFunc("/games/unrated", middleware.RequireAuthAPI(sqlDB, gameHandler.GetUnratedGames)).Methods("GET")
 	api.HandleFunc("/games/{id}", middleware.RequireAuthAPI(sqlDB, gameHandler.Get)).Methods("GET")
 	api.HandleFunc("/games/{id}", middleware.RequireAuthAPI(sqlDB, gameHandler.Update)).Methods("PUT")
 	api.HandleFunc("/games/{id}/status", middleware.RequireAuthAPI(sqlDB, gameHandler.SetGameStatus)).Methods("POST")
