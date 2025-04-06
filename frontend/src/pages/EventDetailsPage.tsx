@@ -340,22 +340,20 @@ const EventDetailsPage = () => {
         {/* Only render Game Management tabs if user is MC or has management permissions */}
         {(isMC || canManageEvent) && (
           <>
-            <Paper sx={{ mt: 3 }}>
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={gameTabValue} onChange={handleGameTabChange} aria-label="Game management tabs">
-                  <Tab label="Game Runner" {...a11yProps(0, 'game-management')} />
-                  <Tab label={<HealthStatusTab eventId={eventId} />} {...a11yProps(1, 'game-health')} />
-                </Tabs>
-              </Box>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs value={gameTabValue} onChange={handleGameTabChange} aria-label="Game management tabs">
+                <Tab label="Game Runner" {...a11yProps(0, 'game-management')} />
+                <Tab label={<HealthStatusTab eventId={eventId} />} {...a11yProps(1, 'game-health')} />
+              </Tabs>
+            </Box>
 
-              <TabPanel value={gameTabValue} index={0} id="game-management">
-                <GameRunner eventId={eventId} isMC={isMC} />
-              </TabPanel>
+            <TabPanel value={gameTabValue} index={0} id="game-management">
+              <GameRunner eventId={eventId} isMC={isMC} />
+            </TabPanel>
 
-              <TabPanel value={gameTabValue} index={1} id="game-health">
-                <GameDataView eventId={eventId} />
-              </TabPanel>
-            </Paper>
+            <TabPanel value={gameTabValue} index={1} id="game-health">
+              <GameDataView eventId={eventId} />
+            </TabPanel>
           </>
         )}
       </TabPanel>
@@ -420,23 +418,6 @@ const GameDataView = ({ eventId }: { eventId?: string }) => {
   return (
     <Box>
       <GameHealthAnalyzer gameData={data} />
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Raw Game Data (JSON)
-        </Typography>
-        <Box
-          sx={{
-            maxHeight: 300,
-            overflow: 'auto',
-            p: 2,
-            backgroundColor: 'grey.100',
-            borderRadius: 1,
-            fontFamily: 'monospace',
-          }}>
-          <pre>{JSON.stringify(data, null, 2)}</pre>
-        </Box>
-      </Paper>
     </Box>
   )
 }

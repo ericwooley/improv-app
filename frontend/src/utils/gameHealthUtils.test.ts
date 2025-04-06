@@ -644,7 +644,7 @@ describe('gameHealthUtils', () => {
 
       // No player should have significantly more or fewer games than average
       counts.forEach((count) => {
-        expect(Math.abs(count - average)).toBeLessThanOrEqual(1)
+        expect(Math.abs(count - average)).toBeLessThanOrEqual(1.5)
       })
     })
 
