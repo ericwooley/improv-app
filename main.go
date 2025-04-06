@@ -130,6 +130,11 @@ func main() {
 	api.HandleFunc("/events/{id}/games", middleware.RequireAuthAPI(sqlDB, eventHandler.AddGameToEvent)).Methods("POST")
 	api.HandleFunc("/events/{id}/games/{gameId}", middleware.RequireAuthAPI(sqlDB, eventHandler.RemoveGameFromEvent)).Methods("DELETE")
 	api.HandleFunc("/events/{id}/games/{gameId}/order", middleware.RequireAuthAPI(sqlDB, eventHandler.UpdateGameOrder)).Methods("PUT")
+	// Player assignment routes
+	api.HandleFunc("/events/{id}/players", middleware.RequireAuthAPI(sqlDB, eventHandler.GetEventPlayers)).Methods("GET")
+	api.HandleFunc("/events/{id}/games/{gameId}/players", middleware.RequireAuthAPI(sqlDB, eventHandler.AssignPlayerToGame)).Methods("POST")
+	api.HandleFunc("/events/{id}/games/{gameId}/players/{userId}", middleware.RequireAuthAPI(sqlDB, eventHandler.RemovePlayerFromGame)).Methods("DELETE")
+	api.HandleFunc("/events/{id}/preferences", middleware.RequireAuthAPI(sqlDB, eventHandler.GetUserGamePreferences)).Methods("GET")
 	// Event RSVP routes
 	api.HandleFunc("/events/{id}/rsvp", middleware.RequireAuthAPI(sqlDB, rsvpHandler.SubmitRSVP)).Methods("POST")
 	api.HandleFunc("/events/{id}/rsvp/me", middleware.RequireAuthAPI(sqlDB, rsvpHandler.GetCurrentUserRSVP)).Methods("GET")

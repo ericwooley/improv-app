@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -310,7 +311,7 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Status    string `json:"status"`
 	}
 
-	var rsvps []RSVP
+	var rsvpMap = make(map[string]RSVP)
 	for rsvpRows.Next() {
 		var rsvp RSVP
 		err := rsvpRows.Scan(&rsvp.UserID, &rsvp.FirstName, &rsvp.LastName, &rsvp.Status)
@@ -319,7 +320,45 @@ func (h *EventHandler) Get(w http.ResponseWriter, r *http.Request) {
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning RSVPs")
 			return
 		}
-		rsvps = append(rsvps, rsvp)
+		rsvpMap[rsvp.UserID] = rsvp
+	}
+
+	// Get all members of the group and include them with "awaiting-response" status if they haven't RSVPed
+	memberRows, err := h.db.Query(`
+		SELECT u.id, u.first_name, u.last_name
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		WHERE gm.group_id = $1
+	`, event.GroupID)
+	if err != nil {
+		log.Printf("Error fetching group members: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching group members")
+		return
+	}
+	defer memberRows.Close()
+
+	var rsvps []RSVP
+	for memberRows.Next() {
+		var userId, firstName, lastName string
+		err := memberRows.Scan(&userId, &firstName, &lastName)
+		if err != nil {
+			log.Printf("Error scanning member row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning group members")
+			return
+		}
+
+		// Check if member has already RSVPed
+		if existingRSVP, ok := rsvpMap[userId]; ok {
+			rsvps = append(rsvps, existingRSVP)
+		} else {
+			// Add with default "awaiting-response" status
+			rsvps = append(rsvps, RSVP{
+				UserID:    userId,
+				FirstName: firstName,
+				LastName:  lastName,
+				Status:    "awaiting-response",
+			})
+		}
 	}
 
 	// Get assigned games
@@ -1025,5 +1064,452 @@ func (h *EventHandler) UpdateGameOrder(w http.ResponseWriter, r *http.Request) {
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Message: "Game order updated successfully",
+	})
+}
+
+// GetEventPlayers gets all player assignments for an event
+func (h *EventHandler) GetEventPlayers(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// First, check if the event exists and get its group ID
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT group_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user has access to this event (is a member of the group)
+	var isGroupMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, user.ID).Scan(&isGroupMember)
+	if err != nil {
+		log.Printf("Error checking group membership for user %s in group %s: %v", user.ID, groupID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
+		return
+	}
+
+	if !isGroupMember {
+		log.Printf("User %s is not a member of group %s", user.ID, groupID)
+		RespondWithError(w, http.StatusForbidden, "You are not a member of this group")
+		return
+	}
+
+	// Get all player assignments for this event
+	rows, err := h.db.Query(`
+		SELECT p.user_id, p.game_id, p.event_id, u.first_name, u.last_name
+		FROM event_player_assignments p
+		JOIN users u ON p.user_id = u.id
+		WHERE p.event_id = $1
+	`, eventID)
+	if err != nil {
+		log.Printf("Error fetching player assignments for event %s: %v", eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching player assignments")
+		return
+	}
+	defer rows.Close()
+
+	type PlayerAssignment struct {
+		UserID    string `json:"userId"`
+		GameID    string `json:"gameId"`
+		EventID   string `json:"eventId"`
+		Name      string `json:"name"`
+	}
+
+	var assignments []PlayerAssignment
+	for rows.Next() {
+		var assignment PlayerAssignment
+		var firstName, lastName string
+		err := rows.Scan(
+			&assignment.UserID,
+			&assignment.GameID,
+			&assignment.EventID,
+			&firstName,
+			&lastName,
+		)
+		if err != nil {
+			log.Printf("Error scanning player assignment row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning player assignments")
+			return
+		}
+
+		assignment.Name = firstName + " " + lastName
+		assignments = append(assignments, assignment)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    assignments,
+	})
+}
+
+// AssignPlayerToGame assigns a player to a game in an event
+func (h *EventHandler) AssignPlayerToGame(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+	gameID := vars["gameId"]
+
+	// Parse request body
+	var request struct {
+		UserID string `json:"userId"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error parsing request body: %v", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	// Verify the event exists and get group ID
+	var groupID string
+	var mcID sql.NullString
+	err = h.db.QueryRow(`
+		SELECT group_id, mc_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID, &mcID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user is authorized (is MC or has admin/organizer role)
+	var isAuthorized bool
+	if mcID.Valid && mcID.String == user.ID {
+		isAuthorized = true
+	} else {
+		err = h.db.QueryRow(`
+			SELECT role IN ('admin', 'organizer')
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		`, groupID, user.ID).Scan(&isAuthorized)
+		if err != nil {
+			log.Printf("Error checking user authorization: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking authorization")
+			return
+		}
+	}
+
+	if !isAuthorized {
+		log.Printf("User %s is not authorized to assign players for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event MC or group organizers can assign players")
+		return
+	}
+
+	// Verify the game exists and is part of the event
+	var gameExists bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM event_games
+			WHERE event_id = $1 AND game_id = $2
+		)
+	`, eventID, gameID).Scan(&gameExists)
+	if err != nil {
+		log.Printf("Error checking if game %s exists in event %s: %v", gameID, eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking game existence")
+		return
+	}
+
+	if !gameExists {
+		log.Printf("Game %s is not part of event %s", gameID, eventID)
+		RespondWithError(w, http.StatusBadRequest, "Game is not part of this event")
+		return
+	}
+
+	// Verify the user being assigned is a group member
+	var isTargetUserMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, request.UserID).Scan(&isTargetUserMember)
+	if err != nil {
+		log.Printf("Error checking if user %s is a member of group %s: %v", request.UserID, groupID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking user membership")
+		return
+	}
+
+	if !isTargetUserMember {
+		log.Printf("User %s is not a member of group %s", request.UserID, groupID)
+		RespondWithError(w, http.StatusBadRequest, "User is not a member of this group")
+		return
+	}
+
+	// Verify the user is attending the event
+	var isAttending bool
+	err = h.db.QueryRow(`
+		SELECT status = 'attending'
+		FROM event_rsvps
+		WHERE event_id = $1 AND user_id = $2
+	`, eventID, request.UserID).Scan(&isAttending)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error checking if user %s is attending event %s: %v", request.UserID, eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking attendance status")
+		return
+	}
+
+	if !isAttending {
+		log.Printf("User %s is not attending event %s", request.UserID, eventID)
+		RespondWithError(w, http.StatusBadRequest, "User is not marked as attending this event")
+		return
+	}
+
+	// Check if player is already assigned to this game
+	var isAlreadyAssigned bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM event_player_assignments
+			WHERE event_id = $1 AND game_id = $2 AND user_id = $3
+		)
+	`, eventID, gameID, request.UserID).Scan(&isAlreadyAssigned)
+	if err != nil {
+		log.Printf("Error checking if player is already assigned: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking player assignment")
+		return
+	}
+
+	if isAlreadyAssigned {
+		log.Printf("User %s is already assigned to game %s in event %s", request.UserID, gameID, eventID)
+		RespondWithError(w, http.StatusBadRequest, "Player is already assigned to this game")
+		return
+	}
+
+	// Assign player to the game
+	_, err = h.db.Exec(`
+		INSERT INTO event_player_assignments (event_id, game_id, user_id)
+		VALUES ($1, $2, $3)
+	`, eventID, gameID, request.UserID)
+	if err != nil {
+		log.Printf("Error assigning player %s to game %s in event %s: %v", request.UserID, gameID, eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error assigning player to game")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Player assigned to game successfully",
+	})
+}
+
+// RemovePlayerFromGame removes a player from a game in an event
+func (h *EventHandler) RemovePlayerFromGame(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+	gameID := vars["gameId"]
+	targetUserID := vars["userId"]
+
+	// Verify the event exists and get group ID
+	var groupID string
+	var mcID sql.NullString
+	err := h.db.QueryRow(`
+		SELECT group_id, mc_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID, &mcID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user is authorized (is MC or has admin/organizer role)
+	var isAuthorized bool
+	if mcID.Valid && mcID.String == user.ID {
+		isAuthorized = true
+	} else {
+		err = h.db.QueryRow(`
+			SELECT role IN ('admin', 'organizer')
+			FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		`, groupID, user.ID).Scan(&isAuthorized)
+		if err != nil {
+			log.Printf("Error checking user authorization: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking authorization")
+			return
+		}
+	}
+
+	if !isAuthorized {
+		log.Printf("User %s is not authorized to remove players for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event MC or group organizers can remove players")
+		return
+	}
+
+	// Check if the assignment exists
+	var assignmentExists bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM event_player_assignments
+			WHERE event_id = $1 AND game_id = $2 AND user_id = $3
+		)
+	`, eventID, gameID, targetUserID).Scan(&assignmentExists)
+	if err != nil {
+		log.Printf("Error checking if assignment exists: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking player assignment")
+		return
+	}
+
+	if !assignmentExists {
+		log.Printf("Assignment for user %s in game %s and event %s not found", targetUserID, gameID, eventID)
+		RespondWithError(w, http.StatusNotFound, "Player assignment not found")
+		return
+	}
+
+	// Remove the player from the game
+	_, err = h.db.Exec(`
+		DELETE FROM event_player_assignments
+		WHERE event_id = $1 AND game_id = $2 AND user_id = $3
+	`, eventID, gameID, targetUserID)
+	if err != nil {
+		log.Printf("Error removing player %s from game %s in event %s: %v", targetUserID, gameID, eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error removing player from game")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Player removed from game successfully",
+	})
+}
+
+// GetUserGamePreferences gets user preferences for games in an event
+func (h *EventHandler) GetUserGamePreferences(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// Get query params
+	gameIDs := []string{}
+	if gamesParam := r.URL.Query().Get("games"); gamesParam != "" {
+		gameIDs = strings.Split(gamesParam, ",")
+	}
+
+	// Verify the event exists and get group ID
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT group_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user has access to this event (is a member of the group)
+	var isGroupMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, user.ID).Scan(&isGroupMember)
+	if err != nil {
+		log.Printf("Error checking group membership for user %s in group %s: %v", user.ID, groupID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
+		return
+	}
+
+	if !isGroupMember {
+		log.Printf("User %s is not a member of group %s", user.ID, groupID)
+		RespondWithError(w, http.StatusForbidden, "You are not a member of this group")
+		return
+	}
+
+	// Build the query to get game preferences
+	queryArgs := []interface{}{eventID}
+	query := `
+		SELECT ugp.user_id, ugp.game_id, ugp.rating, ugp.status
+		FROM event_games eg
+		JOIN user_game_preferences ugp ON eg.game_id = ugp.game_id
+		WHERE eg.event_id = $1
+	`
+
+	// Add filter for specific games if provided
+	if len(gameIDs) > 0 {
+		placeholders := make([]string, len(gameIDs))
+		for i, _ := range gameIDs {
+			queryArgs = append(queryArgs, gameIDs[i])
+			placeholders[i] = fmt.Sprintf("$%d", i+2) // +2 because $1 is already used for eventID
+		}
+		query += fmt.Sprintf(" AND eg.game_id IN (%s)", strings.Join(placeholders, ","))
+	}
+
+	// Execute the query
+	rows, err := h.db.Query(query, queryArgs...)
+	if err != nil {
+		log.Printf("Error fetching game preferences for event %s: %v", eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching game preferences")
+		return
+	}
+	defer rows.Close()
+
+	type GamePreference struct {
+		UserID    string      `json:"userId"`
+		GameID    string      `json:"gameId"`
+		Rating    *int        `json:"rating,omitempty"`
+		Status    string      `json:"status,omitempty"`
+	}
+
+	var preferences []GamePreference
+	for rows.Next() {
+		var preference GamePreference
+		var rating sql.NullInt64
+		var status sql.NullString
+
+		err := rows.Scan(&preference.UserID, &preference.GameID, &rating, &status)
+		if err != nil {
+			log.Printf("Error scanning game preference row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning game preferences")
+			return
+		}
+
+		if rating.Valid {
+			ratingInt := int(rating.Int64)
+			preference.Rating = &ratingInt
+		}
+
+		if status.Valid {
+			preference.Status = status.String
+		}
+
+		preferences = append(preferences, preference)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    preferences,
 	})
 }

@@ -26,6 +26,7 @@ import {
   HelpOutline as MaybeIcon,
   Cancel as DeclinedIcon,
   Edit as EditIcon,
+  HourglassEmpty as AwaitingIcon,
 } from '@mui/icons-material'
 import { RSVP } from '../../store/api/eventsApi'
 import { useUpdateUserRSVPMutation } from '../../store/api/eventsApi'
@@ -49,6 +50,7 @@ const AttendanceList = ({ rsvps, eventId, canManageAttendance }: AttendanceListP
       attending: rsvps.filter((rsvp) => rsvp.status === 'attending').length,
       maybe: rsvps.filter((rsvp) => rsvp.status === 'maybe').length,
       declined: rsvps.filter((rsvp) => rsvp.status === 'declined').length,
+      awaiting: rsvps.filter((rsvp) => rsvp.status === 'awaiting-response').length,
       total: rsvps.length,
     }
   }, [rsvps])
@@ -69,6 +71,8 @@ const AttendanceList = ({ rsvps, eventId, canManageAttendance }: AttendanceListP
         return <Chip icon={<MaybeIcon />} label="Maybe" color="warning" size="small" />
       case 'declined':
         return <Chip icon={<DeclinedIcon />} label="Declined" color="error" size="small" />
+      case 'awaiting-response':
+        return <Chip icon={<AwaitingIcon />} label="Awaiting Response" color="default" size="small" />
       default:
         return null
     }
@@ -87,7 +91,7 @@ const AttendanceList = ({ rsvps, eventId, canManageAttendance }: AttendanceListP
   }
 
   // Handle updating user status
-  const handleUpdateStatus = async (status: 'attending' | 'maybe' | 'declined') => {
+  const handleUpdateStatus = async (status: 'attending' | 'maybe' | 'declined' | 'awaiting-response') => {
     if (!selectedUserId) return
 
     try {
@@ -112,6 +116,7 @@ const AttendanceList = ({ rsvps, eventId, canManageAttendance }: AttendanceListP
           <Chip icon={<AttendingIcon />} label={`Attending: ${summary.attending}`} color="success" variant="outlined" />
           <Chip icon={<MaybeIcon />} label={`Maybe: ${summary.maybe}`} color="warning" variant="outlined" />
           <Chip icon={<DeclinedIcon />} label={`Declined: ${summary.declined}`} color="error" variant="outlined" />
+          <Chip icon={<AwaitingIcon />} label={`Awaiting: ${summary.awaiting}`} color="default" variant="outlined" />
           <Chip label={`Total: ${summary.total}`} color="primary" variant="outlined" />
         </Box>
       </Box>
@@ -128,6 +133,7 @@ const AttendanceList = ({ rsvps, eventId, canManageAttendance }: AttendanceListP
             <MenuItem value="attending">Attending</MenuItem>
             <MenuItem value="maybe">Maybe</MenuItem>
             <MenuItem value="declined">Declined</MenuItem>
+            <MenuItem value="awaiting-response">Awaiting Response</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -210,6 +216,12 @@ const AttendanceList = ({ rsvps, eventId, canManageAttendance }: AttendanceListP
             <DeclinedIcon fontSize="small" color="error" />
           </ListItemIcon>
           <ListItemText>Mark as Declined</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleUpdateStatus('awaiting-response')}>
+          <ListItemIcon>
+            <AwaitingIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Reset to Awaiting Response</ListItemText>
         </MenuItem>
       </Menu>
     </Box>

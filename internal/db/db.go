@@ -165,6 +165,17 @@ func InitDB() *sql.DB {
 			FOREIGN KEY (invited_by) REFERENCES users(id)
 		);
 
+		CREATE TABLE IF NOT EXISTS event_player_assignments (
+			event_id TEXT NOT NULL,
+			game_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (event_id, game_id, user_id),
+			FOREIGN KEY (event_id) REFERENCES events(id),
+			FOREIGN KEY (game_id) REFERENCES games(id),
+			FOREIGN KEY (user_id) REFERENCES users(id)
+		);
+
 		-- Create virtual table for full text search on games
 		CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts4(
 			name,
@@ -201,6 +212,12 @@ func InitDB() *sql.DB {
 	db.Exec(`ALTER TABLE user_game_preferences ADD COLUMN status TEXT;`)
 	db.Exec(`ALTER TABLE user_game_preferences DROP COLUMN rating;`)
 	// Ignore error - it will fail if column already exists, which is fine
+
+	// Create indexes for player assignments if they don't exist
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_player_assignments_event_id ON event_player_assignments(event_id);`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_player_assignments_game_id ON event_player_assignments(game_id);`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_player_assignments_user_id ON event_player_assignments(user_id);`)
+	// Ignore error - it will fail if indexes already exist, which is fine
 
 	// Add group invite links table if it doesn't exist
 	db.Exec(`

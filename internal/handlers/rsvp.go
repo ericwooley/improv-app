@@ -44,9 +44,9 @@ func (h *RSVPHandler) SubmitRSVP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Validate status
-	if request.Status != "attending" && request.Status != "maybe" && request.Status != "declined" {
+	if request.Status != "attending" && request.Status != "maybe" && request.Status != "declined" && request.Status != "awaiting-response" {
 		log.Printf("Invalid RSVP status: %s", request.Status)
-		RespondWithError(w, http.StatusBadRequest, "Invalid RSVP status. Must be 'attending', 'maybe', or 'declined'")
+		RespondWithError(w, http.StatusBadRequest, "Invalid RSVP status. Must be 'attending', 'maybe', 'declined', or 'awaiting-response'")
 		return
 	}
 
@@ -197,9 +197,9 @@ func (h *RSVPHandler) UpdateUserRSVP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Validate status
-	if request.Status != "attending" && request.Status != "maybe" && request.Status != "declined" {
+	if request.Status != "attending" && request.Status != "maybe" && request.Status != "declined" && request.Status != "awaiting-response" {
 		log.Printf("Invalid RSVP status: %s", request.Status)
-		RespondWithError(w, http.StatusBadRequest, "Invalid RSVP status. Must be 'attending', 'maybe', or 'declined'")
+		RespondWithError(w, http.StatusBadRequest, "Invalid RSVP status. Must be 'attending', 'maybe', 'declined', or 'awaiting-response'")
 		return
 	}
 

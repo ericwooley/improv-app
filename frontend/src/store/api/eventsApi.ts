@@ -58,7 +58,7 @@ export interface RSVP {
   userId: string
   firstName: string
   lastName: string
-  status: 'attending' | 'maybe' | 'declined'
+  status: 'attending' | 'maybe' | 'declined' | 'awaiting-response'
 }
 
 export interface CreateEventRequest {
@@ -67,6 +67,21 @@ export interface CreateEventRequest {
   location: string
   startTime: string
   groupId: string
+}
+
+// Game preferences and player assignments
+export interface GamePreference {
+  userId: string
+  gameId: string
+  rating?: number
+  status?: string
+}
+
+export interface PlayerAssignment {
+  userId: string
+  gameId: string
+  eventId: string
+  name: string
 }
 
 export const eventsApi = apiSlice.injectEndpoints({
@@ -185,7 +200,7 @@ export const eventsApi = apiSlice.injectEndpoints({
     // Admin/organizer endpoint to update another user's RSVP
     updateUserRSVP: builder.mutation<
       APIResponse<void>,
-      { eventId: string; userId: string; status: 'attending' | 'maybe' | 'declined' }
+      { eventId: string; userId: string; status: 'attending' | 'maybe' | 'declined' | 'awaiting-response' }
     >({
       query: ({ eventId, userId, status }) => ({
         url: `/events/${eventId}/rsvp/${userId}`,
@@ -193,6 +208,41 @@ export const eventsApi = apiSlice.injectEndpoints({
         body: { status },
       }),
       invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: eventId }],
+    }),
+
+    // Game preference and player assignment endpoints
+    getUserGamePreferences: builder.query<APIResponse<GamePreference[]>, { eventId: string; gameIds?: string[] }>({
+      query: ({ eventId, gameIds }) => ({
+        url: `/events/${eventId}/preferences`,
+        method: 'GET',
+        params: gameIds ? { games: gameIds.join(',') } : undefined,
+      }),
+      providesTags: (_, __, { eventId }) => [{ type: 'Event', id: `${eventId}-prefs` }],
+    }),
+
+    getEventPlayerAssignments: builder.query<
+      APIResponse<PlayerAssignment[]>,
+      string // eventId
+    >({
+      query: (eventId) => `/events/${eventId}/players`,
+      providesTags: (_, __, eventId) => [{ type: 'Event', id: `${eventId}-players` }],
+    }),
+
+    assignPlayerToGame: builder.mutation<APIResponse<void>, { eventId: string; gameId: string; userId: string }>({
+      query: ({ eventId, gameId, userId }) => ({
+        url: `/events/${eventId}/games/${gameId}/players`,
+        method: 'POST',
+        body: { userId },
+      }),
+      invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: `${eventId}-players` }],
+    }),
+
+    removePlayerFromGame: builder.mutation<APIResponse<void>, { eventId: string; gameId: string; userId: string }>({
+      query: ({ eventId, gameId, userId }) => ({
+        url: `/events/${eventId}/games/${gameId}/players/${userId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: `${eventId}-players` }],
     }),
   }),
 })
@@ -211,4 +261,8 @@ export const {
   useSubmitRSVPMutation,
   useGetCurrentUserRSVPQuery,
   useUpdateUserRSVPMutation,
+  useGetUserGamePreferencesQuery,
+  useGetEventPlayerAssignmentsQuery,
+  useAssignPlayerToGameMutation,
+  useRemovePlayerFromGameMutation,
 } = eventsApi
