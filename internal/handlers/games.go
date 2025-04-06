@@ -299,9 +299,63 @@ func (h *GameHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the group exists
+	var groupExists bool
+	err := h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM improv_groups WHERE id = $1)
+	`, gameRequest.GroupID).Scan(&groupExists)
+
+	if err != nil {
+		log.Printf("Error checking if group exists: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking group existence")
+		return
+	}
+
+	if !groupExists {
+		log.Printf("Group with ID %s does not exist", gameRequest.GroupID)
+		RespondWithError(w, http.StatusBadRequest, "Group does not exist")
+		return
+	}
+
+	// Check if user exists
+	var userExists bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)
+	`, user.ID).Scan(&userExists)
+
+	if err != nil {
+		log.Printf("Error checking if user exists: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking user existence")
+		return
+	}
+
+	if !userExists {
+		log.Printf("User with ID %s does not exist", user.ID)
+		RespondWithError(w, http.StatusBadRequest, "User does not exist")
+		return
+	}
+
+	// Check if a game with the same name already exists in this group
+	var nameExists bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM games WHERE name = $1 AND group_id = $2)
+	`, gameRequest.Name, gameRequest.GroupID).Scan(&nameExists)
+
+	if err != nil {
+		log.Printf("Error checking for duplicate game name: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking for duplicate game name")
+		return
+	}
+
+	if nameExists {
+		log.Printf("A game with name '%s' already exists in group %s", gameRequest.Name, gameRequest.GroupID)
+		RespondWithError(w, http.StatusBadRequest, "A game with this name already exists in this group")
+		return
+	}
+
 	// Check if user is a member of the group
 	var role string
-	err := h.db.QueryRow(`
+	err = h.db.QueryRow(`
 		SELECT role
 		FROM group_members
 		WHERE group_id = $1 AND user_id = $2
@@ -317,14 +371,33 @@ func (h *GameHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gameID := uuid.New().String()
+
 	err = h.db.QueryRow(`
 		INSERT INTO games (id, name, description, min_players, max_players, created_by, group_id, public)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`, gameID, gameRequest.Name, gameRequest.Description, gameRequest.MinPlayers, gameRequest.MaxPlayers, user.ID, gameRequest.GroupID, gameRequest.Public).Scan(&gameID)
 	if err != nil {
-		log.Printf("Error creating game: %v", err)
-		RespondWithError(w, http.StatusInternalServerError, "Error creating game")
+		log.Printf("Error creating game: %v - Details: ID=%s, Name=%s, MinPlayers=%d, MaxPlayers=%d, CreatedBy=%s, GroupID=%s",
+			err, gameID, gameRequest.Name, gameRequest.MinPlayers, gameRequest.MaxPlayers, user.ID, gameRequest.GroupID)
+
+		// Check specific constraints
+		var foreignKeyErr bool
+		err1 := h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`, user.ID).Scan(&foreignKeyErr)
+		if err1 == nil && !foreignKeyErr {
+			log.Printf("Foreign key constraint failed: user %s doesn't exist", user.ID)
+			RespondWithError(w, http.StatusBadRequest, "User doesn't exist in the database")
+			return
+		}
+
+		err1 = h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM improv_groups WHERE id = $1)`, gameRequest.GroupID).Scan(&foreignKeyErr)
+		if err1 == nil && !foreignKeyErr {
+			log.Printf("Foreign key constraint failed: group %s doesn't exist", gameRequest.GroupID)
+			RespondWithError(w, http.StatusBadRequest, "Group doesn't exist in the database")
+			return
+		}
+
+		RespondWithError(w, http.StatusInternalServerError, "Error creating game: "+err.Error())
 		return
 	}
 	log.Printf("Created new game: %s (ID: %s)", gameRequest.Name, gameID)
@@ -336,8 +409,17 @@ func (h *GameHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ON CONFLICT DO NOTHING
 	`, gameRequest.GroupID, gameID)
 	if err != nil {
-		log.Printf("Error adding game to group library: %v", err)
-		RespondWithError(w, http.StatusInternalServerError, "Error adding game to group library")
+		// Log the error and try to clean up the game that was just created
+		log.Printf("Error adding game to group library: %v - GroupID=%s, GameID=%s",
+			err, gameRequest.GroupID, gameID)
+
+		// Try to delete the game if we couldn't add it to the library
+		_, cleanupErr := h.db.Exec("DELETE FROM games WHERE id = $1", gameID)
+		if cleanupErr != nil {
+			log.Printf("Failed to clean up game after library insertion error: %v", cleanupErr)
+		}
+
+		RespondWithError(w, http.StatusInternalServerError, "Error adding game to group library: "+err.Error())
 		return
 	}
 	log.Printf("Added game %s to group %s library", gameID, gameRequest.GroupID)

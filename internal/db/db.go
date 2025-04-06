@@ -172,9 +172,14 @@ func InitDB() *sql.DB {
 			content='games'
 		);
 
+		-- Drop existing triggers if they exist to recreate them
+		DROP TRIGGER IF EXISTS games_ai;
+		DROP TRIGGER IF EXISTS games_ad;
+		DROP TRIGGER IF EXISTS games_au;
+
 		-- Create triggers to keep the FTS table in sync with the games table
 		CREATE TRIGGER IF NOT EXISTS games_ai AFTER INSERT ON games BEGIN
-			INSERT INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
+			INSERT OR IGNORE INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
 		END;
 
 		CREATE TRIGGER IF NOT EXISTS games_ad AFTER DELETE ON games BEGIN
@@ -183,7 +188,7 @@ func InitDB() *sql.DB {
 
 		CREATE TRIGGER IF NOT EXISTS games_au AFTER UPDATE ON games BEGIN
 			DELETE FROM games_fts WHERE docid = old.id;
-			INSERT INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
+			INSERT OR IGNORE INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
 		END;
 	`)
 	if err != nil {
