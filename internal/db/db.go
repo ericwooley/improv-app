@@ -179,16 +179,16 @@ func InitDB() *sql.DB {
 
 		-- Create triggers to keep the FTS table in sync with the games table
 		CREATE TRIGGER IF NOT EXISTS games_ai AFTER INSERT ON games BEGIN
-			INSERT OR IGNORE INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
+			INSERT OR IGNORE INTO games_fts(docid, name, description) VALUES (new.rowid, new.name, new.description);
 		END;
 
 		CREATE TRIGGER IF NOT EXISTS games_ad AFTER DELETE ON games BEGIN
-			DELETE FROM games_fts WHERE docid = old.id;
+			DELETE FROM games_fts WHERE docid = old.rowid;
 		END;
 
 		CREATE TRIGGER IF NOT EXISTS games_au AFTER UPDATE ON games BEGIN
-			DELETE FROM games_fts WHERE docid = old.id;
-			INSERT OR IGNORE INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
+			DELETE FROM games_fts WHERE docid = old.rowid;
+			INSERT OR IGNORE INTO games_fts(docid, name, description) VALUES (new.rowid, new.name, new.description);
 		END;
 	`)
 	if err != nil {
@@ -218,6 +218,17 @@ func InitDB() *sql.DB {
 		);
 	`)
 	// Ignore error - it will fail if table already exists, which is fine
+
+	// Resync games_fts table on startup to ensure FTS is up to date
+	db.Exec(`
+		-- Clear existing FTS entries
+		DELETE FROM games_fts;
+
+		-- Repopulate FTS table from games table
+		INSERT INTO games_fts(docid, name, description)
+		SELECT rowid, name, description FROM games;
+	`)
+	log.Println("FTS index for games refreshed")
 
 	return db
 }

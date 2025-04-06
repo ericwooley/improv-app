@@ -73,7 +73,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 				   GROUP_CONCAT(DISTINCT t.name) as tags
 			FROM games g
-			JOIN games_fts ON games_fts.docid = g.id
+			JOIN games_fts ON games_fts.docid = g.rowid
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			WHERE games_fts MATCH ?
@@ -81,7 +81,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		countQueryStr = `
 			SELECT COUNT(DISTINCT g.id)
 			FROM games g
-			JOIN games_fts ON games_fts.docid = g.id
+			JOIN games_fts ON games_fts.docid = g.rowid
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			WHERE games_fts MATCH ?
@@ -844,7 +844,7 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 				GROUP_CONCAT(DISTINCT t.name) as tags
 			FROM games g
-			JOIN games_fts ON games_fts.docid = g.id
+			JOIN games_fts ON games_fts.docid = g.rowid
 			JOIN group_game_libraries ggl ON g.id = ggl.game_id
 			JOIN group_members gm ON ggl.group_id = gm.group_id
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
