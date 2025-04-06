@@ -78,6 +78,11 @@ export const GamesList = ({
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, newPage: number) => {
     setPage(newPage)
+    // Scroll to the top of the page when pagination changes
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
   }
 
   if (isLoading) {
@@ -131,6 +136,13 @@ export const GamesList = ({
 
   return (
     <>
+      {/* Loading indicator that appears at the top when changing pages */}
+      {isLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+          <CircularProgress size={30} />
+        </Box>
+      )}
+
       <Grid container spacing={3}>
         <AnimatePresence mode="popLayout">
           {games.map((game, index) => (
