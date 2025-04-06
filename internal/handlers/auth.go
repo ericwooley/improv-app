@@ -22,10 +22,19 @@ func NewAuthHandler(emailService *services.EmailService) *AuthHandler {
 
 // ApiResponse is a generic API response structure
 type ApiResponse struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Success    bool                `json:"success"`
+	Message    string              `json:"message,omitempty"`
+	Data       interface{}         `json:"data,omitempty"`
+	Error      string              `json:"error,omitempty"`
+	Pagination *PaginationMetadata `json:"pagination,omitempty"`
+}
+
+// PaginationMetadata contains information about pagination results
+type PaginationMetadata struct {
+	Page       int `json:"page"`
+	PageSize   int `json:"pageSize"`
+	TotalItems int `json:"totalItems"`
+	TotalPages int `json:"totalPages"`
 }
 
 // RespondWithJSON sends a JSON response

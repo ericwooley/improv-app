@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,8 +39,33 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	ownedByGroupFilter := query.Get("ownedByGroup")
 	searchQuery := query.Get("search")
 
+	// Pagination parameters
+	pageStr := query.Get("page")
+	pageSizeStr := query.Get("pageSize")
+
+	// Default values for pagination
+	page := 1
+	pageSize := 0 // 0 means no pagination
+
+	// Parse pagination parameters if provided
+	if pageStr != "" {
+		parsedPage, err := strconv.Atoi(pageStr)
+		if err == nil && parsedPage > 0 {
+			page = parsedPage
+		}
+	}
+
+	if pageSizeStr != "" {
+		parsedPageSize, err := strconv.Atoi(pageSizeStr)
+		if err == nil && parsedPageSize > 0 {
+			pageSize = parsedPageSize
+		}
+	}
+
 	var queryStr string
+	var countQueryStr string
 	var params []interface{}
+	var countParams []interface{}
 
 	// If search query is provided, use FTS4
 	if searchQuery != "" {
@@ -52,12 +78,27 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			WHERE games_fts MATCH ?
 		`
+		countQueryStr = `
+			SELECT COUNT(DISTINCT g.id)
+			FROM games g
+			JOIN games_fts ON games_fts.docid = g.id
+			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+			LEFT JOIN game_tags t ON gta.tag_id = t.id
+			WHERE games_fts MATCH ?
+		`
 		params = append(params, searchQuery)
+		countParams = append(countParams, searchQuery)
 	} else {
 		// Regular query without search
 		queryStr = `
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 				   GROUP_CONCAT(DISTINCT t.name) as tags
+			FROM games g
+			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+			LEFT JOIN game_tags t ON gta.tag_id = t.id
+		`
+		countQueryStr = `
+			SELECT COUNT(DISTINCT g.id)
 			FROM games g
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
@@ -72,12 +113,21 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 					SELECT game_id FROM group_game_libraries WHERE group_id = ?
 				)
 			`
+			countQueryStr += `
+				AND g.id IN (
+					SELECT game_id FROM group_game_libraries WHERE group_id = ?
+				)
+			`
 		} else {
 			queryStr += `
 				JOIN group_game_libraries ggl ON g.id = ggl.game_id AND ggl.group_id = ?
 			`
+			countQueryStr += `
+				JOIN group_game_libraries ggl ON g.id = ggl.game_id AND ggl.group_id = ?
+			`
 		}
 		params = append(params, libraryFilter)
+		countParams = append(countParams, libraryFilter)
 	}
 
 	// Add permission check
@@ -86,13 +136,22 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			AND (g.public = TRUE
 			 OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
 		`
+		countQueryStr += `
+			AND (g.public = TRUE
+			 OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
+		`
 	} else {
 		queryStr += `
 			WHERE (g.public = TRUE
 			   OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
 		`
+		countQueryStr += `
+			WHERE (g.public = TRUE
+			   OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
+		`
 	}
 	params = append(params, user.ID)
+	countParams = append(countParams, user.ID)
 
 	// Apply tag filter if provided
 	if tagFilter != "" {
@@ -103,7 +162,15 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 				WHERE t.name = ?
 			)
 		`
+		countQueryStr += `
+			AND g.id IN (
+				SELECT game_id FROM game_tag_associations gta
+				JOIN game_tags t ON gta.tag_id = t.id
+				WHERE t.name = ?
+			)
+		`
 		params = append(params, tagFilter)
+		countParams = append(countParams, tagFilter)
 	}
 
 	// Apply owned by group filter if provided
@@ -111,13 +178,34 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		queryStr += `
 			AND g.group_id = ?
 		`
+		countQueryStr += `
+			AND g.group_id = ?
+		`
 		params = append(params, ownedByGroupFilter)
+		countParams = append(countParams, ownedByGroupFilter)
 	}
 
 	queryStr += `
 		GROUP BY g.id
 		ORDER BY g.created_at DESC
 	`
+
+	// Get total count for pagination
+	var totalCount int
+	err := h.db.QueryRow(countQueryStr, countParams...).Scan(&totalCount)
+	if err != nil {
+		log.Printf("Error counting games: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error counting games")
+		return
+	}
+
+	// Apply pagination if pageSize is specified
+	if pageSize > 0 {
+		queryStr += `
+			LIMIT ? OFFSET ?
+		`
+		params = append(params, pageSize, (page-1)*pageSize)
+	}
 
 	// Execute query
 	rows, err := h.db.Query(queryStr, params...)
@@ -149,10 +237,25 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		games = []models.Game{}
 	}
 
-	RespondWithJSON(w, http.StatusOK, ApiResponse{
+	// Calculate pagination metadata
+	totalPages := 1
+	if pageSize > 0 && totalCount > 0 {
+		totalPages = (totalCount + pageSize - 1) / pageSize // Ceiling division
+	}
+
+	// Response with pagination metadata
+	response := ApiResponse{
 		Success: true,
 		Data:    games,
-	})
+		Pagination: &PaginationMetadata{
+			Page:       page,
+			PageSize:   pageSize,
+			TotalItems: totalCount,
+			TotalPages: totalPages,
+		},
+	}
+
+	RespondWithJSON(w, http.StatusOK, response)
 }
 
 // Create handles creating a new game

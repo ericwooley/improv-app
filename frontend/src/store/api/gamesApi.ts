@@ -57,7 +57,14 @@ export const gamesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getGames: builder.query<
       APIResponse<Game[]>,
-      { tag?: string; library?: string; ownedByGroup?: string; search?: string } | void
+      {
+        tag?: string
+        library?: string
+        ownedByGroup?: string
+        search?: string
+        page?: number
+        pageSize?: number
+      } | void
     >({
       query: (filters = {}) => {
         const params = new URLSearchParams()
@@ -72,6 +79,12 @@ export const gamesApi = apiSlice.injectEndpoints({
         }
         if (filters && 'search' in filters && filters.search) {
           params.append('search', filters.search)
+        }
+        if (filters && 'page' in filters && filters.page) {
+          params.append('page', filters.page.toString())
+        }
+        if (filters && 'pageSize' in filters && filters.pageSize) {
+          params.append('pageSize', filters.pageSize.toString())
         }
         return `/games${params.toString() ? `?${params.toString()}` : ''}`
       },
