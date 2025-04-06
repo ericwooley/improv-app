@@ -235,7 +235,7 @@ export const eventsApi = apiSlice.injectEndpoints({
       string // eventId
     >({
       query: (eventId) => `/events/${eventId}/players`,
-      providesTags: (_, __, eventId) => [{ type: 'Event', id: `${eventId}-players` }],
+      providesTags: (_, __, eventId) => [{ type: 'PlayerAssignments', id: eventId }],
     }),
 
     assignPlayerToGame: builder.mutation<APIResponse<void>, { eventId: string; gameId: string; userId: string }>({
