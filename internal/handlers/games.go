@@ -79,11 +79,13 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 					  WHEN g.name LIKE ? THEN 3
 					  WHEN g.description LIKE ? THEN 1
 					  ELSE 0
-				    END) AS relevance_score
+				    END) AS relevance_score,
+				   COUNT(DISTINCT eg.event_id) AS event_count
 			FROM games g
 			JOIN games_fts ON games_fts.docid = g.rowid
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
+			LEFT JOIN event_games eg ON g.id = eg.game_id
 			WHERE games_fts MATCH ?
 		`
 		countQueryStr = `
@@ -101,10 +103,12 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		// Regular query without search
 		queryStr = `
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-				   GROUP_CONCAT(DISTINCT t.name) as tags
+				   GROUP_CONCAT(DISTINCT t.name) as tags,
+				   COUNT(DISTINCT eg.event_id) AS event_count
 			FROM games g
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
+			LEFT JOIN event_games eg ON g.id = eg.game_id
 		`
 		countQueryStr = `
 			SELECT COUNT(DISTINCT g.id)
@@ -198,14 +202,14 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		GROUP BY g.id
 	`
 
-	// Add ORDER BY relevance for search queries, otherwise by creation date
+	// Add ORDER BY relevance for search queries, otherwise by event count
 	if searchQuery != "" {
 		queryStr += `
-			ORDER BY relevance_score DESC, g.created_at DESC
+			ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
 		`
 	} else {
 		queryStr += `
-			ORDER BY g.created_at DESC
+			ORDER BY event_count DESC, g.created_at DESC
 		`
 	}
 
@@ -239,17 +243,18 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var game models.Game
 		var tagsStr sql.NullString
-		var relevanceScore int
+		var eventCount int
 
 		if searchQuery != "" {
-			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore)
+			var relevanceScore int
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore, &eventCount)
 			if err != nil {
 				log.Printf("Error scanning game row: %v", err)
 				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
 				return
 			}
 		} else {
-			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &eventCount)
 			if err != nil {
 				log.Printf("Error scanning game row: %v", err)
 				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
@@ -881,7 +886,8 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 				  WHEN g.name LIKE ? THEN 3
 				  WHEN g.description LIKE ? THEN 1
 				  ELSE 0
-				END) AS relevance_score
+				END) AS relevance_score,
+				COUNT(DISTINCT eg.event_id) AS event_count
 			FROM games g
 			JOIN games_fts ON games_fts.docid = g.rowid
 			JOIN group_game_libraries ggl ON g.id = ggl.game_id
@@ -889,10 +895,11 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			LEFT JOIN user_game_preferences ugp ON g.id = ugp.game_id AND ugp.user_id = ?
+			LEFT JOIN event_games eg ON g.id = eg.game_id
 			WHERE gm.user_id = ? AND ugp.status IS NULL
 			AND games_fts MATCH ?
 			GROUP BY g.id
-			ORDER BY relevance_score DESC, g.created_at DESC
+			ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
 			LIMIT 10
 		`
 		likePattern := "%" + searchQuery + "%"
@@ -901,16 +908,18 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 		// Regular query without search
 		queryStr = `
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-				GROUP_CONCAT(DISTINCT t.name) as tags
+				GROUP_CONCAT(DISTINCT t.name) as tags,
+				COUNT(DISTINCT eg.event_id) AS event_count
 			FROM games g
 			JOIN group_game_libraries ggl ON g.id = ggl.game_id
 			JOIN group_members gm ON ggl.group_id = gm.group_id
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			LEFT JOIN user_game_preferences ugp ON g.id = ugp.game_id AND ugp.user_id = ?
+			LEFT JOIN event_games eg ON g.id = eg.game_id
 			WHERE gm.user_id = ? AND ugp.status IS NULL
 			GROUP BY g.id
-			ORDER BY g.created_at DESC
+			ORDER BY event_count DESC, g.created_at DESC
 			LIMIT 10
 		`
 		params = append(params, user.ID, user.ID)
@@ -929,17 +938,18 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var game models.Game
 		var tagsStr sql.NullString
-		var relevanceScore int
+		var eventCount int
 
 		if searchQuery != "" {
-			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore)
+			var relevanceScore int
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore, &eventCount)
 			if err != nil {
 				log.Printf("Error scanning game row: %v", err)
 				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
 				return
 			}
 		} else {
-			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &eventCount)
 			if err != nil {
 				log.Printf("Error scanning game row: %v", err)
 				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
