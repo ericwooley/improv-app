@@ -264,3 +264,212 @@ export const getImprovedAssignmentSuggestions = (data: GameData, playerProblems:
 
   return suggestions
 }
+
+/**
+ * Automatically assigns players to games to maximize happiness
+ * @param data Object containing games, players and preferences
+ * @returns Optimized list of player assignments
+ */
+export const autoAssignPlayers = (data: GameData): PlayerAssignment[] => {
+  const { games, players, preferences, assignments } = data;
+  const optimizedAssignments: PlayerAssignment[] = [];
+
+  // Create a scoring matrix for each player-game combination
+  const playerGameScores: Record<string, Record<string, number>> = {};
+
+  // Initialize scores based on preferences
+  players.forEach(player => {
+    playerGameScores[player.userId] = {};
+    games.forEach(game => {
+      const preference = preferences.find(p => p.userId === player.userId && p.gameId === game.id);
+      const preferenceStatus = preference?.status || 'default';
+      const preferenceScore = PREFERENCE_SCORES[preferenceStatus] !== undefined
+        ? PREFERENCE_SCORES[preferenceStatus]
+        : PREFERENCE_SCORES.default;
+
+      playerGameScores[player.userId][game.id] = preferenceScore;
+    });
+  });
+
+  // Track assignments per player and per game
+  const playerAssignmentCount: Record<string, number> = {};
+  players.forEach(player => {
+    playerAssignmentCount[player.userId] = 0;
+  });
+
+  const gameAssignmentCount: Record<string, number> = {};
+  games.forEach(game => {
+    gameAssignmentCount[game.id] = 0;
+  });
+
+  // Sort games by minimum player requirements (prioritize games that need more players)
+  const sortedGames = [...games].sort((a, b) => b.minPlayers - a.minPlayers);
+
+  // Get event ID from existing assignments, or use a placeholder
+  const eventId = assignments.length > 0 ? assignments[0].eventId : 'event-id-placeholder';
+
+  // First pass: Ensure minimum requirements are met for all games
+  for (const game of sortedGames) {
+    // Sort players by their preference for this game (highest score first)
+    const playersByPreference = [...players]
+      .map(player => ({
+        player,
+        score: playerGameScores[player.userId][game.id]
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    // Assign players until minimum requirement is met
+    let assignedCount = 0;
+    for (const { player, score } of playersByPreference) {
+      // Skip players who dislike this game in the first pass if possible
+      if (score < -1 && assignedCount >= game.minPlayers) continue;
+
+      // Check if this game already has minimum players
+      if (gameAssignmentCount[game.id] >= game.minPlayers) break;
+
+      // Add assignment
+      optimizedAssignments.push({
+        userId: player.userId,
+        gameId: game.id,
+        name: `${player.firstName} ${player.lastName}`,
+        eventId
+      });
+
+      playerAssignmentCount[player.userId]++;
+      gameAssignmentCount[game.id]++;
+      assignedCount++;
+    }
+  }
+
+  // Second pass: Fill games up to optimal capacity with players who like them
+  const averageGamesPerPlayer = games.length / players.length;
+  const targetAssignmentsPerPlayer = Math.max(1, Math.floor(averageGamesPerPlayer));
+
+  // Sort games by how close they are to max capacity (prioritize games that need fewer players)
+  const remainingGames = [...games]
+    .filter(game => gameAssignmentCount[game.id] < game.maxPlayers)
+    .sort((a, b) => {
+      const aRemainingCapacity = a.maxPlayers - gameAssignmentCount[a.id];
+      const bRemainingCapacity = b.maxPlayers - gameAssignmentCount[b.id];
+      return aRemainingCapacity - bRemainingCapacity;
+    });
+
+  for (const game of remainingGames) {
+    // Skip if game is already at max capacity
+    if (gameAssignmentCount[game.id] >= game.maxPlayers) continue;
+
+    // Get players who aren't already assigned to this game
+    const unassignedPlayers = players.filter(player =>
+      !optimizedAssignments.some(a => a.userId === player.userId && a.gameId === game.id)
+    );
+
+    // Sort by preference score and then by number of current assignments (prefer players with fewer assignments)
+    const sortedPlayers = unassignedPlayers
+      .map(player => ({
+        player,
+        score: playerGameScores[player.userId][game.id],
+        currentAssignments: playerAssignmentCount[player.userId]
+      }))
+      .sort((a, b) => {
+        // First prioritize by preference score
+        if (b.score !== a.score) return b.score - a.score;
+        // Then prioritize players with fewer assignments
+        return a.currentAssignments - b.currentAssignments;
+      });
+
+    // Assign players until max capacity or no more suitable players
+    for (const { player, score } of sortedPlayers) {
+      // Don't assign players to games they dislike
+      if (score < 0) continue;
+
+      // Stop if game is at max capacity
+      if (gameAssignmentCount[game.id] >= game.maxPlayers) break;
+
+      // Skip players who already have more than the target number of games
+      if (playerAssignmentCount[player.userId] >= targetAssignmentsPerPlayer + 1) continue;
+
+      // Add assignment
+      optimizedAssignments.push({
+        userId: player.userId,
+        gameId: game.id,
+        name: `${player.firstName} ${player.lastName}`,
+        eventId
+      });
+
+      playerAssignmentCount[player.userId]++;
+      gameAssignmentCount[game.id]++;
+    }
+  }
+
+  // Third pass: Balance assignments to ensure all players have games
+  const playersWithFewGames = players
+    .filter(player => playerAssignmentCount[player.userId] < 1)
+    .sort((a, b) => playerAssignmentCount[a.userId] - playerAssignmentCount[b.userId]);
+
+  for (const player of playersWithFewGames) {
+    // Find games that player doesn't hate and aren't at max capacity
+    const possibleGames = games
+      .filter(game => {
+        const preference = playerGameScores[player.userId][game.id];
+        const isAlreadyAssigned = optimizedAssignments.some(
+          a => a.userId === player.userId && a.gameId === game.id
+        );
+        return !isAlreadyAssigned && preference > -2 && gameAssignmentCount[game.id] < game.maxPlayers;
+      })
+      .sort((a, b) => playerGameScores[player.userId][b.id] - playerGameScores[player.userId][a.id]);
+
+    if (possibleGames.length > 0) {
+      const bestGame = possibleGames[0];
+      optimizedAssignments.push({
+        userId: player.userId,
+        gameId: bestGame.id,
+        name: `${player.firstName} ${player.lastName}`,
+        eventId
+      });
+
+      playerAssignmentCount[player.userId]++;
+      gameAssignmentCount[bestGame.id]++;
+    }
+  }
+
+  // Fourth pass: Final optimization to improve overall happiness
+  const remainingCapacityGames = games.filter(game => gameAssignmentCount[game.id] < game.maxPlayers);
+
+  if (remainingCapacityGames.length > 0) {
+    // Find players who love games but aren't assigned to them
+    players.forEach(player => {
+      const lovedGames = preferences
+        .filter(p => p.userId === player.userId && p.status === 'I Love playing this')
+        .map(p => p.gameId);
+
+      const assignedGameIds = optimizedAssignments
+        .filter(a => a.userId === player.userId)
+        .map(a => a.gameId);
+
+      const missingLovedGames = lovedGames
+        .filter(gameId => !assignedGameIds.includes(gameId))
+        .filter(gameId => {
+          const game = games.find(g => g.id === gameId);
+          return game && gameAssignmentCount[gameId] < game.maxPlayers;
+        });
+
+      // Assign to loved games if possible
+      for (const gameId of missingLovedGames) {
+        if (playerAssignmentCount[player.userId] >= targetAssignmentsPerPlayer + 1) break;
+        if (gameAssignmentCount[gameId] >= games.find(g => g.id === gameId)!.maxPlayers) continue;
+
+        optimizedAssignments.push({
+          userId: player.userId,
+          gameId: gameId,
+          name: `${player.firstName} ${player.lastName}`,
+          eventId
+        });
+
+        playerAssignmentCount[player.userId]++;
+        gameAssignmentCount[gameId]++;
+      }
+    });
+  }
+
+  return optimizedAssignments;
+};

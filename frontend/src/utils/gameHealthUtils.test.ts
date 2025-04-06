@@ -3,8 +3,10 @@ import {
   analyzeGameHealth,
   calculateOverallHealthScore,
   getImprovedAssignmentSuggestions,
+  autoAssignPlayers,
   GameData,
 } from './gameHealthUtils'
+import { PlayerAssignment } from '../store/api/eventsApi'
 
 // Sample test data
 const mockGameData: GameData = {
@@ -476,6 +478,194 @@ describe('gameHealthUtils', () => {
 
       // Should suggest removing players from game1
       expect(suggestions.some((s) => s.includes('Game 1') && s.includes('too many'))).toBe(true)
+    })
+  })
+
+  describe('autoAssignPlayers', () => {
+    it('should assign all players to at least one game', () => {
+      const optimizedAssignments = autoAssignPlayers(mockGameData)
+
+      // Check that each player is assigned to at least one game
+      const playerIds = mockGameData.players.map((p) => p.userId)
+      playerIds.forEach((playerId) => {
+        const playerAssignments = optimizedAssignments.filter((a: PlayerAssignment) => a.userId === playerId)
+        expect(playerAssignments.length).toBeGreaterThan(0)
+      })
+    })
+
+    it('should respect game minimum and maximum player requirements', () => {
+      const optimizedAssignments = autoAssignPlayers(mockGameData)
+
+      // Count players per game
+      const playerCountByGame: Record<string, number> = {}
+      mockGameData.games.forEach((game) => {
+        playerCountByGame[game.id] = 0
+      })
+
+      optimizedAssignments.forEach((assignment: PlayerAssignment) => {
+        playerCountByGame[assignment.gameId]++
+      })
+
+      // Verify each game has at least minimum players
+      mockGameData.games.forEach((game) => {
+        expect(playerCountByGame[game.id]).toBeGreaterThanOrEqual(game.minPlayers)
+      })
+
+      // Verify no game exceeds maximum players
+      mockGameData.games.forEach((game) => {
+        expect(playerCountByGame[game.id]).toBeLessThanOrEqual(game.maxPlayers)
+      })
+    })
+
+    it('should prioritize player preferences by assigning loved games', () => {
+      const optimizedAssignments = autoAssignPlayers(mockGameData)
+
+      // Check that players are assigned to games they love
+      const lovedGames: Record<string, string[]> = {}
+
+      mockGameData.preferences
+        .filter((p) => p.status === 'I Love playing this')
+        .forEach((p) => {
+          if (!lovedGames[p.userId]) {
+            lovedGames[p.userId] = []
+          }
+          lovedGames[p.userId].push(p.gameId)
+        })
+
+      // For each player, check if they're assigned to games they love
+      Object.entries(lovedGames).forEach(([userId, gameIds]) => {
+        const playerAssignments = optimizedAssignments
+          .filter((a: PlayerAssignment) => a.userId === userId)
+          .map((a: PlayerAssignment) => a.gameId)
+
+        // At least one loved game should be assigned
+        const hasLovedGame = gameIds.some((gameId) => playerAssignments.includes(gameId))
+        expect(hasLovedGame).toBe(true)
+      })
+    })
+
+    it('should avoid assigning players to games they dislike when possible', () => {
+      // Create a scenario where there are enough players to avoid disliked assignments
+      const testData: GameData = {
+        ...mockGameData,
+        players: [
+          ...mockGameData.players,
+          {
+            userId: 'user4',
+            firstName: 'Extra',
+            lastName: 'Player',
+            status: 'attending' as const,
+          },
+        ],
+        preferences: [
+          ...mockGameData.preferences,
+          {
+            userId: 'user4',
+            gameId: '1',
+            status: 'I Love playing this',
+          },
+          {
+            userId: 'user4',
+            gameId: '2',
+            status: 'I Love playing this',
+          },
+        ],
+      }
+
+      const optimizedAssignments = autoAssignPlayers(testData)
+
+      // Find players with disliked games
+      const dislikedGames: Record<string, string[]> = {}
+
+      testData.preferences
+        .filter((p) => p.status === 'I dont like this game')
+        .forEach((p) => {
+          if (!dislikedGames[p.userId]) {
+            dislikedGames[p.userId] = []
+          }
+          dislikedGames[p.userId].push(p.gameId)
+        })
+
+      // For each player, check they're not assigned to disliked games
+      Object.entries(dislikedGames).forEach(([userId, gameIds]) => {
+        const playerAssignments = optimizedAssignments
+          .filter((a: PlayerAssignment) => a.userId === userId)
+          .map((a: PlayerAssignment) => a.gameId)
+
+        // Disliked games should not be assigned if possible
+        gameIds.forEach((gameId) => {
+          // Get the game to check requirements
+          const game = testData.games.find((g) => g.id === gameId)
+
+          // Only check if there are enough other players for this game
+          if (game && testData.players.length > game.minPlayers) {
+            expect(playerAssignments.includes(gameId)).toBe(false)
+          }
+        })
+      })
+    })
+
+    it('should balance assignments to prevent players from having too many or too few games', () => {
+      // Let's create an unbalanced initial state to test balancing
+      const unbalancedData: GameData = {
+        ...mockGameData,
+        players: [
+          ...mockGameData.players,
+          {
+            userId: 'user4',
+            firstName: 'Extra',
+            lastName: 'Player',
+            status: 'attending' as const,
+          },
+          {
+            userId: 'user5',
+            firstName: 'Another',
+            lastName: 'Player',
+            status: 'attending' as const,
+          },
+        ],
+      }
+
+      const optimizedAssignments = autoAssignPlayers(unbalancedData)
+
+      // Count games per player
+      const gameCountByPlayer: Record<string, number> = {}
+      unbalancedData.players.forEach((player) => {
+        gameCountByPlayer[player.userId] = 0
+      })
+
+      optimizedAssignments.forEach((assignment: PlayerAssignment) => {
+        gameCountByPlayer[assignment.userId]++
+      })
+
+      // Calculate the average games per player (should be somewhat balanced)
+      const counts = Object.values(gameCountByPlayer)
+      const average = counts.reduce((sum, count) => sum + count, 0) / counts.length
+
+      // No player should have significantly more or fewer games than average
+      counts.forEach((count) => {
+        expect(Math.abs(count - average)).toBeLessThanOrEqual(1)
+      })
+    })
+
+    it('should maximize overall happiness score', () => {
+      // Get assignments before optimization
+      const originalScore = calculateOverallHealthScore(analyzeGameHealth(mockGameData))
+
+      // Get optimized assignments
+      const optimizedAssignments = autoAssignPlayers(mockGameData)
+
+      // Create a new data object with optimized assignments
+      const optimizedData = {
+        ...mockGameData,
+        assignments: optimizedAssignments,
+      }
+
+      // Calculate new score
+      const newScore = calculateOverallHealthScore(analyzeGameHealth(optimizedData))
+
+      // The optimized score should be greater than or equal to the original
+      expect(newScore).toBeGreaterThanOrEqual(originalScore)
     })
   })
 })
