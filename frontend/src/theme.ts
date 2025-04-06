@@ -3,12 +3,12 @@ import { createTheme } from '@mui/material/styles'
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#3273dc', // Similar to Bulma's primary color
+      main: 'rgb(42, 62, 80)',
       light: '#4a9eff',
       dark: '#2366d1',
     },
     secondary: {
-      main: '#2d3e50', // Similar to the sidebar color
+      main: '#2d3e50',
       light: '#34495e',
       dark: '#1a252f',
     },

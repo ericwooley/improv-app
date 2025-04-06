@@ -16,6 +16,7 @@ import {
   Link as MuiLink,
   Tabs,
   Tab,
+  Paper,
 } from '@mui/material'
 import {
   Event as EventIcon,
@@ -32,13 +33,22 @@ import {
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import TabPanel, { a11yProps } from '../components/TabPanel'
-import { useGetEventQuery, useDeleteEventMutation, useGetCurrentUserRSVPQuery } from '../store/api/eventsApi'
+import {
+  useGetEventQuery,
+  useDeleteEventMutation,
+  useGetCurrentUserRSVPQuery,
+  useGetEventGamesQuery,
+  useGetEventPlayerAssignmentsQuery,
+  useGetUserGamePreferencesQuery,
+} from '../store/api/eventsApi'
 import { isAdminRole } from '../constants/roles'
 import { EventGamesManager } from '../components/events/EventGamesManager'
 import GameRunner from '../components/games/GameRunner'
 import { RootState } from '../store'
 import AttendanceList from '../components/events/AttendanceList'
 import RSVPModal from '../components/events/RSVPModal'
+import { GameData } from '../utils/gameHealthUtils'
+import GameHealthAnalyzer from '../components/games/GameHealthAnalyzer'
 
 // Helper function to create Google Maps link
 const createGoogleMapsLink = (location: string) => {
@@ -57,6 +67,10 @@ const EventDetailsPage = () => {
   const urlParams = new URLSearchParams(location.search)
   const initialTabValue = parseInt(urlParams.get('tab-event') || '0')
   const [tabValue, setTabValue] = useState(initialTabValue)
+
+  // Initialize second level tabs for game management
+  const initialGameTabValue = parseInt(urlParams.get('tab-game-management') || '0')
+  const [gameTabValue, setGameTabValue] = useState(initialGameTabValue)
 
   // Get current user from Redux store
   const currentUser = useSelector((state: RootState) => state.auth.user)
@@ -133,6 +147,16 @@ const EventDetailsPage = () => {
     // Update URL with tab value
     const newParams = new URLSearchParams(location.search)
     newParams.set('tab-event', newValue.toString())
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true })
+  }
+
+  // Handle game management tab change
+  const handleGameTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setGameTabValue(newValue)
+
+    // Update URL with tab value
+    const newParams = new URLSearchParams(location.search)
+    newParams.set('tab-game-management', newValue.toString())
     navigate(`${location.pathname}?${newParams.toString()}`, { replace: true })
   }
 
@@ -309,8 +333,28 @@ const EventDetailsPage = () => {
             </Grid>
           </Grid>
         </Box>
-        {/* Only render GameRunner if user is MC or has management permissions */}
-        {(isMC || canManageEvent) && <GameRunner eventId={eventId} isMC={isMC} />}
+
+        {/* Only render Game Management tabs if user is MC or has management permissions */}
+        {(isMC || canManageEvent) && (
+          <>
+            <Paper sx={{ mt: 3 }}>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={gameTabValue} onChange={handleGameTabChange} aria-label="Game management tabs">
+                  <Tab label="Game Runner" {...a11yProps(0, 'game-management')} />
+                  <Tab label="Game Health" {...a11yProps(1, 'game-health')} />
+                </Tabs>
+              </Box>
+
+              <TabPanel value={gameTabValue} index={0} id="game-management">
+                <GameRunner eventId={eventId} isMC={isMC} />
+              </TabPanel>
+
+              <TabPanel value={gameTabValue} index={1} id="game-health">
+                <GameDataView eventId={eventId} />
+              </TabPanel>
+            </Paper>
+          </>
+        )}
       </TabPanel>
 
       <TabPanel value={tabValue} index={1} id="event">
@@ -328,6 +372,68 @@ const EventDetailsPage = () => {
         eventId={eventId || ''}
         initialStatus={currentRSVPStatus}
       />
+    </Box>
+  )
+}
+
+// Component to display game data in JSON format and game health analysis
+const GameDataView = ({ eventId }: { eventId?: string }) => {
+  const { data: gamesData, isLoading: isLoadingGames } = useGetEventGamesQuery(eventId || '', { skip: !eventId })
+
+  const { data: eventData, isLoading: isLoadingEvent } = useGetEventQuery(eventId || '', { skip: !eventId })
+
+  const { data: assignmentsData, isLoading: isLoadingAssignments } = useGetEventPlayerAssignmentsQuery(eventId || '', {
+    skip: !eventId,
+  })
+
+  const gameIds = gamesData?.data?.games?.map((game) => game.id) || []
+
+  const { data: preferencesData, isLoading: isLoadingPreferences } = useGetUserGamePreferencesQuery(
+    {
+      eventId: eventId || '',
+      gameIds: gameIds,
+    },
+    {
+      skip: !eventId || gameIds.length === 0,
+    }
+  )
+
+  if (isLoadingGames || isLoadingEvent || isLoadingAssignments || isLoadingPreferences) {
+    return (
+      <Paper sx={{ p: 3, mb: 3, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Paper>
+    )
+  }
+
+  const data: GameData = {
+    games: gamesData?.data?.games || [],
+    players: eventData?.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || [],
+    assignments: assignmentsData?.data || [],
+    preferences: preferencesData?.data || [],
+  }
+
+  // Show GameHealthAnalyzer component with game data
+  return (
+    <Box>
+      <GameHealthAnalyzer gameData={data} />
+
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Raw Game Data (JSON)
+        </Typography>
+        <Box
+          sx={{
+            maxHeight: 300,
+            overflow: 'auto',
+            p: 2,
+            backgroundColor: 'grey.100',
+            borderRadius: 1,
+            fontFamily: 'monospace',
+          }}>
+          <pre>{JSON.stringify(data, null, 2)}</pre>
+        </Box>
+      </Paper>
     </Box>
   )
 }
