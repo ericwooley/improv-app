@@ -28,13 +28,17 @@ import {
   Mic as MicIcon,
   Info as InfoIcon,
   Games as GamesIcon,
+  Group as GroupIcon,
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import TabPanel, { a11yProps } from '../components/TabPanel'
-import { useGetEventQuery, useDeleteEventMutation } from '../store/api/eventsApi'
+import { useGetEventQuery, useDeleteEventMutation, useGetCurrentUserRSVPQuery } from '../store/api/eventsApi'
 import { isAdminRole } from '../constants/roles'
 import { EventGamesManager } from '../components/events/EventGamesManager'
+import GameRunner from '../components/games/GameRunner'
 import { RootState } from '../store'
+import AttendanceList from '../components/events/AttendanceList'
+import RSVPModal from '../components/events/RSVPModal'
 
 // Helper function to create Google Maps link
 const createGoogleMapsLink = (location: string) => {
@@ -47,6 +51,7 @@ const EventDetailsPage = () => {
   const location = useLocation()
   const [canManageEvent, setCanManageEvent] = useState(false)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [rsvpModalOpen, setRsvpModalOpen] = useState(false)
 
   // Initialize tab value from URL query parameter or default to 0
   const urlParams = new URLSearchParams(location.search)
@@ -57,11 +62,14 @@ const EventDetailsPage = () => {
   const currentUser = useSelector((state: RootState) => state.auth.user)
 
   const { data: eventResponse, isLoading, error } = useGetEventQuery(eventId || '')
+  const { data: currentUserRSVP } = useGetCurrentUserRSVPQuery(eventId || '', {
+    skip: !eventId,
+  })
 
   const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation()
 
   // Format event data from API response
-  const { event, groupName, mc } = eventResponse?.data || {}
+  const { event, groupName, mc, rsvps = [] } = eventResponse?.data || {}
 
   // Check if user has permissions to manage this event
   useEffect(() => {
@@ -128,8 +136,16 @@ const EventDetailsPage = () => {
     navigate(`${location.pathname}?${newParams.toString()}`, { replace: true })
   }
 
+  // Handle RSVP button click
+  const handleRSVPClick = () => {
+    setRsvpModalOpen(true)
+  }
+
   // Determine if current user is the MC
   const isMC = Boolean(mc && currentUser && mc.id === currentUser.id)
+
+  // Get current user RSVP status
+  const currentRSVPStatus = currentUserRSVP?.data?.status
 
   // Show loading state
   if (isLoading) {
@@ -211,6 +227,7 @@ const EventDetailsPage = () => {
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="Event tabs" variant="fullWidth">
           <Tab label="Event Details" icon={<InfoIcon />} iconPosition="start" {...a11yProps(0, 'event')} />
           <Tab label="Games" icon={<GamesIcon />} iconPosition="start" {...a11yProps(1, 'event')} />
+          <Tab label="Attendance" icon={<GroupIcon />} iconPosition="start" {...a11yProps(2, 'event')} />
         </Tabs>
       </Box>
 
@@ -267,8 +284,14 @@ const EventDetailsPage = () => {
                   Actions
                 </Typography>
 
-                <Button variant="contained" color="primary" fullWidth startIcon={<EventIcon />} sx={{ mb: 2 }}>
-                  RSVP to Event
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  startIcon={<EventIcon />}
+                  sx={{ mb: 2 }}
+                  onClick={handleRSVPClick}>
+                  {currentRSVPStatus ? `Update RSVP (${currentRSVPStatus})` : 'RSVP to Event'}
                 </Button>
 
                 {canManageEvent && (
@@ -286,11 +309,24 @@ const EventDetailsPage = () => {
             </Grid>
           </Grid>
         </Box>
+        <GameRunner eventId={eventId} isMC={isMC} />
       </TabPanel>
 
       <TabPanel value={tabValue} index={1} id="event">
         <EventGamesManager groupId={event.GroupID} isMC={isMC} />
       </TabPanel>
+
+      <TabPanel value={tabValue} index={2} id="event">
+        <AttendanceList rsvps={rsvps} eventId={eventId || ''} canManageAttendance={canManageEvent} />
+      </TabPanel>
+
+      {/* RSVP Modal */}
+      <RSVPModal
+        open={rsvpModalOpen}
+        onClose={() => setRsvpModalOpen(false)}
+        eventId={eventId || ''}
+        initialStatus={currentRSVPStatus}
+      />
     </Box>
   )
 }

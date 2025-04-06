@@ -37,7 +37,7 @@ export interface EventDetailsResponse {
     CreatedBy: string
   }
   groupName: string
-  rsvps: unknown
+  rsvps: RSVP[]
   games: Array<{
     id: string
     name: string
@@ -52,6 +52,13 @@ export interface EventDetailsResponse {
     firstName: string
     lastName: string
   }
+}
+
+export interface RSVP {
+  userId: string
+  firstName: string
+  lastName: string
+  status: 'attending' | 'maybe' | 'declined'
 }
 
 export interface CreateEventRequest {
@@ -159,6 +166,34 @@ export const eventsApi = apiSlice.injectEndpoints({
         body: { orderIndex: newIndex },
       }),
     }),
+
+    // RSVP endpoints
+    submitRSVP: builder.mutation<APIResponse<void>, { eventId: string; status: 'attending' | 'maybe' | 'declined' }>({
+      query: ({ eventId, status }) => ({
+        url: `/events/${eventId}/rsvp`,
+        method: 'POST',
+        body: { status },
+      }),
+      invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: eventId }],
+    }),
+
+    getCurrentUserRSVP: builder.query<APIResponse<RSVP | null>, string>({
+      query: (eventId) => `/events/${eventId}/rsvp/me`,
+      providesTags: (_, __, eventId) => [{ type: 'Event', id: `${eventId}-rsvp` }],
+    }),
+
+    // Admin/organizer endpoint to update another user's RSVP
+    updateUserRSVP: builder.mutation<
+      APIResponse<void>,
+      { eventId: string; userId: string; status: 'attending' | 'maybe' | 'declined' }
+    >({
+      query: ({ eventId, userId, status }) => ({
+        url: `/events/${eventId}/rsvp/${userId}`,
+        method: 'PUT',
+        body: { status },
+      }),
+      invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: eventId }],
+    }),
   }),
 })
 
@@ -173,4 +208,7 @@ export const {
   useAddEventGameMutation,
   useRemoveEventGameMutation,
   useUpdateEventGameOrderMutation,
+  useSubmitRSVPMutation,
+  useGetCurrentUserRSVPQuery,
+  useUpdateUserRSVPMutation,
 } = eventsApi

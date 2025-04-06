@@ -45,6 +45,7 @@ func main() {
 	invitationHandler := handlers.NewInvitationHandler(sqlDB)
 	eventHandler := handlers.NewEventHandler(sqlDB)
 	gameHandler := handlers.NewGameHandler(sqlDB)
+	rsvpHandler := handlers.NewRSVPHandler(sqlDB)
 
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api").Subrouter()
@@ -129,6 +130,10 @@ func main() {
 	api.HandleFunc("/events/{id}/games", middleware.RequireAuthAPI(sqlDB, eventHandler.AddGameToEvent)).Methods("POST")
 	api.HandleFunc("/events/{id}/games/{gameId}", middleware.RequireAuthAPI(sqlDB, eventHandler.RemoveGameFromEvent)).Methods("DELETE")
 	api.HandleFunc("/events/{id}/games/{gameId}/order", middleware.RequireAuthAPI(sqlDB, eventHandler.UpdateGameOrder)).Methods("PUT")
+	// Event RSVP routes
+	api.HandleFunc("/events/{id}/rsvp", middleware.RequireAuthAPI(sqlDB, rsvpHandler.SubmitRSVP)).Methods("POST")
+	api.HandleFunc("/events/{id}/rsvp/me", middleware.RequireAuthAPI(sqlDB, rsvpHandler.GetCurrentUserRSVP)).Methods("GET")
+	api.HandleFunc("/events/{id}/rsvp/{userId}", middleware.RequireAuthAPI(sqlDB, rsvpHandler.UpdateUserRSVP)).Methods("PUT")
 
 	// Game routes
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET")
