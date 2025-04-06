@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   Collapse,
+  Slide,
 } from '@mui/material'
 import { useState, useMemo } from 'react'
 import {
@@ -264,38 +265,45 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
                           {assignedPlayers.map((player) => {
                             const preference = getPlayerPreference(player.userId, game.id)
                             return (
-                              <ListItem
+                              <Slide
                                 key={player.userId}
-                                secondaryAction={
-                                  isMC && (
-                                    <IconButton
-                                      edge="end"
-                                      onClick={() => handleRemovePlayer(game.id, player.userId)}
-                                      disabled={isRemoving}>
-                                      <RemoveIcon />
-                                    </IconButton>
-                                  )
-                                }>
-                                <ListItemText
-                                  primary={player.name}
-                                  secondary={
-                                    preference ? (
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        {preference.status && (
-                                          <Chip
-                                            label={preference.status}
-                                            size="small"
-                                            color={preference.status === 'experienced' ? 'success' : 'default'}
-                                            sx={{ ml: 1 }}
-                                          />
-                                        )}
-                                      </Box>
-                                    ) : (
-                                      'No preference data'
+                                direction="right"
+                                in={true}
+                                mountOnEnter
+                                unmountOnExit
+                                timeout={300}>
+                                <ListItem
+                                  secondaryAction={
+                                    isMC && (
+                                      <IconButton
+                                        edge="end"
+                                        onClick={() => handleRemovePlayer(game.id, player.userId)}
+                                        disabled={isRemoving}>
+                                        <RemoveIcon />
+                                      </IconButton>
                                     )
-                                  }
-                                />
-                              </ListItem>
+                                  }>
+                                  <ListItemText
+                                    primary={player.name}
+                                    secondary={
+                                      preference ? (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          {preference.status && (
+                                            <Chip
+                                              label={preference.status}
+                                              size="small"
+                                              color={preference.status === 'experienced' ? 'success' : 'default'}
+                                              sx={{ ml: 1 }}
+                                            />
+                                          )}
+                                        </Box>
+                                      ) : (
+                                        'No preference data'
+                                      )
+                                    }
+                                  />
+                                </ListItem>
+                              </Slide>
                             )
                           })}
                         </List>
@@ -322,38 +330,45 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
                           {availablePlayers.map((user) => {
                             const preference = getPlayerPreference(user.userId, game.id)
                             return (
-                              <ListItem
+                              <Slide
                                 key={user.userId}
-                                secondaryAction={
-                                  isMC && (
-                                    <IconButton
-                                      edge="end"
-                                      onClick={() => handleAssignPlayer(game.id, user)}
-                                      disabled={isAssigning}>
-                                      <AssignIcon />
-                                    </IconButton>
-                                  )
-                                }>
-                                <ListItemText
-                                  primary={`${user.firstName} ${user.lastName}`}
-                                  secondary={
-                                    preference ? (
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        {preference.status && (
-                                          <Chip
-                                            label={preference.status}
-                                            size="small"
-                                            color={preference.status === 'experienced' ? 'success' : 'default'}
-                                            sx={{ ml: 1 }}
-                                          />
-                                        )}
-                                      </Box>
-                                    ) : (
-                                      'No preference data'
+                                direction="left"
+                                in={true}
+                                mountOnEnter
+                                unmountOnExit
+                                timeout={300}>
+                                <ListItem
+                                  secondaryAction={
+                                    isMC && (
+                                      <IconButton
+                                        edge="end"
+                                        onClick={() => handleAssignPlayer(game.id, user)}
+                                        disabled={isAssigning}>
+                                        <AssignIcon />
+                                      </IconButton>
                                     )
-                                  }
-                                />
-                              </ListItem>
+                                  }>
+                                  <ListItemText
+                                    primary={`${user.firstName} ${user.lastName}`}
+                                    secondary={
+                                      preference ? (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          {preference.status && (
+                                            <Chip
+                                              label={preference.status}
+                                              size="small"
+                                              color={preference.status === 'experienced' ? 'success' : 'default'}
+                                              sx={{ ml: 1 }}
+                                            />
+                                          )}
+                                        </Box>
+                                      ) : (
+                                        'No preference data'
+                                      )
+                                    }
+                                  />
+                                </ListItem>
+                              </Slide>
                             )
                           })}
                         </List>
