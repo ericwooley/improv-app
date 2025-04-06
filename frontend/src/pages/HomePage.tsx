@@ -40,7 +40,7 @@ const HomePage = () => {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth)
   const { data: groupsResponse, isLoading: groupsLoading } = useGetGroupsQuery()
   const { data: eventsResponse, isLoading: eventsLoading } = useGetEventsQuery()
-  const { data: unratedGamesResponse, isLoading: unratedGamesLoading } = useGetUnratedGamesQuery()
+  const { data: unratedGamesResponse, isLoading: unratedGamesLoading } = useGetUnratedGamesQuery({})
   const [ratedGameIds, setRatedGameIds] = useState<Set<string>>(new Set())
 
   const groups = (groupsResponse as unknown as ApiResponse<Group[]>)?.data || []

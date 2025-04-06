@@ -36,27 +36,63 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	tagFilter := query.Get("tag")
 	libraryFilter := query.Get("library")
 	ownedByGroupFilter := query.Get("ownedByGroup")
+	searchQuery := query.Get("search")
 
-	// Build query and parameters
-	queryStr := `
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-		       GROUP_CONCAT(DISTINCT t.name) as tags
-		FROM games g
-		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
-		LEFT JOIN game_tags t ON gta.tag_id = t.id
-	`
+	var queryStr string
+	var params []interface{}
 
-	// Apply library filter if provided
-	if libraryFilter != "" {
-		queryStr += `
-			JOIN group_game_libraries ggl ON g.id = ggl.game_id AND ggl.group_id = ?
+	// If search query is provided, use FTS4
+	if searchQuery != "" {
+		queryStr = `
+			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+				   GROUP_CONCAT(DISTINCT t.name) as tags
+			FROM games g
+			JOIN games_fts ON games_fts.docid = g.id
+			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+			LEFT JOIN game_tags t ON gta.tag_id = t.id
+			WHERE games_fts MATCH ?
+		`
+		params = append(params, searchQuery)
+	} else {
+		// Regular query without search
+		queryStr = `
+			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+				   GROUP_CONCAT(DISTINCT t.name) as tags
+			FROM games g
+			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+			LEFT JOIN game_tags t ON gta.tag_id = t.id
 		`
 	}
 
-	queryStr += `
-		WHERE (g.public = TRUE
-		   OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
-	`
+	// Apply library filter if provided
+	if libraryFilter != "" {
+		if len(params) > 0 {
+			queryStr += `
+				AND g.id IN (
+					SELECT game_id FROM group_game_libraries WHERE group_id = ?
+				)
+			`
+		} else {
+			queryStr += `
+				JOIN group_game_libraries ggl ON g.id = ggl.game_id AND ggl.group_id = ?
+			`
+		}
+		params = append(params, libraryFilter)
+	}
+
+	// Add permission check
+	if len(params) > 0 {
+		queryStr += `
+			AND (g.public = TRUE
+			 OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
+		`
+	} else {
+		queryStr += `
+			WHERE (g.public = TRUE
+			   OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
+		`
+	}
+	params = append(params, user.ID)
 
 	// Apply tag filter if provided
 	if tagFilter != "" {
@@ -67,6 +103,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 				WHERE t.name = ?
 			)
 		`
+		params = append(params, tagFilter)
 	}
 
 	// Apply owned by group filter if provided
@@ -74,25 +111,13 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		queryStr += `
 			AND g.group_id = ?
 		`
+		params = append(params, ownedByGroupFilter)
 	}
 
 	queryStr += `
 		GROUP BY g.id
 		ORDER BY g.created_at DESC
 	`
-
-	// Prepare query parameters
-	var params []interface{}
-	if libraryFilter != "" {
-		params = append(params, libraryFilter)
-	}
-	params = append(params, user.ID)
-	if tagFilter != "" {
-		params = append(params, tagFilter)
-	}
-	if ownedByGroupFilter != "" {
-		params = append(params, ownedByGroupFilter)
-	}
 
 	// Execute query
 	rows, err := h.db.Query(queryStr, params...)
@@ -623,22 +648,50 @@ func (h *GameHandler) GetGameStatus(w http.ResponseWriter, r *http.Request) {
 // GetUnratedGames returns games from user's groups that don't have a status set by the user
 func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	searchQuery := r.URL.Query().Get("search")
 
-	// Get games from user's groups that don't have a status set by the user
-	rows, err := h.db.Query(`
-		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-			  GROUP_CONCAT(DISTINCT t.name) as tags
-		FROM games g
-		JOIN group_game_libraries ggl ON g.id = ggl.game_id
-		JOIN group_members gm ON ggl.group_id = gm.group_id
-		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
-		LEFT JOIN game_tags t ON gta.tag_id = t.id
-		LEFT JOIN user_game_preferences ugp ON g.id = ugp.game_id AND ugp.user_id = ?
-		WHERE gm.user_id = ? AND ugp.status IS NULL
-		GROUP BY g.id
-		ORDER BY g.created_at DESC
-		LIMIT 10
-	`, user.ID, user.ID)
+	var queryStr string
+	var params []interface{}
+
+	// If search query is provided, use FTS4
+	if searchQuery != "" {
+		queryStr = `
+			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+				GROUP_CONCAT(DISTINCT t.name) as tags
+			FROM games g
+			JOIN games_fts ON games_fts.docid = g.id
+			JOIN group_game_libraries ggl ON g.id = ggl.game_id
+			JOIN group_members gm ON ggl.group_id = gm.group_id
+			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+			LEFT JOIN game_tags t ON gta.tag_id = t.id
+			LEFT JOIN user_game_preferences ugp ON g.id = ugp.game_id AND ugp.user_id = ?
+			WHERE gm.user_id = ? AND ugp.status IS NULL
+			AND games_fts MATCH ?
+			GROUP BY g.id
+			ORDER BY g.created_at DESC
+			LIMIT 10
+		`
+		params = append(params, user.ID, user.ID, searchQuery)
+	} else {
+		// Regular query without search
+		queryStr = `
+			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+				GROUP_CONCAT(DISTINCT t.name) as tags
+			FROM games g
+			JOIN group_game_libraries ggl ON g.id = ggl.game_id
+			JOIN group_members gm ON ggl.group_id = gm.group_id
+			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+			LEFT JOIN game_tags t ON gta.tag_id = t.id
+			LEFT JOIN user_game_preferences ugp ON g.id = ugp.game_id AND ugp.user_id = ?
+			WHERE gm.user_id = ? AND ugp.status IS NULL
+			GROUP BY g.id
+			ORDER BY g.created_at DESC
+			LIMIT 10
+		`
+		params = append(params, user.ID, user.ID)
+	}
+
+	rows, err := h.db.Query(queryStr, params...)
 
 	if err != nil {
 		log.Printf("Error fetching unrated games: %v", err)

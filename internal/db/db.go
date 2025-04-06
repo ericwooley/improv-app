@@ -164,6 +164,27 @@ func InitDB() *sql.DB {
 			FOREIGN KEY (group_id) REFERENCES improv_groups(id),
 			FOREIGN KEY (invited_by) REFERENCES users(id)
 		);
+
+		-- Create virtual table for full text search on games
+		CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts4(
+			name,
+			description,
+			content='games'
+		);
+
+		-- Create triggers to keep the FTS table in sync with the games table
+		CREATE TRIGGER IF NOT EXISTS games_ai AFTER INSERT ON games BEGIN
+			INSERT INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
+		END;
+
+		CREATE TRIGGER IF NOT EXISTS games_ad AFTER DELETE ON games BEGIN
+			DELETE FROM games_fts WHERE docid = old.id;
+		END;
+
+		CREATE TRIGGER IF NOT EXISTS games_au AFTER UPDATE ON games BEGIN
+			DELETE FROM games_fts WHERE docid = old.id;
+			INSERT INTO games_fts(docid, name, description) VALUES (new.id, new.name, new.description);
+		END;
 	`)
 	if err != nil {
 		log.Fatal(err)

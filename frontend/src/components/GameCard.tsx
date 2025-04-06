@@ -13,6 +13,7 @@ import {
   MenuItem,
   SelectChangeEvent,
 } from '@mui/material'
+import React from 'react'
 import { Link } from 'react-router-dom'
 import InfoItem from './InfoItem'
 import TagList from './TagList'
@@ -57,7 +58,7 @@ interface GameCardProps {
 // Create a motion component using MUI Card
 const MotionCard = motion(Card)
 
-const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
+const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
   const [shouldFetchStatus, setShouldFetchStatus] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -331,6 +332,6 @@ const GameCard = ({ game, showViewButton = true, onClick, isSelected, onAddGame 
       )}
     </MotionCard>
   )
-}
+})
 
 export default GameCard

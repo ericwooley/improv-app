@@ -55,7 +55,10 @@ export interface SetGameStatusRequest {
 
 export const gamesApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getGames: builder.query<APIResponse<Game[]>, { tag?: string; library?: string; ownedByGroup?: string } | void>({
+    getGames: builder.query<
+      APIResponse<Game[]>,
+      { tag?: string; library?: string; ownedByGroup?: string; search?: string } | void
+    >({
       query: (filters = {}) => {
         const params = new URLSearchParams()
         if (filters && 'tag' in filters && filters.tag) {
@@ -66,6 +69,9 @@ export const gamesApi = apiSlice.injectEndpoints({
         }
         if (filters && 'ownedByGroup' in filters && filters.ownedByGroup) {
           params.append('ownedByGroup', filters.ownedByGroup)
+        }
+        if (filters && 'search' in filters && filters.search) {
+          params.append('search', filters.search)
         }
         return `/games${params.toString() ? `?${params.toString()}` : ''}`
       },
@@ -146,8 +152,14 @@ export const gamesApi = apiSlice.injectEndpoints({
       providesTags: (_, __, gameId) => [{ type: 'Game', id: `status-${gameId}` }],
     }),
 
-    getUnratedGames: builder.query<APIResponse<Game[]>, void>({
-      query: () => `/games/unrated`,
+    getUnratedGames: builder.query<APIResponse<Game[]>, { search?: string } | void>({
+      query: (filters = {}) => {
+        const params = new URLSearchParams()
+        if (filters && 'search' in filters && filters.search) {
+          params.append('search', filters.search)
+        }
+        return `/games/unrated${params.toString() ? `?${params.toString()}` : ''}`
+      },
       providesTags: [{ type: 'Game', id: 'UNRATED' }],
     }),
   }),

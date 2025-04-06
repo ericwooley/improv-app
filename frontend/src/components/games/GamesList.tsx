@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 interface GamesListProps {
   selectedTag: string
   onClearFilter: () => void
+  searchQuery?: string
   groupLibrary?: string
   groupOwner?: string
   onGameSelect?: (gameId: string) => void
@@ -20,6 +21,7 @@ interface GamesListProps {
 export const GamesList = ({
   selectedTag,
   onClearFilter,
+  searchQuery = '',
   groupLibrary,
   groupOwner,
   showViewButton,
@@ -29,10 +31,14 @@ export const GamesList = ({
   customEmptyState,
   onAddGame,
 }: GamesListProps) => {
-  const queryParams: { tag?: string; library?: string; ownedByGroup?: string } = {}
+  const queryParams: { tag?: string; library?: string; ownedByGroup?: string; search?: string } = {}
 
   if (selectedTag !== 'All Tags') {
     queryParams.tag = selectedTag
+  }
+
+  if (searchQuery) {
+    queryParams.search = searchQuery
   }
 
   if (groupLibrary) {
@@ -76,7 +82,12 @@ export const GamesList = ({
 
     let message = 'No games have been added yet.'
 
-    if (selectedTag !== 'All Tags') {
+    if (searchQuery) {
+      message = `No games found matching "${searchQuery}"`
+      if (selectedTag !== 'All Tags') {
+        message += ` with tag '${selectedTag}'`
+      }
+    } else if (selectedTag !== 'All Tags') {
       message = `No games found with tag '${selectedTag}'`
     } else if (groupLibrary) {
       message = "No games found in this group's library"
@@ -89,10 +100,10 @@ export const GamesList = ({
     return (
       <EmptyState
         message={message}
-        actionText={selectedTag !== 'All Tags' ? 'Clear Filter' : 'Add Your First Game'}
-        actionLink={selectedTag !== 'All Tags' ? undefined : '/games/new'}
-        actionIcon={selectedTag !== 'All Tags' ? 'fas fa-times' : 'fas fa-plus'}
-        onActionClick={selectedTag !== 'All Tags' ? onClearFilter : undefined}
+        actionText={selectedTag !== 'All Tags' || searchQuery ? 'Clear Filters' : 'Add Your First Game'}
+        actionLink={selectedTag !== 'All Tags' || searchQuery ? undefined : '/games/new'}
+        actionIcon={selectedTag !== 'All Tags' || searchQuery ? 'fas fa-times' : 'fas fa-plus'}
+        onActionClick={selectedTag !== 'All Tags' || searchQuery ? onClearFilter : undefined}
       />
     )
   }
