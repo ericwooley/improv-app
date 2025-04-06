@@ -69,9 +69,17 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	// If search query is provided, use FTS4
 	if searchQuery != "" {
+		// Add wildcard for partial word matching
+		searchTermWithWildcard := searchQuery + "*"
+
 		queryStr = `
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-				   GROUP_CONCAT(DISTINCT t.name) as tags
+				   GROUP_CONCAT(DISTINCT t.name) as tags,
+				   (CASE
+					  WHEN g.name LIKE ? THEN 3
+					  WHEN g.description LIKE ? THEN 1
+					  ELSE 0
+				    END) AS relevance_score
 			FROM games g
 			JOIN games_fts ON games_fts.docid = g.rowid
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
@@ -86,8 +94,9 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			WHERE games_fts MATCH ?
 		`
-		params = append(params, searchQuery)
-		countParams = append(countParams, searchQuery)
+		likePattern := "%" + searchQuery + "%"
+		params = append(params, likePattern, likePattern, searchTermWithWildcard)
+		countParams = append(countParams, searchTermWithWildcard)
 	} else {
 		// Regular query without search
 		queryStr = `
@@ -187,8 +196,18 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	queryStr += `
 		GROUP BY g.id
-		ORDER BY g.created_at DESC
 	`
+
+	// Add ORDER BY relevance for search queries, otherwise by creation date
+	if searchQuery != "" {
+		queryStr += `
+			ORDER BY relevance_score DESC, g.created_at DESC
+		`
+	} else {
+		queryStr += `
+			ORDER BY g.created_at DESC
+		`
+	}
 
 	// Get total count for pagination
 	var totalCount int
@@ -220,12 +239,24 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var game models.Game
 		var tagsStr sql.NullString
-		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
-		if err != nil {
-			log.Printf("Error scanning game row: %v", err)
-			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
-			return
+		var relevanceScore int
+
+		if searchQuery != "" {
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore)
+			if err != nil {
+				log.Printf("Error scanning game row: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
+				return
+			}
+		} else {
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
+			if err != nil {
+				log.Printf("Error scanning game row: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
+				return
+			}
 		}
+
 		if tagsStr.Valid {
 			game.Tags = strings.Split(tagsStr.String, ",")
 		} else {
@@ -840,9 +871,17 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 
 	// If search query is provided, use FTS4
 	if searchQuery != "" {
+		// Add wildcard for partial word matching
+		searchTermWithWildcard := searchQuery + "*"
+
 		queryStr = `
 			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-				GROUP_CONCAT(DISTINCT t.name) as tags
+				GROUP_CONCAT(DISTINCT t.name) as tags,
+				(CASE
+				  WHEN g.name LIKE ? THEN 3
+				  WHEN g.description LIKE ? THEN 1
+				  ELSE 0
+				END) AS relevance_score
 			FROM games g
 			JOIN games_fts ON games_fts.docid = g.rowid
 			JOIN group_game_libraries ggl ON g.id = ggl.game_id
@@ -853,10 +892,11 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 			WHERE gm.user_id = ? AND ugp.status IS NULL
 			AND games_fts MATCH ?
 			GROUP BY g.id
-			ORDER BY g.created_at DESC
+			ORDER BY relevance_score DESC, g.created_at DESC
 			LIMIT 10
 		`
-		params = append(params, user.ID, user.ID, searchQuery)
+		likePattern := "%" + searchQuery + "%"
+		params = append(params, likePattern, likePattern, user.ID, user.ID, searchTermWithWildcard)
 	} else {
 		// Regular query without search
 		queryStr = `
@@ -889,12 +929,24 @@ func (h *GameHandler) GetUnratedGames(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var game models.Game
 		var tagsStr sql.NullString
-		err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
-		if err != nil {
-			log.Printf("Error scanning game row: %v", err)
-			RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
-			return
+		var relevanceScore int
+
+		if searchQuery != "" {
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore)
+			if err != nil {
+				log.Printf("Error scanning game row: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
+				return
+			}
+		} else {
+			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr)
+			if err != nil {
+				log.Printf("Error scanning game row: %v", err)
+				RespondWithError(w, http.StatusInternalServerError, "Error scanning games")
+				return
+			}
 		}
+
 		if tagsStr.Valid {
 			game.Tags = strings.Split(tagsStr.String, ",")
 		} else {
