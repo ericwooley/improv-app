@@ -82,19 +82,19 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 				    END) AS relevance_score,
 				   COUNT(DISTINCT eg.event_id) AS event_count
 			FROM games g
-			JOIN games_fts ON games_fts.docid = g.rowid
 			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 			LEFT JOIN game_tags t ON gta.tag_id = t.id
 			LEFT JOIN event_games eg ON g.id = eg.game_id
-			WHERE games_fts MATCH ?
+			WHERE g.id IN (
+				SELECT docid FROM games_fts WHERE games_fts MATCH ?
+			)
 		`
 		countQueryStr = `
 			SELECT COUNT(DISTINCT g.id)
 			FROM games g
-			JOIN games_fts ON games_fts.docid = g.rowid
-			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
-			LEFT JOIN game_tags t ON gta.tag_id = t.id
-			WHERE games_fts MATCH ?
+			WHERE g.id IN (
+				SELECT docid FROM games_fts WHERE games_fts MATCH ?
+			)
 		`
 		likePattern := "%" + searchQuery + "%"
 		params = append(params, likePattern, likePattern, searchTermWithWildcard)

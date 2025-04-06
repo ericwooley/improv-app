@@ -1075,10 +1075,11 @@ func (h *EventHandler) GetEventPlayers(w http.ResponseWriter, r *http.Request) {
 
 	// First, check if the event exists and get its group ID
 	var groupID string
+	var mcID sql.NullString
 	err := h.db.QueryRow(`
-		SELECT group_id FROM events
+		SELECT group_id, mc_id FROM events
 		WHERE id = $1
-	`, eventID).Scan(&groupID)
+	`, eventID).Scan(&groupID, &mcID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Event not found: %s", eventID)
@@ -1090,23 +1091,26 @@ func (h *EventHandler) GetEventPlayers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user has access to this event (is a member of the group)
-	var isGroupMember bool
-	err = h.db.QueryRow(`
-		SELECT EXISTS(
-			SELECT 1 FROM group_members
+	// Check if user is authorized (is MC or has admin/organizer role)
+	var isAuthorized bool
+	if mcID.Valid && mcID.String == user.ID {
+		isAuthorized = true
+	} else {
+		err = h.db.QueryRow(`
+			SELECT role IN ('admin', 'organizer')
+			FROM group_members
 			WHERE group_id = $1 AND user_id = $2
-		)
-	`, groupID, user.ID).Scan(&isGroupMember)
-	if err != nil {
-		log.Printf("Error checking group membership for user %s in group %s: %v", user.ID, groupID, err)
-		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
-		return
+		`, groupID, user.ID).Scan(&isAuthorized)
+		if err != nil {
+			log.Printf("Error checking user authorization: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking authorization")
+			return
+		}
 	}
 
-	if !isGroupMember {
-		log.Printf("User %s is not a member of group %s", user.ID, groupID)
-		RespondWithError(w, http.StatusForbidden, "You are not a member of this group")
+	if !isAuthorized {
+		log.Printf("User %s is not authorized to view player assignments for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event MC or group organizers can view player assignments")
 		return
 	}
 
@@ -1413,10 +1417,11 @@ func (h *EventHandler) GetUserGamePreferences(w http.ResponseWriter, r *http.Req
 
 	// Verify the event exists and get group ID
 	var groupID string
+	var mcID sql.NullString
 	err := h.db.QueryRow(`
-		SELECT group_id FROM events
+		SELECT group_id, mc_id FROM events
 		WHERE id = $1
-	`, eventID).Scan(&groupID)
+	`, eventID).Scan(&groupID, &mcID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("Event not found: %s", eventID)
@@ -1428,30 +1433,33 @@ func (h *EventHandler) GetUserGamePreferences(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Check if user has access to this event (is a member of the group)
-	var isGroupMember bool
-	err = h.db.QueryRow(`
-		SELECT EXISTS(
-			SELECT 1 FROM group_members
+	// Check if user is authorized (is MC or has admin/organizer role)
+	var isAuthorized bool
+	if mcID.Valid && mcID.String == user.ID {
+		isAuthorized = true
+	} else {
+		err = h.db.QueryRow(`
+			SELECT role IN ('admin', 'organizer')
+			FROM group_members
 			WHERE group_id = $1 AND user_id = $2
-		)
-	`, groupID, user.ID).Scan(&isGroupMember)
-	if err != nil {
-		log.Printf("Error checking group membership for user %s in group %s: %v", user.ID, groupID, err)
-		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
-		return
+		`, groupID, user.ID).Scan(&isAuthorized)
+		if err != nil {
+			log.Printf("Error checking user authorization: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking authorization")
+			return
+		}
 	}
 
-	if !isGroupMember {
-		log.Printf("User %s is not a member of group %s", user.ID, groupID)
-		RespondWithError(w, http.StatusForbidden, "You are not a member of this group")
+	if !isAuthorized {
+		log.Printf("User %s is not authorized to view game preferences for event %s", user.ID, eventID)
+		RespondWithError(w, http.StatusForbidden, "Only the event MC or group organizers can view game preferences")
 		return
 	}
 
 	// Build the query to get game preferences
 	queryArgs := []interface{}{eventID}
 	query := `
-		SELECT ugp.user_id, ugp.game_id, ugp.rating, ugp.status
+		SELECT ugp.user_id, ugp.game_id, ugp.status
 		FROM event_games eg
 		JOIN user_game_preferences ugp ON eg.game_id = ugp.game_id
 		WHERE eg.event_id = $1
@@ -1479,26 +1487,19 @@ func (h *EventHandler) GetUserGamePreferences(w http.ResponseWriter, r *http.Req
 	type GamePreference struct {
 		UserID    string      `json:"userId"`
 		GameID    string      `json:"gameId"`
-		Rating    *int        `json:"rating,omitempty"`
 		Status    string      `json:"status,omitempty"`
 	}
 
 	var preferences []GamePreference
 	for rows.Next() {
 		var preference GamePreference
-		var rating sql.NullInt64
 		var status sql.NullString
 
-		err := rows.Scan(&preference.UserID, &preference.GameID, &rating, &status)
+		err := rows.Scan(&preference.UserID, &preference.GameID, &status)
 		if err != nil {
 			log.Printf("Error scanning game preference row: %v", err)
 			RespondWithError(w, http.StatusInternalServerError, "Error scanning game preferences")
 			return
-		}
-
-		if rating.Valid {
-			ratingInt := int(rating.Int64)
-			preference.Rating = &ratingInt
 		}
 
 		if status.Valid {

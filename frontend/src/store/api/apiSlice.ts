@@ -18,6 +18,8 @@ export const apiSlice = createApi({
     'Games',
     'Invitations',
     'GroupInvites',
+    'PlayerAssignments',
+    'GamePreferences',
   ],
   endpoints: () => ({}),
 })

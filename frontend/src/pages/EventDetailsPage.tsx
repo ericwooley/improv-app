@@ -309,7 +309,8 @@ const EventDetailsPage = () => {
             </Grid>
           </Grid>
         </Box>
-        <GameRunner eventId={eventId} isMC={isMC} />
+        {/* Only render GameRunner if user is MC or has management permissions */}
+        {(isMC || canManageEvent) && <GameRunner eventId={eventId} isMC={isMC} />}
       </TabPanel>
 
       <TabPanel value={tabValue} index={1} id="event">

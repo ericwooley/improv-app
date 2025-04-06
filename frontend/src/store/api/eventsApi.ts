@@ -73,7 +73,6 @@ export interface CreateEventRequest {
 export interface GamePreference {
   userId: string
   gameId: string
-  rating?: number
   status?: string
 }
 
@@ -212,12 +211,23 @@ export const eventsApi = apiSlice.injectEndpoints({
 
     // Game preference and player assignment endpoints
     getUserGamePreferences: builder.query<APIResponse<GamePreference[]>, { eventId: string; gameIds?: string[] }>({
-      query: ({ eventId, gameIds }) => ({
-        url: `/events/${eventId}/preferences`,
-        method: 'GET',
-        params: gameIds ? { games: gameIds.join(',') } : undefined,
-      }),
-      providesTags: (_, __, { eventId }) => [{ type: 'Event', id: `${eventId}-prefs` }],
+      query: ({ eventId, gameIds }) => {
+        let url = `/events/${eventId}/preferences`
+        if (gameIds && gameIds.length > 0) {
+          url += `?games=${gameIds.join(',')}`
+        }
+        return url
+      },
+      providesTags: (result, error, { eventId }) =>
+        result
+          ? [
+              ...result.data.map(({ gameId, userId }) => ({
+                type: 'GamePreferences' as const,
+                id: `${eventId}-${gameId}-${userId}`,
+              })),
+              { type: 'GamePreferences', id: eventId },
+            ]
+          : [{ type: 'GamePreferences', id: eventId }],
     }),
 
     getEventPlayerAssignments: builder.query<
@@ -234,7 +244,7 @@ export const eventsApi = apiSlice.injectEndpoints({
         method: 'POST',
         body: { userId },
       }),
-      invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: `${eventId}-players` }],
+      invalidatesTags: (result, error, { eventId }) => [{ type: 'PlayerAssignments', id: eventId }],
     }),
 
     removePlayerFromGame: builder.mutation<APIResponse<void>, { eventId: string; gameId: string; userId: string }>({
@@ -242,7 +252,22 @@ export const eventsApi = apiSlice.injectEndpoints({
         url: `/events/${eventId}/games/${gameId}/players/${userId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (_, __, { eventId }) => [{ type: 'Event', id: `${eventId}-players` }],
+      invalidatesTags: (result, error, { eventId }) => [{ type: 'PlayerAssignments', id: eventId }],
+    }),
+
+    // Player assignments endpoints
+    getEventPlayers: builder.query<APIResponse<PlayerAssignment[]>, string>({
+      query: (eventId) => `/events/${eventId}/players`,
+      providesTags: (result, error, eventId) =>
+        result
+          ? [
+              ...result.data.map(({ gameId, userId }) => ({
+                type: 'PlayerAssignments' as const,
+                id: `${eventId}-${gameId}-${userId}`,
+              })),
+              { type: 'PlayerAssignments', id: eventId },
+            ]
+          : [{ type: 'PlayerAssignments', id: eventId }],
     }),
   }),
 })
@@ -265,4 +290,5 @@ export const {
   useGetEventPlayerAssignmentsQuery,
   useAssignPlayerToGameMutation,
   useRemovePlayerFromGameMutation,
+  useGetEventPlayersQuery,
 } = eventsApi

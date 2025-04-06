@@ -26,8 +26,6 @@ import {
 import {
   PersonAdd as AssignIcon,
   PersonRemove as RemoveIcon,
-  Star as StarIcon,
-  StarBorder as StarBorderIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material'
@@ -283,15 +281,6 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
                                   secondary={
                                     preference ? (
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        {[...Array(5)].map((_, i) => (
-                                          <Box key={i} component="span" sx={{ display: 'inline-flex' }}>
-                                            {i < (preference.rating || 0) ? (
-                                              <StarIcon fontSize="small" color="primary" />
-                                            ) : (
-                                              <StarBorderIcon fontSize="small" color="disabled" />
-                                            )}
-                                          </Box>
-                                        ))}
                                         {preference.status && (
                                           <Chip
                                             label={preference.status}
@@ -350,15 +339,6 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
                                   secondary={
                                     preference ? (
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        {[...Array(5)].map((_, i) => (
-                                          <Box key={i} component="span" sx={{ display: 'inline-flex' }}>
-                                            {i < (preference.rating || 0) ? (
-                                              <StarIcon fontSize="small" color="primary" />
-                                            ) : (
-                                              <StarBorderIcon fontSize="small" color="disabled" />
-                                            )}
-                                          </Box>
-                                        ))}
                                         {preference.status && (
                                           <Chip
                                             label={preference.status}
