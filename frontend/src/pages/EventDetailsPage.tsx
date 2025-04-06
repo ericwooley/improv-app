@@ -30,6 +30,9 @@ import {
   Info as InfoIcon,
   Games as GamesIcon,
   Group as GroupIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material'
 import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
 import TabPanel, { a11yProps } from '../components/TabPanel'
@@ -47,7 +50,7 @@ import GameRunner from '../components/games/GameRunner'
 import { RootState } from '../store'
 import AttendanceList from '../components/events/AttendanceList'
 import RSVPModal from '../components/events/RSVPModal'
-import { GameData } from '../utils/gameHealthUtils'
+import { GameData, analyzeGameHealth, calculateOverallHealthScore } from '../utils/gameHealthUtils'
 import GameHealthAnalyzer from '../components/games/GameHealthAnalyzer'
 
 // Helper function to create Google Maps link
@@ -341,7 +344,7 @@ const EventDetailsPage = () => {
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs value={gameTabValue} onChange={handleGameTabChange} aria-label="Game management tabs">
                   <Tab label="Game Runner" {...a11yProps(0, 'game-management')} />
-                  <Tab label="Game Health" {...a11yProps(1, 'game-health')} />
+                  <Tab label={<HealthStatusTab eventId={eventId} />} {...a11yProps(1, 'game-health')} />
                 </Tabs>
               </Box>
 
@@ -434,6 +437,86 @@ const GameDataView = ({ eventId }: { eventId?: string }) => {
           <pre>{JSON.stringify(data, null, 2)}</pre>
         </Box>
       </Paper>
+    </Box>
+  )
+}
+
+// Component that displays health tab with icons based on health score
+const HealthStatusTab = ({ eventId }: { eventId?: string }) => {
+  const [healthScore, setHealthScore] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch data needed to calculate health score
+  const { data: gamesData } = useGetEventGamesQuery(eventId || '', { skip: !eventId })
+  const { data: eventData } = useGetEventQuery(eventId || '', { skip: !eventId })
+  const { data: assignmentsData } = useGetEventPlayerAssignmentsQuery(eventId || '', { skip: !eventId })
+
+  const gameIds = gamesData?.data?.games?.map((game) => game.id) || []
+  const { data: preferencesData } = useGetUserGamePreferencesQuery(
+    { eventId: eventId || '', gameIds },
+    { skip: !eventId || gameIds.length === 0 }
+  )
+
+  // Calculate health score when data is available
+  useEffect(() => {
+    if (gamesData && eventData && assignmentsData && preferencesData) {
+      const data = {
+        games: gamesData.data?.games || [],
+        players: eventData.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || [],
+        assignments: assignmentsData.data || [],
+        preferences: preferencesData.data || [],
+      }
+
+      if (data.games.length > 0 && data.players.length > 0) {
+        const playerProblems = analyzeGameHealth(data)
+        const score = calculateOverallHealthScore(playerProblems)
+        setHealthScore(score)
+      }
+      setIsLoading(false)
+    }
+  }, [gamesData, eventData, assignmentsData, preferencesData])
+
+  const getStatusIcon = () => {
+    if (healthScore === null) return null
+
+    if (healthScore < 50) {
+      // Critical status - double error icon
+      return (
+        <Box sx={{ display: 'flex' }}>
+          <ErrorIcon fontSize="small" color="error" />
+          <ErrorIcon fontSize="small" color="error" sx={{ ml: -0.5 }} />
+        </Box>
+      )
+    }
+
+    if (healthScore < 60) {
+      // Danger status
+      return <ErrorIcon fontSize="small" color="error" />
+    }
+
+    if (healthScore < 70) {
+      // High warning status - warning with red color
+      return <WarningIcon fontSize="small" sx={{ color: '#ff8c00' }} />
+    }
+
+    if (healthScore < 80) {
+      // Warning status
+      return <WarningIcon fontSize="small" color="warning" />
+    }
+
+    if (healthScore < 90) {
+      // Notice status
+      return <InfoIcon fontSize="small" color="info" />
+    }
+
+    // Good status - above 90
+    return <CheckCircleIcon fontSize="small" color="success" sx={{ opacity: 0.8 }} />
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      Game Health
+      {!isLoading && <Box sx={{ ml: 1, display: 'flex', alignItems: 'center' }}>{getStatusIcon()}</Box>}
     </Box>
   )
 }

@@ -72,6 +72,7 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
             </Box>
             <Typography variant="h4" color={`${scoreColor}.main`} fontWeight="bold">
               {healthScore.toFixed(0)}
+
             </Typography>
           </Box>
 
