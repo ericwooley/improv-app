@@ -46,6 +46,24 @@ interface GameRunnerProps {
   isMC?: boolean
 }
 
+// Add this function before the GameRunner component
+const getStatusVariant = (status: string) => {
+  switch (status) {
+    case 'I Love playing this':
+      return 'success'
+    case 'I Need to practice this':
+      return 'warning'
+    case 'I dont like this game':
+      return 'error'
+    case 'I want to try this game':
+      return 'info'
+    case 'No opinion on this game':
+      return 'default'
+    default:
+      return 'default'
+  }
+}
+
 const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
   const [expandedGames, setExpandedGames] = useState<Record<string, boolean>>({})
   const [isOptimizing, setIsOptimizing] = useState(false)
@@ -457,7 +475,8 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
                                             <Chip
                                               label={preference.status}
                                               size="small"
-                                              color={preference.status === 'experienced' ? 'success' : 'default'}
+                                              variant="outlined"
+                                              color={getStatusVariant(preference.status)}
                                               sx={{ ml: 1 }}
                                             />
                                           )}
@@ -522,7 +541,8 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
                                             <Chip
                                               label={preference.status}
                                               size="small"
-                                              color={preference.status === 'experienced' ? 'success' : 'default'}
+                                              variant="outlined"
+                                              color={getStatusVariant(preference.status)}
                                               sx={{ ml: 1 }}
                                             />
                                           )}

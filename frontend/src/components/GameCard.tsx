@@ -157,7 +157,7 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
   const getStatusIconAndColor = (status: string) => {
     switch (status) {
       case 'I Love playing this':
-        return { icon: <FavoriteIcon />, color: 'error.main' }
+        return { icon: <FavoriteIcon />, color: 'success.main' }
       case 'I Need to practice this':
         return { icon: <AccessTimeIcon />, color: 'warning.main' }
       case 'I dont like this game':
