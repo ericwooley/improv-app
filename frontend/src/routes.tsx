@@ -20,6 +20,8 @@ import GameDetailsPage from './pages/GameDetailsPage'
 import EditGamePage from './pages/EditGamePage'
 import JoinGroupPage from './pages/JoinGroupPage'
 import NotFoundPage from './pages/NotFoundPage'
+import TermsOfServicePage from './pages/TermsOfServicePage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 
 const AppRoutes = () => {
   const { isLoading } = useGetMeQuery()
@@ -53,6 +55,8 @@ const AppRoutes = () => {
       <Route path="/events/:eventId/edit" element={<EditEventPage />} />
       <Route path="/join/:code" element={<JoinGroupPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
