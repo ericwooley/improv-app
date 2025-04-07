@@ -13,12 +13,14 @@ import {
   Alert,
   CircularProgress,
   IconButton,
-  Stack,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material'
 import { Email as EmailIcon, Send as SendIcon, Key as KeyIcon } from '@mui/icons-material'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const dispatch = useAppDispatch()
 
   // RTK Query hook for login mutation
@@ -26,6 +28,11 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+
+    if (!agreedToTerms) {
+      alert('Please agree to the Privacy Policy and Terms of Service to continue.')
+      return
+    }
 
     try {
       const response = await login({ email }).unwrap()
@@ -89,12 +96,36 @@ const LoginPage = () => {
                   startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
                 }}
               />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    I agree to the{' '}
+                    <Link to="/privacy-policy" style={{ textDecoration: 'none' }}>
+                      Privacy Policy
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/terms-of-service" style={{ textDecoration: 'none' }}>
+                      Terms of Service
+                    </Link>
+                  </Typography>
+                }
+                sx={{ mt: 2 }}
+              />
+
               <Button
                 type="submit"
                 variant="contained"
                 fullWidth
                 size="large"
-                disabled={isLoading}
+                disabled={isLoading || !agreedToTerms}
                 sx={{ mt: 3 }}
                 startIcon={isLoading ? <CircularProgress size={20} /> : <SendIcon />}>
                 Send Magic Link
@@ -107,15 +138,6 @@ const LoginPage = () => {
               </Alert>
             )}
           </Paper>
-
-          <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-            <Typography variant="body2">Don't have an account?</Typography>
-            <Link to="/register" style={{ textDecoration: 'none' }}>
-              <Typography variant="body2" color="primary">
-                Register now
-              </Typography>
-            </Link>
-          </Stack>
         </Paper>
       </Box>
     </Container>
