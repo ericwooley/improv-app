@@ -1,5 +1,9 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useGetMeQuery } from './store/api/authApi'
+import { useSelector } from 'react-redux'
+import { RootState } from './store'
+import MainLayout from './layout/MainLayout'
+import PublicLayout from './layout/PublicLayout'
 
 // Pages
 import HomePage from './pages/HomePage'
@@ -23,8 +27,50 @@ import NotFoundPage from './pages/NotFoundPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 
+// Public routes that don't require authentication
+const PublicRoutes = () => {
+  return (
+    <PublicLayout>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </PublicLayout>
+  )
+}
+
+// Private routes that require authentication
+const PrivateRoutes = () => {
+  return (
+    <MainLayout>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/games" element={<GamesPage />} />
+        <Route path="/games/new" element={<NewGamePage />} />
+        <Route path="/games/:gameId" element={<GameDetailsPage />} />
+        <Route path="/games/:gameId/edit" element={<EditGamePage />} />
+        <Route path="/groups" element={<GroupsPage />} />
+        <Route path="/groups/new" element={<NewGroupPage />} />
+        <Route path="/groups/:groupId" element={<GroupDetailsPage />} />
+        <Route path="/groups/:groupId/edit" element={<EditGroupPage />} />
+        <Route path="/groups/:groupId/members" element={<GroupMembersPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/events/new" element={<NewEventPage />} />
+        <Route path="/events/:eventId" element={<EventDetailsPage />} />
+        <Route path="/events/:eventId/edit" element={<EditEventPage />} />
+        <Route path="/join/:code" element={<JoinGroupPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </MainLayout>
+  )
+}
+
 const AppRoutes = () => {
   const { isLoading } = useGetMeQuery()
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
 
   if (isLoading) {
     return (
@@ -36,30 +82,7 @@ const AppRoutes = () => {
     )
   }
 
-  return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/games" element={<GamesPage />} />
-      <Route path="/games/new" element={<NewGamePage />} />
-      <Route path="/games/:gameId" element={<GameDetailsPage />} />
-      <Route path="/games/:gameId/edit" element={<EditGamePage />} />
-      <Route path="/groups" element={<GroupsPage />} />
-      <Route path="/groups/new" element={<NewGroupPage />} />
-      <Route path="/groups/:groupId" element={<GroupDetailsPage />} />
-      <Route path="/groups/:groupId/edit" element={<EditGroupPage />} />
-      <Route path="/groups/:groupId/members" element={<GroupMembersPage />} />
-      <Route path="/events" element={<EventsPage />} />
-      <Route path="/events/new" element={<NewEventPage />} />
-      <Route path="/events/:eventId" element={<EventDetailsPage />} />
-      <Route path="/events/:eventId/edit" element={<EditEventPage />} />
-      <Route path="/join/:code" element={<JoinGroupPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  )
+  return isAuthenticated ? <PrivateRoutes /> : <PublicRoutes />
 }
 
 export default AppRoutes
