@@ -62,6 +62,7 @@ const PrivateRoutes = () => {
         <Route path="/events/:eventId" element={<EventDetailsPage />} />
         <Route path="/events/:eventId/edit" element={<EditEventPage />} />
         <Route path="/join/:code" element={<JoinGroupPage />} />
+        <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </MainLayout>

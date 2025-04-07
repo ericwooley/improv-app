@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { clearCredentials } from '../store/slices/authSlice'
 import { useProfileCompletion } from '../hooks/useProfileCompletion'
+import { useLogoutMutation } from '../store/api/authApi'
 import {
   Box,
   Drawer,
@@ -43,9 +44,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [logout] = useLogoutMutation()
 
   const handleLogout = async () => {
     try {
+      await logout().unwrap()
       dispatch(clearCredentials())
       navigate('/login')
     } catch (error) {
