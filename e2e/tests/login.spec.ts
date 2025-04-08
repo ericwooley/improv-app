@@ -2,12 +2,29 @@ import { test, expect } from '@playwright/test'
 import { LoginPage } from '../pages/LoginPage'
 import { MailpitClient } from '../clients/MailpitClient'
 import { env } from '../env'
+import { ProfilePage } from '../pages/ProfilePage'
+import { HomePage } from '../pages/HomePage'
 
 // Helper function to generate unique email addresses
 function generateUniqueEmail() {
   const timestamp = Date.now()
   const random = Math.floor(Math.random() * 10000)
   return `test-${timestamp}-${random}@example.com`
+}
+
+// Helper function to extract magic link from email
+async function extractMagicLinkFromEmail(mailpitClient: MailpitClient, emailId: string): Promise<string> {
+  const emailDetails = await mailpitClient.getMessage(emailId)
+
+  // Use the MAGIC_LINK marker to extract the link
+  const magicLinkRegex = /MAGIC_LINK: (.*?)(\s|$)/
+  const matches = emailDetails.Text.match(magicLinkRegex)
+
+  if (!matches || matches.length < 2) {
+    throw new Error('Magic link not found in email')
+  }
+
+  return matches[1].trim()
 }
 
 test.describe('Login Page', () => {
@@ -121,5 +138,71 @@ test.describe('Login Page', () => {
       expect(emailDetails.Text).toContain('Click the link below')
       expect(emailDetails.Text).toContain(env.API_URL + '/api/auth/verify?token=')
     }
+  })
+
+  test('should redirect to profile page on first login and home page on subsequent logins', async ({ page }) => {
+    // Create unique email for this test
+    const uniqueEmail = generateUniqueEmail()
+
+    // First login
+    await loginPage.login(uniqueEmail, true)
+
+    // Wait for the email to arrive
+    const emailMessage = await mailpitClient.waitForMessageByRecipient(uniqueEmail, 10000)
+    expect(emailMessage).not.toBeNull()
+
+    // Fail test if email wasn't received
+    if (!emailMessage) {
+      test.fail(true, 'Email not received')
+      return
+    }
+
+    // Extract the magic link from the email
+    const magicLink = await extractMagicLinkFromEmail(mailpitClient, emailMessage.ID)
+
+    // Click the magic link (first time login)
+    await page.goto(magicLink)
+
+    // Should redirect to profile page for first-time login
+    const profilePage = new ProfilePage(page)
+    await expect(page).toHaveURL(/.*profile/)
+
+    // Fill out the profile form
+    await profilePage.fillForm('Test', 'User')
+    await profilePage.clickUpdate()
+
+    // Wait for success message
+    await expect(page.locator('[data-testid="profile-success-alert"]')).toBeVisible({ timeout: 5000 })
+
+    // Log out
+    await page.click('[data-testid="user-menu-button"]')
+    await page.click('[data-testid="logout-button"]')
+
+    // Go back to login page for second login attempt
+    await loginPage.goto('/login')
+    await loginPage.login(uniqueEmail, true)
+
+    // Wait for the second email to arrive
+    const secondEmailMessage = await mailpitClient.waitForMessageByRecipient(uniqueEmail, 10000)
+    expect(secondEmailMessage).not.toBeNull()
+
+    // Fail the rest of the test if the second email wasn't received
+    if (!secondEmailMessage) {
+      test.fail(true, 'Second email not received')
+      return
+    }
+
+    // Extract the magic link from the second email
+    const secondMagicLink = await extractMagicLinkFromEmail(mailpitClient, secondEmailMessage.ID)
+
+    // Click the magic link (second login)
+    await page.goto(secondMagicLink)
+
+    // Should redirect to home page for returning user
+    const homePage = new HomePage(page)
+    await expect(page).toHaveURL('/')
+
+    // Verify we're on the home page
+    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 5000 })
   })
 })

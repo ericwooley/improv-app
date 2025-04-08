@@ -42,7 +42,7 @@ const ProfilePage = () => {
 
   if (isLoadingUser) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }} data-testid="profile-loading">
         <Typography variant="h5" sx={{ mb: 2 }}>
           Loading profile...
         </Typography>
@@ -52,27 +52,27 @@ const ProfilePage = () => {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" sx={{ mb: 1 }}>
+    <Box data-testid="profile-page">
+      <Typography variant="h4" sx={{ mb: 1 }} data-testid="profile-title">
         My Profile
       </Typography>
-      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }} data-testid="profile-subtitle">
         Manage your personal information
       </Typography>
 
       {isSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }}>
+        <Alert severity="success" sx={{ mb: 3 }} data-testid="profile-success-alert">
           Profile updated successfully!
         </Alert>
       )}
 
       {updateError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3 }} data-testid="profile-error-alert">
           {JSON.stringify(updateError)}
         </Alert>
       )}
 
-      <Paper elevation={0} component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
+      <Paper elevation={0} component="form" onSubmit={handleSubmit} sx={{ p: 3 }} data-testid="profile-form">
         <Stack spacing={3}>
           <TextField
             id="firstName"
@@ -85,6 +85,7 @@ const ProfilePage = () => {
               startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
             }}
             onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+            data-testid="profile-first-name-input"
           />
 
           <TextField
@@ -98,13 +99,23 @@ const ProfilePage = () => {
               startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />,
             }}
             onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+            data-testid="profile-last-name-input"
           />
 
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button variant="outlined" onClick={() => navigate('/dashboard')} disabled={isUpdating}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/dashboard')}
+              disabled={isUpdating}
+              data-testid="profile-cancel-button">
               Cancel
             </Button>
-            <Button variant="contained" type="submit" startIcon={<SaveIcon />} disabled={isUpdating}>
+            <Button
+              variant="contained"
+              type="submit"
+              startIcon={<SaveIcon />}
+              disabled={isUpdating}
+              data-testid="profile-update-button">
               {isUpdating ? 'Updating...' : 'Update Profile'}
             </Button>
           </Box>

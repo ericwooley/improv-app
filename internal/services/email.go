@@ -79,18 +79,19 @@ func (s *EmailService) SendMagicLink(email string) error {
 		panic("BASE_URL is not set")
 	}
 
+	// URL encode the token for safety
+	urlEncodedToken := base64.URLEncoding.EncodeToString([]byte(token))
+	magicLink := fmt.Sprintf("%s/api/auth/verify?token=%s", baseURL, urlEncodedToken)
+
 	body := fmt.Sprintf(`
-		Hello,
+Hello,
 
-		Click the link below to sign in to your Improv App account:
+Click the link below to sign in to your Improv App account:
 
-		%s/api/auth/verify?token=%s
+MAGIC_LINK: %s
 
-		This link will expire in 24 hours.
-
-		Best regards,
-		%s
-	`, baseURL, token, fromName)
+This link will expire in 24 hours.
+	`, magicLink)
 
 	// Set up email message
 	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+
