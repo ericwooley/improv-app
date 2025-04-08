@@ -281,8 +281,9 @@ npx playwright test --ui
 
 3. Add `await page.pause()` in your tests for step-by-step debugging
 
-## Additional Resources
+## Conventions and guidelines. 
 
-- [Playwright Documentation](mdc:https:/playwright.dev/docs/intro)
-- [Page Object Model Best Practices](mdc:https:/playwright.dev/docs/pom)
-- [Test Generator](mdc:https:/playwright.dev/docs/codegen)
+1. Each test should be independent of other test, including any data that might be created on the server.
+2. Each email user created should have a unique email generated.
+3. [utils.ts](mdc:e2e/utils.ts) has useful utils for this.
+

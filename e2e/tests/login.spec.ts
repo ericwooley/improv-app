@@ -5,28 +5,7 @@ import { env } from '../env'
 import { ProfilePage } from '../pages/ProfilePage'
 import { HomePage } from '../pages/HomePage'
 import { MainLayoutPage } from '../pages/MainLayoutPage'
-
-// Helper function to generate unique email addresses
-function generateUniqueEmail() {
-  const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 10000)
-  return `test-${timestamp}-${random}@example.com`
-}
-
-// Helper function to extract magic link from email
-async function extractMagicLinkFromEmail(mailpitClient: MailpitClient, emailId: string): Promise<string> {
-  const emailDetails = await mailpitClient.getMessage(emailId)
-
-  // Use the MAGIC_LINK marker to extract the link
-  const magicLinkRegex = /MAGIC_LINK: (.*?)(\s|$)/
-  const matches = emailDetails.Text.match(magicLinkRegex)
-
-  if (!matches || matches.length < 2) {
-    throw new Error('Magic link not found in email')
-  }
-
-  return matches[1].trim()
-}
+import { generateUniqueEmail, extractMagicLinkFromEmail } from '../utils'
 
 test.describe('Login Page', () => {
   let loginPage: LoginPage
