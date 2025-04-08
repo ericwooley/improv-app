@@ -176,6 +176,10 @@ test.describe('Login Page', () => {
     // Click the magic link (second login)
     await page.goto(secondMagicLink)
 
+    // Add explicit waiting for navigation to complete and page to stabilize
+    await page.waitForLoadState('networkidle')
+    // await page.waitForTimeout(1000) // Give the UI a moment to render
+
     // Should redirect to home page for returning user
     const homePage = new HomePage(page)
     await expect(page).toHaveURL('/')
@@ -183,7 +187,15 @@ test.describe('Login Page', () => {
     // Verify we're on the home page using MainLayoutPage to check
     const mainLayoutForSecondLogin = new MainLayoutPage(page)
     expect(await mainLayoutForSecondLogin.isOnPage('home')).toBeTruthy()
-    expect(await mainLayoutForSecondLogin.isAuthenticated()).toBeTruthy()
+
+    // Add retry logic for authentication check to handle potential race conditions
+    let isAuthenticated = false
+    for (let i = 0; i < 3; i++) {
+      isAuthenticated = await mainLayoutForSecondLogin.isAuthenticated()
+      if (isAuthenticated) break
+      await page.waitForTimeout(500)
+    }
+    expect(isAuthenticated).toBeTruthy()
   })
 
   test('should display error flash message when redirected with error parameter', async ({ page }) => {

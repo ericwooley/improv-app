@@ -58,7 +58,7 @@ test.describe('Main Navigation', () => {
       await page.fill('[data-testid="profile-lastname-input"]', 'User')
       await page.click('[data-testid="profile-update-button"]')
       // Wait for navigation after profile update
-      await page.waitForNavigation()
+      await page.waitForURL('/')
     }
   })
 
