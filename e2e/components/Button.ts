@@ -9,8 +9,12 @@ export class Button {
     this.selector = `[data-testid="${testId}"]`
   }
 
-  async click() {
-    await this.page.click(this.selector)
+  async click(force = false) {
+    if (force) {
+      await this.page.click(this.selector, { force: true })
+    } else {
+      await this.page.click(this.selector)
+    }
   }
 
   async isVisible() {
@@ -18,7 +22,8 @@ export class Button {
   }
 
   async isDisabled() {
-    return await this.page.isDisabled(this.selector)
+    const button = await this.page.locator(this.selector)
+    return await button.isDisabled()
   }
 
   async getText() {

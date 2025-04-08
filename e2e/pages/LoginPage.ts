@@ -44,8 +44,8 @@ export class LoginPage extends BasePage {
     return await this.termsCheckbox.isChecked()
   }
 
-  async clickSubmitButton() {
-    await this.submitButton.click()
+  async clickSubmitButton(force = false) {
+    await this.submitButton.click(force)
   }
 
   async isSubmitButtonDisabled() {

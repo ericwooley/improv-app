@@ -50,6 +50,9 @@ All tabs components should sync their selected tab component to the url, using a
 ## Overview
 This document outlines the best practices for implementing end-to-end tests using Playwright with TypeScript, focusing on page objects and test IDs.
 
+
+Don't use mocks at all. We will setup our actual api running locally to test the whole system in a true e2e manner
+
 ## Test ID Naming Convention
 
 ### Component Test IDs

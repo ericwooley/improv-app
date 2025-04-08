@@ -6,7 +6,7 @@ export class TextField {
 
   constructor(page: Page, testId: string) {
     this.page = page
-    this.selector = `[data-testid="${testId}"]`
+    this.selector = `[data-testid="${testId}"] input`
   }
 
   async fill(value: string) {
@@ -30,17 +30,17 @@ export class TextField {
   }
 
   async hasError() {
-    // This assumes error state is indicated by a specific class or data attribute
-    // Adjust based on how your TextField component actually indicates errors
-    const element = await this.page.locator(this.selector)
-    const classAttr = await element.getAttribute('class')
-    return classAttr ? classAttr.includes('error') : false
+    const parent = this.page.locator(
+      `[data-testid="${this.selector.split(' ')[0].replace('[data-testid="', '').replace('"]', '')}"]`
+    )
+    return (await parent.getAttribute('aria-invalid')) === 'true'
   }
 
   async getErrorMessage() {
-    // This assumes error messages are rendered with a specific class or data attribute
-    // Adjust based on how your TextField component actually renders error messages
-    const errorMessageSelector = `${this.selector}-error-message`
-    return await this.page.textContent(errorMessageSelector)
+    const parent = this.page.locator(
+      `[data-testid="${this.selector.split(' ')[0].replace('[data-testid="', '').replace('"]', '')}"]`
+    )
+    const errorMessage = await parent.locator('.MuiFormHelperText-root').textContent()
+    return errorMessage
   }
 }

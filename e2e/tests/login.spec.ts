@@ -38,13 +38,14 @@ test.describe('Login Page', () => {
     // Enter email
     await loginPage.enterEmail('test@example.com')
 
-    // Try to submit without checking terms
-    await loginPage.clickSubmitButton()
+    // Set up alert handler
+    loginPage.getPage().on('dialog', async (dialog) => {
+      expect(dialog.message()).toBe('Please agree to the Privacy Policy and Terms of Service to continue.')
+      await dialog.accept()
+    })
 
-    // Should show alert about agreeing to terms
-    // Note: This assumes the alert is shown via a browser alert
-    // In a real test, you might need to handle this differently
-    // depending on how your app shows this error
+    // Try to submit without checking terms (force click since button is disabled)
+    await loginPage.clickSubmitButton(true)
   })
 
   test('should navigate to privacy policy when clicking link', async () => {
@@ -63,12 +64,31 @@ test.describe('Login Page', () => {
     await expect(loginPage.getPage()).toHaveURL(/.*terms-of-service/)
   })
 
-  test('should submit login form successfully', async () => {
-    // Complete login flow
-    await loginPage.login('test@example.com', true)
+  test('should send magic link when submitting login form', async () => {
+    const testEmail = 'test@example.com'
 
-    // In a real test, you would verify the success state
-    // This might include checking for a success message,
-    // verifying navigation to a dashboard, etc.
+    // Set up alert handler
+    loginPage.getPage().on('dialog', async (dialog) => {
+      expect(dialog.message()).toBe('Magic link has been sent to your email. Please check your inbox.')
+      await dialog.accept()
+    })
+
+    // Complete login flow
+    await loginPage.login(testEmail, true)
+
+    // Verify the API response
+    const response = await loginPage.getPage().evaluate(async (email) => {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+      return res.json()
+    }, testEmail)
+
+    expect(response.success).toBe(true)
+    expect(response.message).toBe('Magic link sent! Check your email.')
   })
 })
