@@ -1,7 +1,8 @@
 import { MailpitClient } from './clients/MailpitClient'
 import { Page } from '@playwright/test'
 import { LoginPage } from './pages/LoginPage'
-
+import sqlite3 from 'sqlite3'
+import path from 'path'
 /**
  * Generates a unique email address for testing
  */
@@ -28,19 +29,45 @@ export async function extractMagicLinkFromEmail(mailpitClient: MailpitClient, em
   return matches[1].trim()
 }
 
+export async function addProfileToDB(
+  email: string,
+  {
+    firstName = 'Test',
+    lastName = 'User',
+  }: {
+    firstName?: string
+    lastName?: string
+  } = {}
+): Promise<void> {
+  const sqlClient = new sqlite3.Database(path.resolve(__dirname, process.env.DATABASE_URL || ''))
+  await new Promise((resolve, reject) =>
+    sqlClient.run(
+      `
+    update users set first_name = ?, last_name = ? where email = ?
+  `,
+      [firstName, lastName, email],
+      (err) => {
+        if (err) reject(err)
+        else resolve(true)
+      }
+    )
+  )
+}
+
 /**
  * Performs the complete login flow including waiting for and using the magic link
  */
-export async function loginWithMagicLink(page: Page, email?: string): Promise<void> {
+export async function loginWithMagicLink(
+  page: Page,
+  email?: string,
+  { deleteEmail = true, setupProfileWithSQL = true }: { deleteEmail?: boolean; setupProfileWithSQL?: boolean } = {}
+): Promise<void> {
   // Initialize necessary objects
   const loginPage = new LoginPage(page)
   const mailpitClient = new MailpitClient()
 
   // Generate a unique email if none provided
   const testEmail = email || generateUniqueEmail()
-
-  // Clear any existing emails
-  await mailpitClient.deleteAllMessages()
 
   // Go to login page and submit email
   await loginPage.goto('/login')
@@ -52,8 +79,15 @@ export async function loginWithMagicLink(page: Page, email?: string): Promise<vo
     throw new Error('Login email not received')
   }
 
+  if (setupProfileWithSQL) {
+    await addProfileToDB(testEmail)
+  }
+
   // Extract and use the magic link
   const magicLink = await extractMagicLinkFromEmail(mailpitClient, emailMessage.ID)
-  await mailpitClient.deleteMessage(emailMessage.ID)
+  if (deleteEmail) {
+    await mailpitClient.deleteMessage(emailMessage.ID)
+  }
+
   await page.goto(magicLink)
 }

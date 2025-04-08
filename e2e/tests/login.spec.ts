@@ -15,8 +15,6 @@ test.describe('Login Page', () => {
     loginPage = new LoginPage(page)
     mailpitClient = new MailpitClient()
     await loginPage.goto('/login')
-    // Clear any existing emails in the mailbox before each test
-    await mailpitClient.deleteAllMessages()
   })
 
   test('should display login form', async () => {

@@ -35,8 +35,6 @@ test.describe('Main Navigation', () => {
     mainLayoutPage = new MainLayoutPage(page)
     mailpitClient = new MailpitClient()
 
-    // Clear any existing emails
-    await mailpitClient.deleteAllMessages()
 
     // Log in a test user
     await loginPage.goto('/login')
