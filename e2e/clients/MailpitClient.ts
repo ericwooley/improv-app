@@ -101,13 +101,16 @@ export class MailpitClient {
   }
 
   /**
-   * Find a message by recipient email
+   * Find the most recent message by recipient email
    * @param email The email address to search for
-   * @returns The first message sent to the email or null if not found
+   * @returns The most recent message sent to the email or null if not found
    */
   async findMessageByRecipient(email: string): Promise<MessageSummary | null> {
     const messages = await this.getMessages()
-    return messages.messages.find((msg) => msg.To.some((recipient) => recipient.Address === email)) || null
+    const matchingMessages = messages.messages.filter((msg) => msg.To.some((recipient) => recipient.Address === email))
+
+    // Return the first message (most recent) or null if none found
+    return matchingMessages.length > 0 ? matchingMessages[0] : null
   }
 
   /**
@@ -123,7 +126,24 @@ export class MailpitClient {
    * Delete all messages in the mailbox
    */
   async deleteAllMessages(): Promise<void> {
-    await axios.delete(`${this.baseUrl}/api/v1/messages`)
+    // First get all messages to get their IDs
+    const messages = await this.getMessages()
+
+    if (messages.messages.length > 0) {
+      // Extract all message IDs
+      const messageIds = messages.messages.map((msg) => msg.ID)
+
+      // Delete messages by IDs
+      await axios.delete(`${this.baseUrl}/api/v1/messages`, {
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        data: {
+          IDs: messageIds,
+        },
+      })
+    }
   }
 
   /**
@@ -131,7 +151,15 @@ export class MailpitClient {
    * @param messageId The ID of the message to delete
    */
   async deleteMessage(messageId: string): Promise<void> {
-    await axios.delete(`${this.baseUrl}/api/v1/message/${messageId}`)
+    await axios.delete(`${this.baseUrl}/api/v1/messages`, {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+      },
+      data: {
+        IDs: [messageId],
+      },
+    })
   }
 
   /**

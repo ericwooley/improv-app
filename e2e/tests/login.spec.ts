@@ -176,6 +176,9 @@ test.describe('Login Page', () => {
     const mainLayoutPage = new MainLayoutPage(page)
     await mainLayoutPage.logout()
 
+    // Delete the first email message to ensure we don't pick it up in the next step
+    await mailpitClient.deleteMessage(emailMessage.ID)
+
     // Go back to login page for second login attempt
     await loginPage.goto('/login')
     await loginPage.login(uniqueEmail, true)
@@ -204,5 +207,32 @@ test.describe('Login Page', () => {
     const mainLayoutForSecondLogin = new MainLayoutPage(page)
     expect(await mainLayoutForSecondLogin.isOnPage('home')).toBeTruthy()
     expect(await mainLayoutForSecondLogin.isAuthenticated()).toBeTruthy()
+  })
+
+  test('should display error flash message when redirected with error parameter', async ({ page }) => {
+    // Initialize login page
+    const loginPage = new LoginPage(page)
+
+    // Test each error type
+    const errorTests = [
+      { errorCode: 'missing_token', expectedMessage: 'The verification link is invalid or missing a required token.' },
+      {
+        errorCode: 'invalid_token',
+        expectedMessage: 'The verification link has expired or is invalid. Please request a new one.',
+      },
+      { errorCode: 'unknown_error', expectedMessage: 'An error occurred during sign in. Please try again.' },
+    ]
+
+    for (const { errorCode, expectedMessage } of errorTests) {
+      // Navigate to login page with error parameter
+      await loginPage.goto(`/login?error=${errorCode}`)
+
+      // Verify the error alert is visible
+      const errorAlert = loginPage.getErrorAlert()
+      await expect(errorAlert).toBeVisible()
+
+      // Verify the correct error message is displayed
+      await expect(errorAlert).toContainText(expectedMessage)
+    }
   })
 })
