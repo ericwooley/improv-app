@@ -96,9 +96,8 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if token == "" {
-		w.WriteHeader(http.StatusBadRequest)
 		fmt.Println("No token provided")
-		// redirect to login page with flash
+		// redirect to login page with error
 		http.Redirect(w, r, redirectURL+"/login?error=missing_token", http.StatusSeeOther)
 		return
 	}
@@ -106,8 +105,7 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	user, err := h.emailService.VerifyToken(token)
 	if err != nil {
 		fmt.Println("Error verifying token:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		// redirect to login page with flash
+		// redirect to login page with error
 		http.Redirect(w, r, redirectURL+"/login?error=invalid_token", http.StatusSeeOther)
 		return
 	}

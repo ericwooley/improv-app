@@ -1,5 +1,5 @@
-import { useState, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, FormEvent, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useLoginMutation } from '../store/api/authApi'
 import { useAppDispatch } from '../store/hooks'
 import { setCredentials } from '../store/slices/authSlice'
@@ -18,16 +18,37 @@ import {
 } from '@mui/material'
 import { Email as EmailIcon, Send as SendIcon, Key as KeyIcon } from '@mui/icons-material'
 
+// Map of error codes to user-friendly messages
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_token: 'The verification link is invalid or missing a required token.',
+  invalid_token: 'The verification link has expired or is invalid. Please request a new one.',
+  default: 'An error occurred during sign in. Please try again.',
+}
+
 const LoginPage = () => {
   const [email, setEmail] = useState('')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const dispatch = useAppDispatch()
+  const location = useLocation()
 
   // RTK Query hook for login mutation
-  const [login, { isLoading, error }] = useLoginMutation()
+  const [login, { isLoading }] = useLoginMutation()
+
+  // Check for error parameters in URL on component mount
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search)
+    const errorCode = queryParams.get('error')
+
+    if (errorCode) {
+      const errorMessage = ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.default
+      setLoginError(errorMessage)
+    }
+  }, [location.search])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    setLoginError(null)
 
     if (!agreedToTerms) {
       alert('Please agree to the Privacy Policy and Terms of Service to continue.')
@@ -45,6 +66,7 @@ const LoginPage = () => {
     } catch (err) {
       // Error is handled by RTK Query and available in the error variable
       console.error('Failed to send magic link:', err)
+      setLoginError('Failed to send magic link. Please try again later.')
     }
   }
 
@@ -72,6 +94,12 @@ const LoginPage = () => {
           <Typography variant="h4" component="h1" gutterBottom>
             Sign In
           </Typography>
+
+          {loginError && (
+            <Alert severity="error" sx={{ width: '100%', mb: 2 }} data-testid="login-error-alert">
+              {loginError}
+            </Alert>
+          )}
 
           <Paper variant="outlined" sx={{ p: 3, width: '100%', mt: 2 }}>
             <Typography variant="h6" gutterBottom>
@@ -140,12 +168,6 @@ const LoginPage = () => {
                 Send Magic Link
               </Button>
             </form>
-
-            {error && (
-              <Alert severity="error" sx={{ mt: 2 }} data-testid="login-error-alert">
-                {JSON.stringify(error)}
-              </Alert>
-            )}
           </Paper>
         </Paper>
       </Box>
