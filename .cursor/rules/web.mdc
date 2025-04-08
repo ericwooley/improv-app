@@ -1,9 +1,9 @@
 ---
 description: 
-globs: frontend/**/*
+globs: frontend/**/*,e2e/**/*
 alwaysApply: false
 ---
-
+# Frontend Tips
 use bun for installs, all web installs are in the frontend directory
 we are using material ui 7. Grids look like this:
 ```tsx
@@ -37,3 +37,245 @@ To adjust sizes per screen size:
 
 
 All tabs components should sync their selected tab component to the url, using a `?tab-<unique-identifier>=<selected tab>` query selector. When the tab changes the url should reflect that, and that value should be the default selction for the tab. However, we do not want to try to sync the url bar changes down to the tab, as that makes the logic to difficult. This is just so people can link to a tab, and so a refresh works. We don't expect anyone to edit to url bar manually.
+
+
+
+
+# End-to-End Testing Documentation
+
+## Overview
+This document outlines the best practices for implementing end-to-end tests using Playwright with TypeScript, focusing on page objects and test IDs.
+
+## Test ID Naming Convention
+
+### Component Test IDs
+For components in `frontend/src/components`, use the following format:
+```tsx
+data-testid="component-name-element-purpose"
+```
+
+Examples:
+- `data-testid="nav-menu-button"`
+- `data-testid="user-profile-avatar"`
+- `data-testid="search-input-field"`
+
+### Page Test IDs
+For pages in `frontend/src/pages`, use the following format:
+```tsx
+data-testid="page-name-section-element"
+```
+
+Examples:
+- `data-testid="home-hero-title"`
+- `data-testid="profile-settings-form"`
+- `data-testid="dashboard-stats-card"`
+
+## Adding Test IDs to Components
+
+### Component Example
+```tsx
+// frontend/src/components/Button.tsx
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+}
+
+export const Button = ({ label, onClick }: ButtonProps) => {
+  return (
+    <button
+      data-testid={`button-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+};
+```
+
+### Page Example
+```tsx
+// frontend/src/pages/Home.tsx
+export const Home = () => {
+  return (
+    <div data-testid="home-page">
+      <h1 data-testid="home-title">Welcome</h1>
+      <section data-testid="home-features">
+        {/* Feature content */}
+      </section>
+    </div>
+  );
+};
+```
+
+## Page Objects Structure
+
+### Directory Structure
+```
+e2e/
+├── pages/
+│   ├── BasePage.ts
+│   ├── HomePage.ts
+│   ├── ProfilePage.ts
+│   └── ...
+├── components/
+│   ├── Button.ts
+│   ├── Navigation.ts
+│   └── ...
+└── tests/
+    ├── home.spec.ts
+    ├── profile.spec.ts
+    └── ...
+```
+
+### Base Page Object
+```typescript
+// e2e/pages/BasePage.ts
+import { Page } from '@playwright/test';
+
+export class BasePage {
+  protected page: Page;
+
+  constructor(page: Page) {
+    this.page = page;
+  }
+
+  async goto(path: string) {
+    await this.page.goto(path);
+  }
+
+  async waitForSelector(selector: string) {
+    await this.page.waitForSelector(selector);
+  }
+}
+```
+
+### Page Object Example
+```typescript
+// e2e/pages/HomePage.ts
+import { BasePage } from './BasePage';
+
+export class HomePage extends BasePage {
+  // Selectors
+  private readonly titleSelector = '[data-testid="home-title"]';
+  private readonly featuresSelector = '[data-testid="home-features"]';
+
+  // Actions
+  async getTitle() {
+    return await this.page.textContent(this.titleSelector);
+  }
+
+  async isFeaturesVisible() {
+    return await this.page.isVisible(this.featuresSelector);
+  }
+}
+```
+
+### Component Object Example
+```typescript
+// e2e/components/Button.ts
+import { Page } from '@playwright/test';
+
+export class Button {
+  private page: Page;
+  private selector: string;
+
+  constructor(page: Page, label: string) {
+    this.page = page;
+    this.selector = `[data-testid="button-${label.toLowerCase().replace(/\s+/g, '-')}"]`;
+  }
+
+  async click() {
+    await this.page.click(this.selector);
+  }
+
+  async isVisible() {
+    return await this.page.isVisible(this.selector);
+  }
+}
+```
+
+## Test Example
+```typescript
+// e2e/tests/home.spec.ts
+import { test, expect } from '@playwright/test';
+import { HomePage } from '../pages/HomePage';
+
+test.describe('Home Page', () => {
+  let homePage: HomePage;
+
+  test.beforeEach(async ({ page }) => {
+    homePage = new HomePage(page);
+    await homePage.goto('/');
+  });
+
+  test('should display welcome title', async () => {
+    const title = await homePage.getTitle();
+    expect(title).toBe('Welcome');
+  });
+
+  test('should show features section', async () => {
+    const isVisible = await homePage.isFeaturesVisible();
+    expect(isVisible).toBeTruthy();
+  });
+});
+```
+
+## Best Practices
+
+1. **Test ID Consistency**
+   - Always use `data-testid` attribute for test selectors
+   - Follow the naming convention strictly
+   - Keep test IDs semantic and meaningful
+
+2. **Page Objects**
+   - Create a page object for each page in the application
+   - Extend the BasePage class for common functionality
+   - Keep selectors private and expose only necessary actions
+
+3. **Component Objects**
+   - Create component objects for reusable components
+   - Keep component objects focused and single-responsibility
+   - Use constructor parameters for dynamic selectors
+
+4. **Test Organization**
+   - Group related tests using `test.describe`
+   - Use meaningful test names
+   - Keep tests independent and isolated
+
+5. **Maintenance**
+   - Update page objects when UI changes
+   - Keep test IDs in sync with component changes
+   - Document complex test scenarios
+
+## Running Tests
+
+```bash
+# Run all tests
+npx playwright test
+
+# Run specific test file
+npx playwright test e2e/tests/home.spec.ts
+
+# Run tests in UI mode
+npx playwright test --ui
+```
+
+## Debugging Tips
+
+1. Use Playwright's built-in debugging tools:
+   ```bash
+   npx playwright test --debug
+   ```
+
+2. Use the Playwright Inspector:
+   ```bash
+   PWDEBUG=1 npx playwright test
+   ```
+
+3. Add `await page.pause()` in your tests for step-by-step debugging
+
+## Additional Resources
+
+- [Playwright Documentation](https://playwright.dev/docs/intro)
+- [Page Object Model Best Practices](https://playwright.dev/docs/pom)
+- [Test Generator](https://playwright.dev/docs/codegen)
