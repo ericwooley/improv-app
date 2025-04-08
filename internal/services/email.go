@@ -45,12 +45,12 @@ func (s *EmailService) SendMagicLink(email string) error {
 		VALUES ($1, $2)
 		ON CONFLICT (email) DO UPDATE SET email = $2
 		RETURNING id
-	`, newId, email, ).Scan(&userID)
+	`, newId, email).Scan(&userID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Sending magic link to:", email, "User ID:", userID, newId)
+	fmt.Println("Sending magic link to:", email, "User ID:", userID, newId, token)
 	// Create email token
 	_, err = s.db.Exec(`
 		INSERT INTO email_tokens (id, user_id, token, expires_at)
@@ -79,9 +79,8 @@ func (s *EmailService) SendMagicLink(email string) error {
 		panic("BASE_URL is not set")
 	}
 
-	// URL encode the token for safety
-	urlEncodedToken := base64.URLEncoding.EncodeToString([]byte(token))
-	magicLink := fmt.Sprintf("%s/api/auth/verify?token=%s", baseURL, urlEncodedToken)
+
+	magicLink := fmt.Sprintf("%s/api/auth/verify?token=%s", baseURL, token)
 
 	body := fmt.Sprintf(`
 Hello,

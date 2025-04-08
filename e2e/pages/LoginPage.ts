@@ -12,6 +12,12 @@ export class LoginPage extends BasePage {
   private submitButton: Button
   private errorAlert: Alert
 
+  // Selectors for direct use
+  private readonly emailInputSelector = '[data-testid="login-email-input"]'
+  private readonly termsCheckboxSelector = '[data-testid="login-terms-checkbox"]'
+  private readonly submitButtonSelector = '[data-testid="login-submit-button"]'
+  private readonly errorAlertSelector = '[data-testid="login-error-alert"]'
+
   constructor(page: Page) {
     super(page)
 
@@ -25,6 +31,23 @@ export class LoginPage extends BasePage {
   // Methods to access page property
   getPage(): Page {
     return this.page
+  }
+
+  // Getters that return Playwright locators
+  getEmailInput() {
+    return this.page.locator(this.emailInputSelector)
+  }
+
+  getTermsCheckbox() {
+    return this.page.locator(this.termsCheckboxSelector)
+  }
+
+  getSubmitButton() {
+    return this.page.locator(this.submitButtonSelector)
+  }
+
+  getErrorAlert() {
+    return this.page.locator(this.errorAlertSelector)
   }
 
   // Actions

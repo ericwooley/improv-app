@@ -73,7 +73,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </Typography>
       </Box>
       <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
-      <List sx={{ mt: 2 }}>
+      <List sx={{ mt: 2 }} data-testid="nav-menu-list">
         {menuItems.map((item) => (
           <ListItemButton
             key={item.text}
@@ -81,6 +81,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             to={item.path}
             selected={location.pathname === item.path}
             onClick={() => setIsSidebarOpen(false)}
+            data-testid={`nav-menu-item-${item.text.toLowerCase()}`}
             sx={{
               '&.Mui-selected': {
                 backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -94,7 +95,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </List>
       <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
       <Box sx={{ p: 2 }}>
-        <Button variant="outlined" color="error" fullWidth startIcon={<LogoutIcon />} onClick={handleLogout}>
+        <Button
+          variant="outlined"
+          color="error"
+          fullWidth
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+          data-testid="logout-button">
           Logout
         </Button>
       </Box>
@@ -135,7 +142,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             bgcolor: 'secondary.main',
           }}>
           <Toolbar>
-            <IconButton color="inherit" edge="start" onClick={() => setIsSidebarOpen(!isSidebarOpen)} sx={{ mr: 2 }}>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              sx={{ mr: 2 }}
+              data-testid="mobile-menu-toggle">
               <MenuIcon />
             </IconButton>
             <Box sx={{ flexGrow: 1 }} />
@@ -149,7 +161,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </AppBar>
       )}
 
-      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
+      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }} data-testid="main-navigation">
         {isMobile ? (
           <Drawer
             variant="temporary"
@@ -193,7 +205,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           width: { md: `calc(100% - ${drawerWidth}px)` },
           mt: { xs: '64px', md: 0 },
           bgcolor: 'background.default',
-        }}>
+        }}
+        data-testid="main-content">
         {children}
       </Box>
     </Box>

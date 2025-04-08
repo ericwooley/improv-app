@@ -4,6 +4,7 @@ import { MailpitClient } from '../clients/MailpitClient'
 import { env } from '../env'
 import { ProfilePage } from '../pages/ProfilePage'
 import { HomePage } from '../pages/HomePage'
+import { MainLayoutPage } from '../pages/MainLayoutPage'
 
 // Helper function to generate unique email addresses
 function generateUniqueEmail() {
@@ -41,13 +42,13 @@ test.describe('Login Page', () => {
 
   test('should display login form', async () => {
     // Verify email input is visible
-    await expect(loginPage.getPage().locator('[data-testid="login-email-input"]')).toBeVisible()
+    await expect(loginPage.getEmailInput()).toBeVisible()
 
     // Verify terms checkbox is visible
-    await expect(loginPage.getPage().locator('[data-testid="login-terms-checkbox"]')).toBeVisible()
+    await expect(loginPage.getTermsCheckbox()).toBeVisible()
 
     // Verify submit button is visible
-    await expect(loginPage.getPage().locator('[data-testid="login-submit-button"]')).toBeVisible()
+    await expect(loginPage.getSubmitButton()).toBeVisible()
   })
 
   test('should require terms agreement to submit', async () => {
@@ -171,12 +172,9 @@ test.describe('Login Page', () => {
     await profilePage.fillForm('Test', 'User')
     await profilePage.clickUpdate()
 
-    // Wait for success message
-    await expect(page.locator('[data-testid="profile-success-alert"]')).toBeVisible({ timeout: 5000 })
-
-    // Log out
-    await page.click('[data-testid="user-menu-button"]')
-    await page.click('[data-testid="logout-button"]')
+    // Log out using MainLayoutPage
+    const mainLayoutPage = new MainLayoutPage(page)
+    await mainLayoutPage.logout()
 
     // Go back to login page for second login attempt
     await loginPage.goto('/login')
@@ -202,7 +200,9 @@ test.describe('Login Page', () => {
     const homePage = new HomePage(page)
     await expect(page).toHaveURL('/')
 
-    // Verify we're on the home page
-    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 5000 })
+    // Verify we're on the home page using MainLayoutPage to check
+    const mainLayoutForSecondLogin = new MainLayoutPage(page)
+    expect(await mainLayoutForSecondLogin.isOnPage('home')).toBeTruthy()
+    expect(await mainLayoutForSecondLogin.isAuthenticated()).toBeTruthy()
   })
 })
