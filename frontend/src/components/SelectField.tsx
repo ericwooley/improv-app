@@ -15,6 +15,7 @@ interface SelectFieldProps {
   icon?: string
   placeholder?: string
   onChange: (e: SelectChangeEvent<string>) => void
+  testId?: string
 }
 
 const SelectField: React.FC<SelectFieldProps> = ({
@@ -26,9 +27,10 @@ const SelectField: React.FC<SelectFieldProps> = ({
   icon,
   placeholder = 'Select an option...',
   onChange,
+  testId,
 }) => {
   return (
-    <FormControl fullWidth>
+    <FormControl fullWidth data-testid={testId || `select-field-${id}`}>
       <InputLabel id={`${id}-label`}>{label}</InputLabel>
       <Select
         labelId={`${id}-label`}

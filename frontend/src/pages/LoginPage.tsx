@@ -95,6 +95,7 @@ const LoginPage = () => {
                 InputProps={{
                   startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />,
                 }}
+                data-testid="login-email-input"
               />
 
               <FormControlLabel
@@ -103,16 +104,23 @@ const LoginPage = () => {
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
                     color="primary"
+                    data-testid="login-terms-checkbox"
                   />
                 }
                 label={
                   <Typography variant="body2">
                     I agree to the{' '}
-                    <Link to="/privacy-policy" style={{ textDecoration: 'none' }}>
+                    <Link
+                      to="/privacy-policy"
+                      style={{ textDecoration: 'none' }}
+                      data-testid="login-privacy-policy-link">
                       Privacy Policy
                     </Link>{' '}
                     and{' '}
-                    <Link to="/terms-of-service" style={{ textDecoration: 'none' }}>
+                    <Link
+                      to="/terms-of-service"
+                      style={{ textDecoration: 'none' }}
+                      data-testid="login-terms-of-service-link">
                       Terms of Service
                     </Link>
                   </Typography>
@@ -127,13 +135,14 @@ const LoginPage = () => {
                 size="large"
                 disabled={isLoading || !agreedToTerms}
                 sx={{ mt: 3 }}
-                startIcon={isLoading ? <CircularProgress size={20} /> : <SendIcon />}>
+                startIcon={isLoading ? <CircularProgress size={20} /> : <SendIcon />}
+                data-testid="login-submit-button">
                 Send Magic Link
               </Button>
             </form>
 
             {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert severity="error" sx={{ mt: 2 }} data-testid="login-error-alert">
                 {JSON.stringify(error)}
               </Alert>
             )}

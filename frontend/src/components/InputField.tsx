@@ -12,6 +12,7 @@ interface InputFieldProps {
   disabled?: boolean
   last?: boolean
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  testId?: string
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -25,6 +26,7 @@ const InputField: React.FC<InputFieldProps> = ({
   disabled = false,
   last = false,
   onChange,
+  testId,
 }) => {
   return (
     <TextField
@@ -41,6 +43,7 @@ const InputField: React.FC<InputFieldProps> = ({
       InputProps={{
         startAdornment: icon ? <i className={icon} style={{ marginRight: 8, color: 'rgba(0, 0, 0, 0.54)' }} /> : null,
       }}
+      data-testid={testId || `input-field-${id}`}
     />
   )
 }

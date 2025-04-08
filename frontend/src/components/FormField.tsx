@@ -6,11 +6,12 @@ interface FormFieldProps {
   htmlFor: string
   children: ReactNode
   icon?: string
+  testId?: string
 }
 
-const FormField: React.FC<FormFieldProps> = ({ label, htmlFor, children, icon }) => {
+const FormField: React.FC<FormFieldProps> = ({ label, htmlFor, children, icon, testId }) => {
   return (
-    <FormControl fullWidth>
+    <FormControl fullWidth data-testid={testId || `form-field-${htmlFor}`}>
       <InputLabel htmlFor={htmlFor}>{label}</InputLabel>
       <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         {children}

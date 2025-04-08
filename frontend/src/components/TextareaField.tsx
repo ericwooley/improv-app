@@ -11,6 +11,7 @@ interface TextareaFieldProps {
   last?: boolean
   disabled?: boolean
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  testId?: string
 }
 
 const TextareaField: React.FC<TextareaFieldProps> = ({
@@ -23,6 +24,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
   disabled = false,
   last = false,
   onChange,
+  testId,
 }) => {
   return (
     <TextField
@@ -37,6 +39,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
       onChange={onChange}
       fullWidth
       sx={{ mb: last ? 0 : 2 }}
+      data-testid={testId || `textarea-field-${id}`}
     />
   )
 }

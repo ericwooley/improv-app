@@ -3,6 +3,8 @@ description:
 globs: frontend/**/*,e2e/**/*
 alwaysApply: false
 ---
+All frontend code is in the "<root>/frontend" directory, all e2e test code is in the "<root>/e2e" directory. Make sure all e2e tests and page objects go in "<root>/e2e". All frontend code should be in "<root>/frontend".
+
 # Frontend Tips
 use bun for installs, all web installs are in the frontend directory
 we are using material ui 7. Grids look like this:
@@ -49,7 +51,7 @@ This document outlines the best practices for implementing end-to-end tests usin
 ## Test ID Naming Convention
 
 ### Component Test IDs
-For components in `frontend/src/components`, use the following format:
+For components in `<root>/frontend/src/components`, use the following format:
 ```tsx
 data-testid="component-name-element-purpose"
 ```
@@ -60,7 +62,7 @@ Examples:
 - `data-testid="search-input-field"`
 
 ### Page Test IDs
-For pages in `frontend/src/pages`, use the following format:
+For pages in `<root>/frontend/src/pages`, use the following format:
 ```tsx
 data-testid="page-name-section-element"
 ```
@@ -111,7 +113,7 @@ export const Home = () => {
 
 ### Directory Structure
 ```
-e2e/
+<root>/e2e/
 ├── pages/
 │   ├── BasePage.ts
 │   ├── HomePage.ts
@@ -151,7 +153,7 @@ export class BasePage {
 
 ### Page Object Example
 ```typescript
-// e2e/pages/HomePage.ts
+// <root>/e2e/pages/HomePage.ts
 import { BasePage } from './BasePage';
 
 export class HomePage extends BasePage {
@@ -172,7 +174,7 @@ export class HomePage extends BasePage {
 
 ### Component Object Example
 ```typescript
-// e2e/components/Button.ts
+// <root>/e2e/components/Button.ts
 import { Page } from '@playwright/test';
 
 export class Button {
@@ -196,7 +198,7 @@ export class Button {
 
 ## Test Example
 ```typescript
-// e2e/tests/home.spec.ts
+// <root>/e2e/tests/home.spec.ts
 import { test, expect } from '@playwright/test';
 import { HomePage } from '../pages/HomePage';
 
@@ -276,6 +278,6 @@ npx playwright test --ui
 
 ## Additional Resources
 
-- [Playwright Documentation](https://playwright.dev/docs/intro)
-- [Page Object Model Best Practices](https://playwright.dev/docs/pom)
-- [Test Generator](https://playwright.dev/docs/codegen)
+- [Playwright Documentation](mdc:https:/playwright.dev/docs/intro)
+- [Page Object Model Best Practices](mdc:https:/playwright.dev/docs/pom)
+- [Test Generator](mdc:https:/playwright.dev/docs/codegen)

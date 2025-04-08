@@ -16,6 +16,7 @@ interface ActionButtonProps {
   className?: string
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
+  testId?: string
 }
 
 const StyledLink = styled(Link)({
@@ -36,6 +37,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   className = '',
   type = 'button',
   disabled = false,
+  testId,
 }) => {
   // Convert string-based font-awesome icons to MUI icon components
   const getIcon = () => {
@@ -61,14 +63,21 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     startIcon: getIcon(),
   }
 
-  const content = <Button {...buttonProps}>{text}</Button>
+  const defaultTestId = `action-button-${text.toLowerCase().replace(/\s+/g, '-')}`
+  const finalTestId = testId || defaultTestId
+
+  const content = (
+    <Button {...buttonProps} data-testid={finalTestId}>
+      {text}
+    </Button>
+  )
 
   if (to) {
     return <StyledLink to={to}>{content}</StyledLink>
   }
 
   return (
-    <Button {...buttonProps} onClick={onClick}>
+    <Button {...buttonProps} onClick={onClick} data-testid={finalTestId}>
       {text}
     </Button>
   )
