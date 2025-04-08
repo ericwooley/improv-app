@@ -1,12 +1,25 @@
 import { test, expect } from '@playwright/test'
 import { LoginPage } from '../pages/LoginPage'
+import { MailpitClient } from '../clients/MailpitClient'
+import { env } from '../env'
+
+// Helper function to generate unique email addresses
+function generateUniqueEmail() {
+  const timestamp = Date.now()
+  const random = Math.floor(Math.random() * 10000)
+  return `test-${timestamp}-${random}@example.com`
+}
 
 test.describe('Login Page', () => {
   let loginPage: LoginPage
+  let mailpitClient: MailpitClient
 
   test.beforeEach(async ({ page }) => {
     loginPage = new LoginPage(page)
+    mailpitClient = new MailpitClient()
     await loginPage.goto('/login')
+    // Clear any existing emails in the mailbox before each test
+    await mailpitClient.deleteAllMessages()
   })
 
   test('should display login form', async () => {
@@ -22,7 +35,8 @@ test.describe('Login Page', () => {
 
   test('should require terms agreement to submit', async () => {
     // Enter email but don't check terms
-    await loginPage.enterEmail('test@example.com')
+    const uniqueEmail = generateUniqueEmail()
+    await loginPage.enterEmail(uniqueEmail)
 
     // Submit button should be disabled
     expect(await loginPage.isSubmitButtonDisabled()).toBeTruthy()
@@ -36,7 +50,8 @@ test.describe('Login Page', () => {
 
   test('should show error when submitting without terms agreement', async () => {
     // Enter email
-    await loginPage.enterEmail('test@example.com')
+    const uniqueEmail = generateUniqueEmail()
+    await loginPage.enterEmail(uniqueEmail)
 
     // Set up alert handler
     loginPage.getPage().on('dialog', async (dialog) => {
@@ -65,7 +80,7 @@ test.describe('Login Page', () => {
   })
 
   test('should send magic link when submitting login form', async () => {
-    const testEmail = 'test@example.com'
+    const uniqueEmail = generateUniqueEmail()
 
     // Set up alert handler
     loginPage.getPage().on('dialog', async (dialog) => {
@@ -74,7 +89,7 @@ test.describe('Login Page', () => {
     })
 
     // Complete login flow
-    await loginPage.login(testEmail, true)
+    await loginPage.login(uniqueEmail, true)
 
     // Verify the API response
     const response = await loginPage.getPage().evaluate(async (email) => {
@@ -86,9 +101,25 @@ test.describe('Login Page', () => {
         body: JSON.stringify({ email }),
       })
       return res.json()
-    }, testEmail)
+    }, uniqueEmail)
 
     expect(response.success).toBe(true)
     expect(response.message).toBe('Magic link sent! Check your email.')
+
+    // Wait for the email to arrive in Mailpit
+    const emailMessage = await mailpitClient.waitForMessageByRecipient(uniqueEmail, 10000)
+
+    // Verify the email was received
+    expect(emailMessage).not.toBeNull()
+    expect(emailMessage?.To.some((recipient) => recipient.Address === uniqueEmail)).toBe(true)
+
+    // Get the full email details to verify content
+    if (emailMessage) {
+      const emailDetails = await mailpitClient.getMessage(emailMessage.ID)
+
+      // Verify the email contains a magic link
+      expect(emailDetails.Text).toContain('Click the link below')
+      expect(emailDetails.Text).toContain(env.API_URL + '/api/auth/verify?token=')
+    }
   })
 })
