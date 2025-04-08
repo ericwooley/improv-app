@@ -5,6 +5,8 @@ alwaysApply: false
 ---
 All frontend code is in the "<root>/frontend" directory, all e2e test code is in the "<root>/e2e" directory. Make sure all e2e tests and page objects go in "<root>/e2e". All frontend code should be in "<root>/frontend".
 
+Whenever you are creating page objects, make sure to add the test id's to the frontend components as well.
+
 # Frontend Tips
 use bun for installs, all web installs are in the frontend directory
 we are using material ui 7. Grids look like this:
