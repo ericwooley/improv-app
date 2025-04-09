@@ -91,3 +91,25 @@ export async function loginWithMagicLink(
 
   await page.goto(magicLink)
 }
+
+/**
+ * Creates a group for testing purposes
+ * TODO: Implement the actual creation logic
+ */
+export async function createGroup(
+  page: Page,
+  {
+    name = `Test Group ${Date.now()}`,
+    description = 'This is a test group created by e2e tests'
+  }: {
+    name?: string,
+    description?: string
+  } = {}
+): Promise<{ name: string, description: string }> {
+  // This is a stub implementation
+  console.log('STUB: Creating a group with name:', name);
+
+  // TODO: Implement the actual API call or UI interaction to create the group
+  // For now, just return the mock data
+  return { name, description };
+}

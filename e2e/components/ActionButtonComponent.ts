@@ -22,8 +22,6 @@ export class ActionButtonComponent {
    * Click on the button
    */
   async click() {
-    console.log('click', this.getSelector())
-    await this.page.waitForSelector(this.getSelector())
     await this.page.click(this.getSelector())
   }
 

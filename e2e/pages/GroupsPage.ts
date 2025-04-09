@@ -36,7 +36,6 @@ export class GroupsPage extends BasePage {
    */
   async clickCreateGroupButton() {
     const createButton = new ActionButtonComponent(this.page, this.createGroupButtonText)
-    console.log('isVisible', await createButton.isVisible())
     await createButton.click()
   }
 
