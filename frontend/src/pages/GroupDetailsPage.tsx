@@ -20,8 +20,6 @@ import {
   TabPanel,
   a11yProps,
   TabValue,
-  indexToTabValue,
-  tabValueToIndex,
 } from '../components'
 import {
   Box,
@@ -52,7 +50,7 @@ import {
   Link as LinkIcon,
   ExitToApp as ExitToAppIcon,
 } from '@mui/icons-material'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ROLE_ADMIN, ROLE_ORGANIZER } from '../constants/roles'
 
 const GroupDetailsPage = () => {
@@ -83,17 +81,54 @@ const GroupDetailsPage = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
 
+  // Dynamic tab mapping based on user permissions
+  const tabConfig = useMemo(() => {
+    // Define all possible tabs in order
+    const tabs = [
+      { value: TabValue.Info, label: 'Information', icon: <InfoIcon /> },
+      { value: TabValue.Members, label: 'Members', icon: <GroupIcon /> },
+      { value: TabValue.Games, label: 'Games', icon: <GamepadIcon /> },
+    ]
+
+    // Add Invites tab only if user can manage invites
+    if (canManageInvites) {
+      tabs.push({ value: TabValue.Invites, label: 'Invites', icon: <LinkIcon /> })
+    }
+
+    // Create mappings
+    const indexToValue: Record<number, string> = {}
+    const valueToIndex: Record<string, number> = {}
+
+    tabs.forEach((tab, index) => {
+      indexToValue[index] = tab.value
+      valueToIndex[tab.value] = index
+    })
+
+    return { tabs, indexToValue, valueToIndex }
+  }, [canManageInvites])
+
   // Get tab from URL params or default to info
   const tabFromUrl = searchParams.get('tab') || TabValue.Info
-  const [mainTabValue, setMainTabValue] = useState(tabValueToIndex[tabFromUrl] || 0)
+  const [mainTabValue, setMainTabValue] = useState(() => {
+    // Initialize with the correct index based on URL
+    return tabConfig.valueToIndex[tabFromUrl] !== undefined ? tabConfig.valueToIndex[tabFromUrl] : 0
+  })
+
+  // Update state when permissions change
+  useEffect(() => {
+    // Ensure the tab value is valid with current permissions
+    if (mainTabValue >= tabConfig.tabs.length) {
+      setMainTabValue(0)
+    }
+  }, [mainTabValue, tabConfig.tabs.length])
 
   // Sync URL when tab changes
   useEffect(() => {
-    const currentTabValue = indexToTabValue[mainTabValue]
+    const currentTabValue = tabConfig.indexToValue[mainTabValue]
     if (searchParams.get('tab') !== currentTabValue) {
       setSearchParams({ tab: currentTabValue })
     }
-  }, [mainTabValue, searchParams, setSearchParams])
+  }, [mainTabValue, searchParams, setSearchParams, tabConfig.indexToValue])
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -290,36 +325,16 @@ const GroupDetailsPage = () => {
             aria-label="group details tabs"
             variant="fullWidth"
             data-testid="group-details-tabs">
-            <Tab
-              icon={<InfoIcon />}
-              label="Information"
-              {...a11yProps(0)}
-              iconPosition="start"
-              data-testid="group-details-tab-info"
-            />
-            <Tab
-              icon={<GroupIcon />}
-              label="Members"
-              {...a11yProps(1)}
-              iconPosition="start"
-              data-testid="group-details-tab-members"
-            />
-            <Tab
-              icon={<GamepadIcon />}
-              label="Games"
-              {...a11yProps(2)}
-              iconPosition="start"
-              data-testid="group-details-tab-games"
-            />
-            {canManageInvites && (
+            {tabConfig.tabs.map((tab, index) => (
               <Tab
-                icon={<LinkIcon />}
-                label="Invites"
-                {...a11yProps(3)}
+                key={tab.value}
+                icon={tab.icon}
+                label={tab.label}
+                {...a11yProps(index)}
                 iconPosition="start"
-                data-testid="group-details-tab-invites"
+                data-testid={`group-details-tab-${tab.value}`}
               />
-            )}
+            ))}
           </Tabs>
         </Box>
 
@@ -353,9 +368,12 @@ const GroupDetailsPage = () => {
           />
         </TabPanel>
 
-        {/* Invites Tab */}
+        {/* Invites Tab - Only render if user has permission */}
         {canManageInvites && (
-          <TabPanel value={mainTabValue} index={3} data-testid="group-details-tabpanel-invites">
+          <TabPanel
+            value={mainTabValue}
+            index={tabConfig.valueToIndex[TabValue.Invites]}
+            data-testid="group-details-tabpanel-invites">
             <GroupInvitesTab
               groupId={group.ID}
               userRole={userRole}
