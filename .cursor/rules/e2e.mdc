@@ -1,0 +1,280 @@
+---
+description: 
+globs: e2e/**/*
+alwaysApply: false
+---
+All frontend code is in the "<root>/frontend" directory, all e2e test code is in the "<root>/e2e" directory. Make sure all e2e tests and page objects go in "<root>/e2e". All frontend code should be in "<root>/frontend".
+
+Whenever you are creating page objects, make sure to add the test id's to the frontend components as well.
+
+
+# End-to-End Testing Documentation
+
+## Overview
+This document outlines the best practices for implementing end-to-end tests using Playwright with TypeScript, focusing on page objects and test IDs.
+
+
+Don't use mocks at all. We will setup our actual api running locally to test the whole system in a true e2e manner
+
+## Test ID Naming Convention
+
+### Component Test IDs
+For components in `<root>/frontend/src/components`, use the following format:
+```tsx
+data-testid="component-name-element-purpose"
+```
+
+Examples:
+- `data-testid="nav-menu-button"`
+- `data-testid="user-profile-avatar"`
+- `data-testid="search-input-field"`
+
+### Page Test IDs
+For pages in `<root>/frontend/src/pages`, use the following format:
+```tsx
+data-testid="page-name-section-element"
+```
+
+Examples:
+- `data-testid="home-hero-title"`
+- `data-testid="profile-settings-form"`
+- `data-testid="dashboard-stats-card"`
+
+## Adding Test IDs to Components
+
+### Component Example
+```tsx
+// frontend/src/components/Button.tsx
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+}
+
+export const Button = ({ label, onClick }: ButtonProps) => {
+  return (
+    <button
+      data-testid={`button-${label.toLowerCase().replace(/\s+/g, '-')}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+};
+```
+
+### Page Example
+```tsx
+// frontend/src/pages/Home.tsx
+export const Home = () => {
+  return (
+    <div data-testid="home-page">
+      <h1 data-testid="home-title">Welcome</h1>
+      <section data-testid="home-features">
+        {/* Feature content */}
+      </section>
+    </div>
+  );
+};
+```
+
+## Page Objects Structure
+
+### Directory Structure
+```
+<root>/frontend/src
+├── App.tsx
+├── components
+│   ├── ActionButton.tsx
+│   ├── events
+│   │   ├── AttendanceList.tsx
+│   │   ├── ... other components
+│   ├── FormActions.tsx
+│   └── ... other components
+├── constants
+├── hooks
+├── layout
+│   ├── MainLayout.tsx
+│   └── PublicLayout.tsx
+├── main.tsx
+├── pages
+│   ├── EditEventPage.tsx
+│   └── ... other pages
+├── routes.tsx
+├── store
+│   ├── api
+│   │   ├── apiSlice.ts
+│   │   ├── authApi.ts
+│   │   ├── eventsApi.ts
+│   │   ├── gamesApi.ts
+│   │   ├── groupsApi.ts
+│   │   └── invitationsApi.ts
+│   ├── hooks.ts
+│   ├── index.ts
+│   ├── slices
+│   │   ├── authSlice.ts
+│   │   ├── eventsSlice.ts
+│   │   ├── gamesSlice.ts
+│   │   └── groupsSlice.ts
+│   └── types.ts
+├── test
+│   └── setup.ts
+├── theme.ts
+├── utils
+│   ├── gameHealthUtils.test.ts
+│   └── gameHealthUtils.ts
+└── vite-env.d.ts
+<root>/e2e/
+├── pages/
+│   ├── BasePage.ts
+│   ├── HomePage.ts
+│   ├── ProfilePage.ts
+│   └── ...
+├── components/
+│   ├── Button.ts
+│   ├── Navigation.ts
+│   └── ...
+└── tests/
+    ├── home.spec.ts
+    ├── profile.spec.ts
+    └── ...
+```
+
+### Base Page Object
+```typescript
+// e2e/pages/BasePage.ts
+import { Page } from '@playwright/test';
+
+export class BasePage {
+  protected page: Page;
+
+  constructor(page: Page) {
+    this.page = page;
+  }
+
+  async goto(path: string) {
+    await this.page.goto(path);
+  }
+
+  async waitForSelector(selector: string) {
+    await this.page.waitForSelector(selector);
+  }
+}
+```
+
+### Page Object Example
+```typescript
+// <root>/e2e/pages/HomePage.ts
+import { BasePage } from './BasePage';
+
+export class HomePage extends BasePage {
+  // Selectors
+  private readonly titleSelector = '[data-testid="home-title"]';
+  private readonly featuresSelector = '[data-testid="home-features"]';
+
+  // Actions
+  async getTitle() {
+    return await this.page.textContent(this.titleSelector);
+  }
+
+  async isFeaturesVisible() {
+    return await this.page.isVisible(this.featuresSelector);
+  }
+}
+```
+
+### Component Object Example
+```typescript
+// <root>/e2e/components/Button.ts
+import { Page } from '@playwright/test';
+
+export class Button {
+  private page: Page;
+  private selector: string;
+
+  constructor(page: Page, label: string) {
+    this.page = page;
+    this.selector = `[data-testid="button-${label.toLowerCase().replace(/\s+/g, '-')}"]`;
+  }
+
+  async click() {
+    await this.page.click(this.selector);
+  }
+
+  async isVisible() {
+    return await this.page.isVisible(this.selector);
+  }
+}
+```
+
+## Test Example
+```typescript
+// <root>/e2e/tests/home.spec.ts
+import { test, expect } from '@playwright/test';
+import { HomePage } from '../pages/HomePage';
+
+test.describe('Home Page', () => {
+  let homePage: HomePage;
+
+  test.beforeEach(async ({ page }) => {
+    homePage = new HomePage(page);
+    await homePage.goto('/');
+  });
+
+  test('should display welcome title', async () => {
+    const title = await homePage.getTitle();
+    expect(title).toBe('Welcome');
+  });
+
+  test('should show features section', async () => {
+    const isVisible = await homePage.isFeaturesVisible();
+    expect(isVisible).toBeTruthy();
+  });
+});
+```
+
+## Best Practices
+
+1. **Test ID Consistency**
+   - Always use `data-testid` attribute for test selectors
+   - Follow the naming convention strictly
+   - Keep test IDs semantic and meaningful
+
+2. **Page Objects**
+   - Create a page object for each page in the application
+   - Extend the BasePage class for common functionality
+   - Keep selectors private and expose only necessary actions
+
+3. **Component Objects**
+   - Create component objects for reusable components
+   - Keep component objects focused and single-responsibility
+   - Use constructor parameters for dynamic selectors
+
+4. **Test Organization**
+   - Group related tests using `test.describe`
+   - Use meaningful test names
+   - Keep tests independent and isolated
+
+5. **Maintenance**
+   - Update page objects when UI changes
+   - Keep test IDs in sync with component changes
+   - Document complex test scenarios
+
+## Running Tests
+
+```bash
+# from the e2e directory.
+# Run all tests
+pnpn run test:local
+
+# Run specific test file
+pnpm run test:local tests/home.spec.ts
+```
+
+1. Add `await page.pause()` in your tests for step-by-step debugging
+
+## Conventions and guidelines. 
+
+1. Each test should be independent of other test, including any data that might be created on the server.
+2. Each email user created should have a unique email generated.
+3. [utils.ts](mdc:e2e/utils.ts) has useful utils for this.
+
