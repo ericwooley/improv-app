@@ -22,4 +22,12 @@ export class BasePage {
   async getText(selector: string) {
     return await this.page.textContent(selector)
   }
+
+  /**
+   * Check if the current URL matches a pattern
+   */
+  async hasUrlPattern(pattern: RegExp): Promise<boolean> {
+    const url = this.page.url()
+    return pattern.test(url)
+  }
 }
