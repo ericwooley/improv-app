@@ -1,65 +1,15 @@
 import { test, expect } from '@playwright/test'
-import { LoginPage } from '../pages/LoginPage'
 import { MainLayoutPage } from '../pages/MainLayoutPage'
-import { MailpitClient } from '../clients/MailpitClient'
-
-// Helper function to generate unique email addresses
-function generateUniqueEmail() {
-  const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 10000)
-  return `test-${timestamp}-${random}@example.com`
-}
-
-// Helper function to extract magic link from email
-async function extractMagicLinkFromEmail(mailpitClient: MailpitClient, emailId: string): Promise<string> {
-  const emailDetails = await mailpitClient.getMessage(emailId)
-
-  // Use the MAGIC_LINK marker to extract the link
-  const magicLinkRegex = /MAGIC_LINK: (.*?)(\s|$)/
-  const matches = emailDetails.Text.match(magicLinkRegex)
-
-  if (!matches || matches.length < 2) {
-    throw new Error('Magic link not found in email')
-  }
-
-  return matches[1].trim()
-}
+import { loginWithMagicLink } from '../utils'
 
 test.describe('Main Navigation', () => {
-  let loginPage: LoginPage
   let mainLayoutPage: MainLayoutPage
-  let mailpitClient: MailpitClient
 
   test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page)
     mainLayoutPage = new MainLayoutPage(page)
-    mailpitClient = new MailpitClient()
 
-
-    // Log in a test user
-    await loginPage.goto('/login')
-    const uniqueEmail = generateUniqueEmail()
-    await loginPage.login(uniqueEmail, true)
-
-    // Get magic link and use it
-    const emailMessage = await mailpitClient.waitForMessageByRecipient(uniqueEmail, 10000)
-    if (!emailMessage) {
-      test.fail(true, 'Email not received')
-      return
-    }
-
-    const magicLink = await extractMagicLinkFromEmail(mailpitClient, emailMessage.ID)
-    await page.goto(magicLink)
-
-    // If profile completion is needed, do it
-    const url = page.url()
-    if (url.includes('/profile')) {
-      await page.fill('[data-testid="profile-firstname-input"]', 'Test')
-      await page.fill('[data-testid="profile-lastname-input"]', 'User')
-      await page.click('[data-testid="profile-update-button"]')
-      // Wait for navigation after profile update
-      await page.waitForURL('/')
-    }
+    // Log in using the utility function
+    await loginWithMagicLink(page)
   })
 
   test('should navigate to all main pages', async () => {
@@ -97,9 +47,9 @@ test.describe('Main Navigation', () => {
   test('should log out successfully', async () => {
     // Perform logout
     await mainLayoutPage.logout()
-
-    // Verify we're on the login page
-    expect(mainLayoutPage.getPage().url()).toContain('/login')
+    await mainLayoutPage.getPage().waitForLoadState('networkidle')
+    await mainLayoutPage.getPage().goto('/')
+    await mainLayoutPage.getPage().waitForURL('/login')
 
     // Verify we're not authenticated
     expect(await mainLayoutPage.isAuthenticated()).toBeFalsy()

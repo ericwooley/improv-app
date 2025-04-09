@@ -18,7 +18,7 @@ const GroupsPage = () => {
 
       {groups.length > 0 && (
         <Box sx={{ mb: 5 }}>
-          <ActionButton text="Create Group" to="/groups/new" icon="fas fa-plus" />
+          <ActionButton testId="create-group-button" text="Create Group" to="/groups/new" icon="fas fa-plus" />
         </Box>
       )}
       <Paper>

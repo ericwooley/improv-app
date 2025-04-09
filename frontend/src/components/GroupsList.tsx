@@ -52,6 +52,7 @@ export const GroupsList = ({
           actionText={emptyActionText}
           actionLink={emptyActionLink}
           actionIcon="fas fa-plus"
+          actionTestId="create-group-button"
         />
       )}
     </>

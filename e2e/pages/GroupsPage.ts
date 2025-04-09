@@ -6,7 +6,7 @@ import { GroupsListComponent } from '../components/GroupsListComponent'
 export class GroupsPage extends BasePage {
   // Selectors
   private readonly pageTitle = 'Improv Groups'
-  private readonly createGroupButtonText = 'Create Group'
+  private readonly createGroupButtonText = 'create-group-button'
 
   // Page objects
   private readonly groupsList: GroupsListComponent
@@ -36,6 +36,7 @@ export class GroupsPage extends BasePage {
    */
   async clickCreateGroupButton() {
     const createButton = new ActionButtonComponent(this.page, this.createGroupButtonText)
+    console.log('isVisible', await createButton.isVisible())
     await createButton.click()
   }
 
