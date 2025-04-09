@@ -10,19 +10,6 @@ interface Group {
   Name: string
 }
 
-// We're keeping this interface for reference, but it's not directly used in this component
-// It matches the structure expected by the API
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface Event {
-  id: string
-  title: string
-  description: string
-  location: string
-  startTime: string
-  endTime: string
-  groupId: string
-  groupName?: string
-}
 
 const NewEventPage = () => {
   const navigate = useNavigate()
@@ -39,7 +26,6 @@ const NewEventPage = () => {
     location: '',
     groupId: '',
     startTime: '',
-    endTime: '',
   }
 
   const handleSubmit = async (formData: EventFormData) => {
@@ -50,7 +36,6 @@ const NewEventPage = () => {
         description: formData.description,
         location: formData.location,
         startTime: new Date(formData.startTime).toISOString(),
-        endTime: new Date(formData.endTime).toISOString(),
         groupId: formData.groupId,
       }
 
