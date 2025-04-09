@@ -68,7 +68,13 @@ export const GroupForm = ({
           disabled={isLoading}
           onClick={onCancel}
         />
-        <ActionButton text={submitButtonText} icon={submitButtonIcon} type="submit" disabled={isLoading} />
+        <ActionButton
+          data-testid="group-form-submit-button"
+          text={submitButtonText}
+          icon={submitButtonIcon}
+          type="submit"
+          disabled={isLoading}
+        />
       </FormActions>
     </FormContainer>
   )

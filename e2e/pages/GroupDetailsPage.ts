@@ -1,36 +1,22 @@
 import { Page } from '@playwright/test'
 import { BasePage } from './BasePage'
+import { GroupTabsComponent } from '../components/GroupTabsComponent'
+import { GroupActionsMenuComponent } from '../components/GroupActionsMenuComponent'
 
 export class GroupDetailsPage extends BasePage {
   // Selectors
   private readonly pageSelector = '[data-testid="group-details-page"]'
   private readonly loadingSelector = '[data-testid="group-details-loading"]'
   private readonly errorSelector = '[data-testid="group-details-error"]'
-  private readonly actionsButtonSelector = '[data-testid="group-details-actions-button"]'
-  private readonly actionsMenuSelector = '[data-testid="group-details-actions-menu"]'
-  private readonly tabsSelector = '[data-testid="group-details-tabs"]'
-  private readonly tabInfoSelector = '[data-testid="group-details-tab-info"]'
-  private readonly tabMembersSelector = '[data-testid="group-details-tab-members"]'
-  private readonly tabGamesSelector = '[data-testid="group-details-tab-games"]'
-  private readonly tabInvitesSelector = '[data-testid="group-details-tab-invites"]'
-  private readonly leaveDialogSelector = '[data-testid="group-details-leave-dialog"]'
-  private readonly leaveCancelSelector = '[data-testid="group-details-leave-cancel"]'
-  private readonly leaveConfirmSelector = '[data-testid="group-details-leave-confirm"]'
-  private readonly leaveWarningSelector = '[data-testid="group-details-leave-warning"]'
-  private readonly tabPanelInfoSelector = '[data-testid="group-details-tabpanel-info"]'
-  private readonly tabPanelMembersSelector = '[data-testid="group-details-tabpanel-members"]'
-  private readonly tabPanelGamesSelector = '[data-testid="group-details-tabpanel-games"]'
-  private readonly tabPanelInvitesSelector = '[data-testid="group-details-tabpanel-invites"]'
 
-  // Action menu items
-  private readonly createEventActionSelector = '[data-testid="group-details-create-event-action"]'
-  private readonly createGameActionSelector = '[data-testid="group-details-create-game-action"]'
-  private readonly editGroupActionSelector = '[data-testid="group-details-edit-group-action"]'
-  private readonly manageMemebersActionSelector = '[data-testid="group-details-manage-members-action"]'
-  private readonly leaveGroupActionSelector = '[data-testid="group-details-leave-group-action"]'
+  // Component instances
+  private readonly tabs: GroupTabsComponent
+  private readonly actionsMenu: GroupActionsMenuComponent
 
   constructor(page: Page) {
     super(page)
+    this.tabs = new GroupTabsComponent(page)
+    this.actionsMenu = new GroupActionsMenuComponent(page)
   }
 
   /**
@@ -67,117 +53,110 @@ export class GroupDetailsPage extends BasePage {
    * Open the actions menu
    */
   async openActionsMenu() {
-    await this.page.click(this.actionsButtonSelector)
-    await this.page.waitForSelector(this.actionsMenuSelector, { state: 'visible' })
+    await this.actionsMenu.openMenu()
+  }
+
+  /**
+   * Close the actions menu
+   */
+  async closeActionsMenu() {
+    await this.actionsMenu.closeMenu()
   }
 
   /**
    * Click on an action in the menu
-   * @param action The action to click (create-event, create-game, edit-group, manage-members, leave-group)
+   * @param action The action to click
    */
   async clickAction(action: 'create-event' | 'create-game' | 'edit-group' | 'manage-members' | 'leave-group') {
-    const selectors = {
-      'create-event': this.createEventActionSelector,
-      'create-game': this.createGameActionSelector,
-      'edit-group': this.editGroupActionSelector,
-      'manage-members': this.manageMemebersActionSelector,
-      'leave-group': this.leaveGroupActionSelector,
-    }
+    await this.actionsMenu.clickAction(action)
+  }
 
-    await this.page.click(selectors[action])
+  /**
+   * Check if an action is visible in the menu
+   * @param action The action to check
+   */
+  async isActionVisible(action: 'create-event' | 'create-game' | 'edit-group' | 'manage-members' | 'leave-group') {
+    return await this.actionsMenu.isActionVisible(action)
   }
 
   /**
    * Select a tab
-   * @param tabName The name of the tab to select (info, members, games, invites)
+   * @param tabName The name of the tab to select
    */
   async selectTab(tabName: 'info' | 'members' | 'games' | 'invites') {
-    const selectors = {
-      info: this.tabInfoSelector,
-      members: this.tabMembersSelector,
-      games: this.tabGamesSelector,
-      invites: this.tabInvitesSelector,
-    }
-
-    await this.page.click(selectors[tabName])
-
-    // Wait for the correct tab panel to be visible
-    const tabPanelSelectors = {
-      info: this.tabPanelInfoSelector,
-      members: this.tabPanelMembersSelector,
-      games: this.tabPanelGamesSelector,
-      invites: this.tabPanelInvitesSelector,
-    }
-
-    await this.page.waitForSelector(tabPanelSelectors[tabName], { state: 'visible' })
+    await this.tabs.selectTab(tabName)
   }
 
   /**
-   * Check if the specified tab is visible
-   * @param tabName The name of the tab to check (info, members, games, invites)
+   * Check if a tab is visible
+   * @param tabName The name of the tab to check
    */
   async isTabVisible(tabName: 'info' | 'members' | 'games' | 'invites') {
-    const selectors = {
-      info: this.tabInfoSelector,
-      members: this.tabMembersSelector,
-      games: this.tabGamesSelector,
-      invites: this.tabInvitesSelector,
-    }
-
-    return await this.page.isVisible(selectors[tabName])
+    return await this.tabs.isTabVisible(tabName)
   }
 
   /**
-   * Check if the leave group dialog is open
+   * Check if a tab panel is active (visible)
+   * @param tabName The name of the tab panel to check
+   */
+  async isTabPanelActive(tabName: 'info' | 'members' | 'games' | 'invites') {
+    return await this.tabs.isTabPanelActive(tabName)
+  }
+
+  /**
+   * Get the current tab from the URL
+   */
+  async getCurrentTabFromUrl() {
+    return await this.tabs.getCurrentTabFromUrl()
+  }
+
+  /**
+   * Open the leave group dialog
+   */
+  async openLeaveGroupDialog() {
+    await this.actionsMenu.openLeaveGroupDialog()
+  }
+
+  /**
+   * Check if the leave dialog is open
    */
   async isLeaveDialogOpen() {
-    return await this.page.isVisible(this.leaveDialogSelector)
+    return await this.actionsMenu.isLeaveDialogOpen()
   }
 
   /**
-   * Check if the leave warning is displayed (when user is last admin)
+   * Check if the leave warning is displayed
    */
   async hasLeaveWarning() {
-    return await this.page.isVisible(this.leaveWarningSelector)
+    return await this.actionsMenu.hasLeaveWarning()
   }
 
   /**
    * Cancel leaving the group
    */
   async cancelLeaveGroup() {
-    await this.page.click(this.leaveCancelSelector)
+    await this.actionsMenu.cancelLeaveGroup()
   }
 
   /**
    * Confirm leaving the group
    */
   async confirmLeaveGroup() {
-    await this.page.click(this.leaveConfirmSelector)
+    await this.actionsMenu.confirmLeaveGroup()
   }
 
   /**
-   * Open the leave group dialog from the actions menu
+   * Wait for the page to fully load
    */
-  async openLeaveGroupDialog() {
-    await this.openActionsMenu()
-    await this.clickAction('leave-group')
-    await this.page.waitForSelector(this.leaveDialogSelector, { state: 'visible' })
+  async waitForPageLoad() {
+    await this.page.waitForSelector(this.pageSelector, { state: 'visible' })
+    await this.page.waitForLoadState('networkidle')
   }
 
   /**
-   * Check if the specified tab panel is active
-   * @param tabName The name of the tab panel to check (info, members, games, invites)
+   * Get the current URL
    */
-  async isTabPanelActive(tabName: 'info' | 'members' | 'games' | 'invites') {
-    const selectors = {
-      info: this.tabPanelInfoSelector,
-      members: this.tabPanelMembersSelector,
-      games: this.tabPanelGamesSelector,
-      invites: this.tabPanelInvitesSelector,
-    }
-
-    // Check if the panel has attribute 'hidden' set to false
-    const isHidden = await this.page.getAttribute(selectors[tabName], 'hidden')
-    return isHidden === null || isHidden === 'false'
+  async getCurrentUrl() {
+    return this.page.url()
   }
 }

@@ -28,81 +28,29 @@ export class NewGroupPage extends BasePage {
 
   /**
    * Create a new group with the provided name and description
-   * Uses robust implementation with fallbacks for maximum reliability
+   * Uses the GroupFormComponent to interact with the form
    */
   async createGroup(
     name: string = `Test Group ${Date.now()}`,
     description: string = 'This is a test group created by e2e tests'
-  ): Promise<{ name: string; description: string }> {
+  ): Promise<{ id: string; name: string; description: string }> {
     try {
       // Navigate directly to the new group page
       await this.goto()
 
-      // Wait for page to load - looking for any form elements
-      try {
-        await this.page.waitForSelector('form', { timeout: 5000 })
-      } catch (e) {
-        console.log('Form not found, retrying with input selector')
-      }
+      // Wait for the form to load
+      await this.groupForm.waitForForm()
 
-      // Try to find the name input field
-      try {
-        await this.page.waitForSelector('input[id="name"]', { timeout: 5000 })
-      } catch (e) {
-        console.log('Name input not found, trying with less specific selector')
-        await this.page.waitForSelector('input', { timeout: 5000 })
-      }
-
-      // Fill the name field
-      try {
-        await this.page.fill('input[id="name"]', name)
-      } catch (e) {
-        console.log('Could not fill name field, trying with direct type')
-        try {
-          const nameInput = await this.page.$('input')
-          if (nameInput) {
-            await nameInput.type(name)
-          }
-        } catch (e2) {
-          console.log('Could not fill name field at all')
-        }
-      }
-
-      // Fill the description field - with fallbacks
-      try {
-        await this.page.fill('textarea[id="description"]', description)
-      } catch (e) {
-        console.log('Could not fill description field, trying with less specific selector')
-        try {
-          await this.page.fill('textarea', description)
-        } catch (e2) {
-          console.log('Could not fill description field at all')
-        }
-      }
+      // Fill the form fields
+      await this.groupForm.fillForm(name, description)
 
       // Submit the form
-      try {
-        await this.page.click('button[type="submit"]')
-      } catch (e) {
-        console.log('Submit button not found, trying generic submit button')
-        try {
-          const button = await this.page.$('button:has-text("Create")')
-          if (button) {
-            await button.click()
-          } else {
-            const anyButton = await this.page.$('button')
-            if (anyButton) {
-              await anyButton.click()
-            }
-          }
-        } catch (e2) {
-          console.log('Could not click any submit button')
-        }
-      }
+      await this.groupForm.submit()
 
       // Wait for navigation to complete or timeout
       try {
-        await this.page.waitForURL(/.*\/groups.*/, { timeout: 10000 })
+        await this.page.waitForURL(/groups/, { timeout: 10000 })
+        await this.page.locator('a:has-text("' + name + '")').click()
       } catch (e) {
         console.log('Navigation did not complete, but continuing')
       }
@@ -110,8 +58,20 @@ export class NewGroupPage extends BasePage {
       console.error('Error creating group:', error)
     }
 
-    // Return the group details regardless of success/failure
-    return { name, description }
+    // Extract the group ID from the URL if possible
+    let id = ''
+    try {
+      const url = this.page.url()
+      const match = url.match(/\/groups\/(.*)/)
+      if (match && match[1]) {
+        id = match[1].split(/\/|\?/)[0]
+      }
+    } catch (error) {
+      console.error('Error extracting group ID:', error)
+    }
+
+    // Return the group details including ID
+    return { id, name, description }
   }
 
   /**

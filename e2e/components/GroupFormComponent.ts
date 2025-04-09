@@ -12,7 +12,7 @@ export class GroupFormComponent {
     this.page = page
     this.nameInput = page.locator('input[id="name"]')
     this.descriptionTextarea = page.locator('textarea[id="description"]')
-    this.submitButton = page.locator('button[type="submit"]')
+    this.submitButton = page.locator('button[data-testid="action-button-create-group"]')
     this.cancelButton = page.locator('button:has-text("Cancel")')
     this.errorAlert = page.locator('div.alert.alert-danger')
   }

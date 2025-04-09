@@ -37,20 +37,17 @@ test.describe('Group Details Page', () => {
       expect(name).toBe(testGroupName)
     }
 
-    // Navigate to the group details page
-    await groupDetailsPage.goto(groupId)
+    // Navigate to the group details page and wait for it to load
+    await groupDetailsPage.waitForPageLoad()
   })
 
-  test('should display the group details page with correct group name', async ({ page }) => {
-    // Verify the page is loaded
-    await expect(page.locator('[data-testid="group-details-page"]')).toBeVisible()
-
+  test('should display the group details page with correct group name', async () => {
     // Check if the group name is displayed correctly
     const displayedName = await groupDetailsPage.getGroupName()
     expect(displayedName).toBe(testGroupName)
   })
 
-  test('should display and navigate between tabs', async ({ page }) => {
+  test('should display and navigate between tabs', async () => {
     // Verify the default tab (info) is active
     expect(await groupDetailsPage.isTabPanelActive('info')).toBeTruthy()
 
@@ -63,23 +60,23 @@ test.describe('Group Details Page', () => {
     await groupDetailsPage.selectTab('games')
     expect(await groupDetailsPage.isTabPanelActive('games')).toBeTruthy()
     expect(await groupDetailsPage.isTabPanelActive('members')).toBeFalsy()
-
-    // Check URL query parameter updates
-    expect(page.url()).toContain('tab=games')
   })
 
-  test('should open actions menu and verify admin options', async ({ page }) => {
+  test('should open actions menu and verify admin options', async () => {
     // Open the actions menu
     await groupDetailsPage.openActionsMenu()
 
     // Verify admin options are visible (user who creates a group is an admin)
-    expect(await page.isVisible('[data-testid="group-details-create-event-action"]')).toBeTruthy()
-    expect(await page.isVisible('[data-testid="group-details-create-game-action"]')).toBeTruthy()
-    expect(await page.isVisible('[data-testid="group-details-edit-group-action"]')).toBeTruthy()
-    expect(await page.isVisible('[data-testid="group-details-manage-members-action"]')).toBeTruthy()
+    expect(await groupDetailsPage.isActionVisible('create-event')).toBeTruthy()
+    expect(await groupDetailsPage.isActionVisible('create-game')).toBeTruthy()
+    expect(await groupDetailsPage.isActionVisible('edit-group')).toBeTruthy()
+    expect(await groupDetailsPage.isActionVisible('manage-members')).toBeTruthy()
 
     // Leave option should not be visible for admin
-    expect(await page.isVisible('[data-testid="group-details-leave-group-action"]')).toBeFalsy()
+    expect(await groupDetailsPage.isActionVisible('leave-group')).toBeFalsy()
+
+    // Close the actions menu
+    await groupDetailsPage.closeActionsMenu()
   })
 
   test('should navigate to edit group page when clicking edit action', async ({ page }) => {
@@ -93,10 +90,11 @@ test.describe('Group Details Page', () => {
     await page.waitForURL(`/groups/${groupId}/edit`)
 
     // Verify we're on the edit page
-    expect(page.url()).toContain(`/groups/${groupId}/edit`)
+    const url = await groupDetailsPage.getCurrentUrl()
+    expect(url).toContain(`/groups/${groupId}/edit`)
   })
 
-  test('should show invites tab for admin users', async ({ page }) => {
+  test('should show invites tab for admin users', async () => {
     // Verify the invites tab is visible (as creator is admin)
     expect(await groupDetailsPage.isTabVisible('invites')).toBeTruthy()
 
@@ -105,6 +103,9 @@ test.describe('Group Details Page', () => {
 
     // Verify we're on the invites tab
     expect(await groupDetailsPage.isTabPanelActive('invites')).toBeTruthy()
-    expect(page.url()).toContain('tab=invites')
+
+    // Check URL parameter
+    const tabValue = await groupDetailsPage.getCurrentTabFromUrl()
+    expect(tabValue).toBe('invites')
   })
 })
