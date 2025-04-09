@@ -153,7 +153,9 @@ const GroupDetailsPage = () => {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+      <Box
+        sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}
+        data-testid="group-details-loading">
         <CircularProgress />
       </Box>
     )
@@ -161,7 +163,7 @@ const GroupDetailsPage = () => {
 
   if (error || !groupResponse?.data) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 3 }} data-testid="group-details-error">
         <Alert severity="error">Error loading group details. Please try again later.</Alert>
       </Box>
     )
@@ -173,7 +175,7 @@ const GroupDetailsPage = () => {
   const inviteLinks = inviteLinksResponse?.data || []
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3 }} data-testid="group-details-page">
       <Breadcrumb
         items={[
           { label: 'Groups', to: '/groups' },
@@ -184,32 +186,56 @@ const GroupDetailsPage = () => {
       <PageHeader
         title={group.Name}
         actions={
-          <IconButton onClick={handleMenuOpen} aria-label="group actions">
+          <IconButton onClick={handleMenuOpen} aria-label="group actions" data-testid="group-details-actions-button">
             <MoreVertIcon />
           </IconButton>
         }
       />
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        data-testid="group-details-actions-menu">
         {isAdmin && [
-          <MenuItem key="create-event" onClick={handleMenuClose} component="a" href={`/events/new?groupId=${group.ID}`}>
+          <MenuItem
+            key="create-event"
+            onClick={handleMenuClose}
+            component="a"
+            href={`/events/new?groupId=${group.ID}`}
+            data-testid="group-details-create-event-action">
             <ListItemIcon>
               <CalendarIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Create Event</ListItemText>
           </MenuItem>,
-          <MenuItem key="create-game" onClick={handleMenuClose} component="a" href={`/games/new?groupId=${group.ID}`}>
+          <MenuItem
+            key="create-game"
+            onClick={handleMenuClose}
+            component="a"
+            href={`/games/new?groupId=${group.ID}`}
+            data-testid="group-details-create-game-action">
             <ListItemIcon>
               <GamepadIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Create Game</ListItemText>
           </MenuItem>,
-          <MenuItem key="edit-group" onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/edit`}>
+          <MenuItem
+            key="edit-group"
+            onClick={handleMenuClose}
+            component="a"
+            href={`/groups/${group.ID}/edit`}
+            data-testid="group-details-edit-group-action">
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Edit Group</ListItemText>
           </MenuItem>,
-          <MenuItem key="manage-members" onClick={handleMenuClose} component="a" href={`/groups/${group.ID}/members`}>
+          <MenuItem
+            key="manage-members"
+            onClick={handleMenuClose}
+            component="a"
+            href={`/groups/${group.ID}/members`}
+            data-testid="group-details-manage-members-action">
             <ListItemIcon>
               <PeopleIcon fontSize="small" />
             </ListItemIcon>
@@ -218,7 +244,7 @@ const GroupDetailsPage = () => {
         ]}
         {/* Leave Group option (available to non-admin members) */}
         {!isAdmin && (
-          <MenuItem onClick={handleLeaveGroupClick}>
+          <MenuItem onClick={handleLeaveGroupClick} data-testid="group-details-leave-group-action">
             <ListItemIcon>
               <ExitToAppIcon fontSize="small" />
             </ListItemIcon>
@@ -232,41 +258,73 @@ const GroupDetailsPage = () => {
         open={leaveDialogOpen}
         onClose={handleLeaveDialogClose}
         aria-labelledby="leave-group-dialog-title"
-        aria-describedby="leave-group-dialog-description">
+        aria-describedby="leave-group-dialog-description"
+        data-testid="group-details-leave-dialog">
         <DialogTitle id="leave-group-dialog-title">Leave Group</DialogTitle>
         <DialogContent>
           <DialogContentText id="leave-group-dialog-description">
             Are you sure you want to leave {group.Name}? This action cannot be undone.
             {isAdmin && members.filter((m) => m.role === ROLE_ADMIN).length <= 1 && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
+              <Alert severity="warning" sx={{ mt: 2 }} data-testid="group-details-leave-warning">
                 You are the last admin of this group. Leaving will mean no one can manage the group!
               </Alert>
             )}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleLeaveDialogClose} color="primary">
+          <Button onClick={handleLeaveDialogClose} color="primary" data-testid="group-details-leave-cancel">
             Cancel
           </Button>
-          <Button onClick={handleLeaveGroupConfirm} color="error" autoFocus>
+          <Button onClick={handleLeaveGroupConfirm} color="error" autoFocus data-testid="group-details-leave-confirm">
             Leave Group
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Main tabs */}
-      <Box sx={{ width: '100%', mt: 3 }}>
+      <Box sx={{ width: '100%', mt: 3 }} data-testid="group-details-tabs-container">
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={mainTabValue} onChange={handleMainTabChange} aria-label="group details tabs" variant="fullWidth">
-            <Tab icon={<InfoIcon />} label="Information" {...a11yProps(0)} iconPosition="start" />
-            <Tab icon={<GroupIcon />} label="Members" {...a11yProps(1)} iconPosition="start" />
-            <Tab icon={<GamepadIcon />} label="Games" {...a11yProps(2)} iconPosition="start" />
-            {canManageInvites && <Tab icon={<LinkIcon />} label="Invites" {...a11yProps(3)} iconPosition="start" />}
+          <Tabs
+            value={mainTabValue}
+            onChange={handleMainTabChange}
+            aria-label="group details tabs"
+            variant="fullWidth"
+            data-testid="group-details-tabs">
+            <Tab
+              icon={<InfoIcon />}
+              label="Information"
+              {...a11yProps(0)}
+              iconPosition="start"
+              data-testid="group-details-tab-info"
+            />
+            <Tab
+              icon={<GroupIcon />}
+              label="Members"
+              {...a11yProps(1)}
+              iconPosition="start"
+              data-testid="group-details-tab-members"
+            />
+            <Tab
+              icon={<GamepadIcon />}
+              label="Games"
+              {...a11yProps(2)}
+              iconPosition="start"
+              data-testid="group-details-tab-games"
+            />
+            {canManageInvites && (
+              <Tab
+                icon={<LinkIcon />}
+                label="Invites"
+                {...a11yProps(3)}
+                iconPosition="start"
+                data-testid="group-details-tab-invites"
+              />
+            )}
           </Tabs>
         </Box>
 
         {/* Information Tab */}
-        <TabPanel value={mainTabValue} index={0}>
+        <TabPanel value={mainTabValue} index={0} data-testid="group-details-tabpanel-info">
           <Box sx={{ mb: 2 }}>
             <GroupInfoTab group={group} userRole={userRole} />
           </Box>
@@ -277,15 +335,14 @@ const GroupDetailsPage = () => {
             isLoading={eventsLoading}
           />
         </TabPanel>
-        {/* Events Tab */}
 
         {/* Members Tab */}
-        <TabPanel value={mainTabValue} index={1}>
+        <TabPanel value={mainTabValue} index={1} data-testid="group-details-tabpanel-members">
           <GroupMembersTab members={members} />
         </TabPanel>
 
         {/* Games Tab */}
-        <TabPanel value={mainTabValue} index={2}>
+        <TabPanel value={mainTabValue} index={2} data-testid="group-details-tabpanel-games">
           <GroupGamesTab
             userRole={userRole}
             groupId={group.ID}
@@ -298,7 +355,7 @@ const GroupDetailsPage = () => {
 
         {/* Invites Tab */}
         {canManageInvites && (
-          <TabPanel value={mainTabValue} index={3}>
+          <TabPanel value={mainTabValue} index={3} data-testid="group-details-tabpanel-invites">
             <GroupInvitesTab
               groupId={group.ID}
               userRole={userRole}
