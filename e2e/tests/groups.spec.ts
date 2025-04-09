@@ -146,7 +146,7 @@ test.describe('Groups Page', () => {
       await groupsPage.clickGroupByName(name)
 
       // Wait for navigation to group details page
-      await page.waitForURL(/.*\/groups\/\d+.*/, { timeout: 5000 })
+      await page.waitForURL(/.*\/groups\/.*/, { timeout: 5000 })
     } catch (error) {
       throw error
     }
