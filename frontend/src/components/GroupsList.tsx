@@ -12,6 +12,7 @@ interface GroupsListProps {
   emptyMessage?: string
   emptyActionText?: string
   emptyActionLink?: string
+  testId?: string
 }
 
 export const GroupsList = ({
@@ -22,6 +23,7 @@ export const GroupsList = ({
   emptyMessage = "You haven't created any groups yet.",
   emptyActionText = 'Create Your First Group',
   emptyActionLink = '/groups/new',
+  testId = 'groups-list',
 }: GroupsListProps) => {
   const displayGroups = maxItems ? groups.slice(0, maxItems) : groups
 
@@ -36,7 +38,7 @@ export const GroupsList = ({
           Error loading groups. Please try again later.
         </Typography>
       ) : groups.length > 0 ? (
-        <List>
+        <List data-testid={testId}>
           {displayGroups.map((group) => (
             <ListItemButton key={group.ID} component={Link} to={`/groups/${group.ID}`}>
               <ListItemIcon>

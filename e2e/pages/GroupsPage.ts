@@ -68,6 +68,20 @@ export class GroupsPage extends BasePage {
   }
 
   /**
+   * Get the number of group elements
+   */
+  async getGroupElementsCount() {
+    return await this.groupsList.getGroupCount()
+  }
+
+  /**
+   * Check if the empty message is visible
+   */
+  async isEmptyMessageVisible() {
+    return await this.groupsList.isEmptyMessageVisible()
+  }
+
+  /**
    * Click on the empty state action button
    */
   async clickEmptyStateAction() {

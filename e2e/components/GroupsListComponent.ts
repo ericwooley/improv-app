@@ -3,10 +3,12 @@ import { Page, Locator } from '@playwright/test'
 export class GroupsListComponent {
   protected page: Page
   private container: Locator
+  private emptyState: Locator
 
   constructor(page: Page) {
     this.page = page
-    this.container = page.locator('div:has(> div > [title="Recent Groups"])')
+    this.container = page.locator('[data-testid="groups-list"]')
+    this.emptyState = page.locator('[data-testid="empty-state"]')
   }
 
   async isVisible() {
@@ -19,18 +21,23 @@ export class GroupsListComponent {
 
   async isEmpty() {
     if (await this.isLoading()) return false
-    return await this.container.locator("text=You haven't created any groups yet.").isVisible()
+    try {
+      await this.emptyState.waitFor({ state: 'visible', timeout: 250 })
+    } catch (error) {
+      return false
+    }
+    return true
   }
 
   async getGroupCount() {
     if ((await this.isEmpty()) || (await this.isLoading())) return 0
 
-    const groups = await this.container.locator('li').all()
+    const groups = await this.container.locator('a').all()
     return groups.length
   }
 
   async getGroupName(index = 0) {
-    const groups = await this.container.locator('li').all()
+    const groups = await this.container.locator('a').all()
     if (groups.length <= index) return null
 
     const primaryText = await groups[index].locator('div[class*="MuiListItemText-primary"]').textContent()
@@ -38,7 +45,7 @@ export class GroupsListComponent {
   }
 
   async clickGroup(index = 0) {
-    const groups = await this.container.locator('li').all()
+    const groups = await this.container.locator('a').all()
     if (groups.length <= index) return
 
     await groups[index].click()
@@ -61,7 +68,7 @@ export class GroupsListComponent {
   async getGroups(): Promise<Array<{ name: string; description: string }>> {
     if ((await this.isEmpty()) || (await this.isLoading())) return []
 
-    const groups = await this.container.locator('li').all()
+    const groups = await this.container.locator('a').all()
     const result: Array<{ name: string; description: string }> = []
 
     for (let i = 0; i < groups.length; i++) {
@@ -78,7 +85,7 @@ export class GroupsListComponent {
    * Click on a group by its name
    */
   async clickGroupByName(name: string) {
-    const groupItem = this.page.locator('li', {
+    const groupItem = this.page.locator('a', {
       hasText: name,
     })
 
@@ -97,5 +104,12 @@ export class GroupsListComponent {
    */
   async clickEmptyStateAction() {
     await this.page.locator('button:has-text("Create Your First Group")').click()
+  }
+
+  /**
+   * Check if the empty message is visible
+   */
+  async isEmptyMessageVisible() {
+    return await this.page.isVisible("text=You haven't created any groups yet.")
   }
 }

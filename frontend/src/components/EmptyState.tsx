@@ -26,6 +26,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <Paper
       elevation={0}
+      data-testid="empty-state"
       sx={{
         p: 6,
         textAlign: 'center',

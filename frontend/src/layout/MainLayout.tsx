@@ -132,7 +132,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }} data-testid="main-navigation">
       {isMobile && (
         <AppBar
           position="fixed"
@@ -161,7 +161,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </AppBar>
       )}
 
-      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }} data-testid="main-navigation">
+      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
         {isMobile ? (
           <Drawer
             variant="temporary"

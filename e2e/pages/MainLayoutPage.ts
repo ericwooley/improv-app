@@ -81,7 +81,16 @@ export class MainLayoutPage extends BasePage {
 
   // State checks
   async isAuthenticated() {
-    return await this.isVisible(this.navigationSelector)
+    await this.page.waitForLoadState('networkidle')
+    try {
+      await this.page.waitForSelector(this.navigationSelector, {
+        state: 'visible',
+        timeout: 100,
+      })
+      return true
+    } catch (error) {
+      return false
+    }
   }
 
   async isNavMenuVisible() {
