@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Node.js
+frontend/node_modules
+frontend/.cache
+frontend/dist
+
+# Build artifacts
+improv-app
+improv.db
+data/
+*.log
+
+# IDE files
+.vscode
+.idea
+
+# Misc
+README.md
+*.md

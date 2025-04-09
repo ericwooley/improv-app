@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"improv-app/internal/config"
 	"improv-app/internal/db"
@@ -27,9 +28,15 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "dev"
+	}
+	if env != "production" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
 	}
 
 	config.InitStore()
@@ -152,8 +159,23 @@ func main() {
 	api.HandleFunc("/games/{id}/libraries", middleware.RequireAuthAPI(sqlDB, gameHandler.GetGameGroupLibraries)).Methods("GET")
 
 	// Serve frontend static files in production
-	fs := http.FileServer(http.Dir("./frontend/dist"))
-	r.PathPrefix("/").Handler(http.StripPrefix("/", fs))
+	fs := http.FileServer(http.Dir("./public"))
+
+	// Custom file server that serves index.html for paths that don't exist
+	r.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// First try to serve static file
+		path := "./public" + r.URL.Path
+		_, err := os.Stat(path)
+
+		// If file exists, serve it directly
+		if err == nil {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		// Otherwise serve index.html
+		http.ServeFile(w, r, "./public/index.html")
+	}))
 
 	port := ":4080"
 	log.Printf("Starting on port http://localhost%s", port)

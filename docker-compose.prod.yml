@@ -1,0 +1,31 @@
+services:
+
+  improv-app:
+    image: ghcr.io/ericwooley/improv-app:latest
+    restart: always
+    ports:
+      - "127.0.0.1:4080:4080"
+    env_file:
+      - .secrets/doppler.env  # <- Securely store your Doppler token here
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json
+    command: --interval 30
+    restart: always
+# To set up the .secrets directory:
+#
+# 1. Create the directory in your project root:
+#      mkdir -p .secrets
+#
+# 2. Add your Doppler token to a file:
+#      echo "DOPPLER_TOKEN=your-token-here" > .secrets/doppler.env
+#
+# 3. Set strict permissions so only your user (e.g. ansible) can read it:
+#      chmod 600 .secrets/doppler.env
+#      chown ansible:ansible .secrets/doppler.env
+#
+# Now when you run:
+#      docker compose up -d
+# The DOPPLER_TOKEN will be injected securely into your container
