@@ -7,6 +7,7 @@ services:
       - "127.0.0.1:4080:4080"
     env_file:
       - .secrets/doppler.env  # <- Securely store your Doppler token here
+    command: doppler run --/app/improv-app
   watchtower:
     image: containrrr/watchtower
     volumes:
