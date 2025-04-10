@@ -30,3 +30,4 @@ improv.db
 __debug*
 improv-app
 docker-data
+.secrets
