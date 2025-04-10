@@ -3,6 +3,7 @@ tag=$(git rev-parse --short HEAD)
 docker build . -t improv-app:${tag}
 docker run -p 4080:4080\
   --network=improv-hq_default \
+  --volume $(pwd)/docker-data:/app/data \
   --rm \
   -e ENV=production \
   -e DATABASE_PATH=/app/data/improv.db \

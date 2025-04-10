@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:local": "cp .env.local .env && playwright test"
+    "test:local": "cp .env.local .env && playwright test",
+    "test:docker": "cp .env.docker .env && TEST_ENV=docker playwright test"
   },
   "keywords": [],
   "author": "",

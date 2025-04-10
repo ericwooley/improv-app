@@ -11,6 +11,10 @@ const environments: Record<string, EnvironmentConfig> = {
     baseURL: 'http://localhost:5173',
     apiURL: 'http://localhost:4080',
   },
+  docker: {
+    baseURL: 'http://127.0.0.1:4080',
+    apiURL: 'http://127.0.0.1:4080',
+  },
   staging: {
     baseURL: 'https://staging.your-app.com',
     apiURL: 'https://api.staging.your-app.com',
