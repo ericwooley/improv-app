@@ -109,7 +109,10 @@ This link will expire in 24 hours.
 	fmt.Println("Sending email to:", to, "from:", from, "host:", host, "port:", port, "username:", username, "password:", password)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
-	auth := smtp.PlainAuth("", username, password, host)
+	var auth smtp.Auth
+	if username != "" && password != "" {
+		auth = smtp.PlainAuth("", username, password, host)
+	}
 
 	err = smtp.SendMail(addr, auth, from, []string{to}, msg)
 	if err != nil {
@@ -226,7 +229,10 @@ func (s *EmailService) SendGroupInvitation(email, groupID, groupName, inviterNam
 	log.Printf("Sending group invitation email to: %s for group: %s", to, groupName)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
-	auth := smtp.PlainAuth("", username, password, host)
+	var auth smtp.Auth
+	if username != "" && password != "" {
+		auth = smtp.PlainAuth("", username, password, host)
+	}
 
 	err = smtp.SendMail(addr, auth, from, []string{to}, msg)
 	if err != nil {

@@ -12,7 +12,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the source code
-COPY . .
+
+COPY main.go .
+COPY internal/ ./internal/
+
+
 
 # Build the Go application
 RUN go build -o improv-app
