@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -85,6 +86,7 @@ func RequireAuthAPI(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 		session, _ := config.Store.Get(r, "session")
 		userID, ok := session.Values["user_id"].(string)
 		if !ok {
+			fmt.Println("No user ID found in session")
 			RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 			return
 		}
@@ -96,6 +98,7 @@ func RequireAuthAPI(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			WHERE id = $1
 		`, userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
 		if err != nil {
+			fmt.Println("Error querying user:", err)
 			RespondWithError(w, http.StatusUnauthorized, "Invalid user session")
 			return
 		}

@@ -50,6 +50,7 @@ services:
     image: keinos/sqlite3
     volumes:
       - ./docker-data:/data
+    user: root
     command: >
       sh -c "
         while true; do
