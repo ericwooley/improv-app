@@ -64,17 +64,35 @@ const GameForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await onSubmit(formData)
+
+    // Create a new object with properly typed values
+    const submissionData = {
+      ...formData,
+      // Ensure minPlayers and maxPlayers are integers
+      minPlayers: parseInt(formData.minPlayers.toString(), 10),
+      maxPlayers: parseInt(formData.maxPlayers.toString(), 10),
+    }
+
+    await onSubmit(submissionData)
   }
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>
   ) => {
     const { name, value, checked } = e.target as HTMLInputElement
-    setFormData((prev) => ({
-      ...prev,
-      [name as string]: name === 'public' ? checked : value,
-    }))
+
+    if (name === 'minPlayers' || name === 'maxPlayers') {
+      // Parse number inputs to integers
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value === '' ? 0 : parseInt(value, 10),
+      }))
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name as string]: name === 'public' ? checked : value,
+      }))
+    }
   }
 
   const handleTagsChange = (_event: React.SyntheticEvent, newValue: string[]) => {
@@ -101,6 +119,7 @@ const GameForm = ({
 
         <InputField
           id="name"
+          name="name"
           label="Game Name"
           value={formData.name}
           required
@@ -110,6 +129,7 @@ const GameForm = ({
 
         <TextareaField
           id="description"
+          name="description"
           label="Description"
           value={formData.description}
           rows={4}
@@ -121,33 +141,23 @@ const GameForm = ({
         <Box sx={{ display: 'flex', gap: 2 }} data-testid="game-form-players-container">
           <InputField
             id="minPlayers"
+            name="minPlayers"
             label="Minimum Players"
             value={formData.minPlayers.toString()}
             type="number"
             required
-            onChange={(e) => {
-              const newValue = parseInt(e.target.value)
-              setFormData((prev) => ({
-                ...prev,
-                minPlayers: isNaN(newValue) ? 1 : newValue,
-              }))
-            }}
+            onChange={handleChange}
             testId="game-form-min-players-input"
           />
 
           <InputField
             id="maxPlayers"
+            name="maxPlayers"
             label="Maximum Players"
             value={formData.maxPlayers.toString()}
             type="number"
             required
-            onChange={(e) => {
-              const newValue = parseInt(e.target.value)
-              setFormData((prev) => ({
-                ...prev,
-                maxPlayers: isNaN(newValue) ? formData.minPlayers : newValue,
-              }))
-            }}
+            onChange={handleChange}
             testId="game-form-max-players-input"
           />
         </Box>
@@ -177,6 +187,7 @@ const GameForm = ({
           renderInput={(params) => (
             <TextField
               {...params}
+              name="tags"
               label="Tags"
               helperText="Select tags to categorize your game"
               fullWidth

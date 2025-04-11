@@ -3,6 +3,7 @@ import { TextField } from '@mui/material'
 
 interface TextareaFieldProps {
   id: string
+  name?: string
   label: string
   value: string
   placeholder?: string
@@ -16,6 +17,7 @@ interface TextareaFieldProps {
 
 const TextareaField: React.FC<TextareaFieldProps> = ({
   id,
+  name = id,
   label,
   value,
   placeholder = '',
@@ -29,6 +31,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
   return (
     <TextField
       id={id}
+      name={name}
       label={label}
       multiline
       rows={rows}
