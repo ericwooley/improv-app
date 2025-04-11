@@ -30,6 +30,8 @@ import {
   ThumbDown as ThumbDownIcon,
   NewReleases as NewReleasesIcon,
   NoAccounts as NoAccountsIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material'
 import { useSetGameStatusMutation, useGetGameStatusQuery } from '../store/api/gamesApi'
 import { useEffect, useRef, useState } from 'react'
@@ -59,8 +61,15 @@ interface GameCardProps {
 // Create a motion component using MUI Card
 const MotionCard = motion(Card)
 
-const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected, onAddGame }: GameCardProps) => {
+const GameCard = React.memo(function GameCard({
+  game,
+  showViewButton = true,
+  onClick,
+  isSelected,
+  onAddGame,
+}: GameCardProps) {
   const [shouldFetchStatus, setShouldFetchStatus] = useState(false)
+  const [descriptionVisible, setDescriptionVisible] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -174,6 +183,11 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
 
   const { icon: statusIcon, color: statusColor } = getStatusIconAndColor(currentStatus)
 
+  const toggleDescription = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent the card click event
+    setDescriptionVisible(!descriptionVisible)
+  }
+
   return (
     <MotionCard
       ref={cardRef}
@@ -242,8 +256,31 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
       />
       <Divider />
       <CardContent sx={{ flexGrow: 1, pt: 2 }} data-testid="game-card-content">
-        <Box sx={{ mb: 2 }} data-testid="game-card-description">
-          <Markdown>{game.description}</Markdown>
+        <Box data-testid="game-card-description">
+          {descriptionVisible && (
+            <Box sx={{ mb: 2 }}>
+              <Markdown>{game.description}</Markdown>
+            </Box>
+          )}
+          <Box
+            sx={{ textAlign: 'center', cursor: 'pointer' }}
+            onClick={toggleDescription}
+            data-testid="game-card-description-toggle">
+            <Typography
+              variant="caption"
+              color="primary"
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {descriptionVisible ? (
+                <>
+                  Hide description <ExpandLessIcon fontSize="small" />
+                </>
+              ) : (
+                <>
+                  Show description <ExpandMoreIcon fontSize="small" />
+                </>
+              )}
+            </Typography>
+          </Box>
         </Box>
 
         <Box sx={{ mt: 2 }}>
