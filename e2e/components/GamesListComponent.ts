@@ -118,22 +118,24 @@ export class GamesListComponent {
    * Get the current page number
    */
   async getCurrentPage() {
-    const currentButton = this.paginationContainer.locator('button[aria-current="true"]')
-    const pageText = await currentButton.textContent()
-    return pageText ? parseInt(pageText, 10) : 1
+    const currentPageElement = this.paginationContainer.locator('[data-current="true"]')
+    const pageElement = await currentPageElement.locator('div[data-page-number]')
+    const pageNumber = await pageElement.getAttribute('data-page-number')
+    return pageNumber ? parseInt(pageNumber, 10) : 1
   }
 
   /**
    * Get the total number of pages
    */
   async getTotalPages() {
-    const buttons = await this.paginationContainer.locator('button[aria-label^="Go to page"]').all()
+    const pageButtons = await this.paginationContainer.locator('[data-testid^="games-list-page-"]').all()
     let maxPage = 1
 
-    for (const button of buttons) {
-      const pageText = await button.textContent()
-      if (pageText) {
-        const pageNum = parseInt(pageText, 10)
+    for (const button of pageButtons) {
+      const pageElement = await button.locator('div[data-page-number]')
+      const pageNumber = await pageElement.getAttribute('data-page-number')
+      if (pageNumber) {
+        const pageNum = parseInt(pageNumber, 10)
         if (!isNaN(pageNum) && pageNum > maxPage) {
           maxPage = pageNum
         }
@@ -147,7 +149,7 @@ export class GamesListComponent {
    * Go to a specific page
    */
   async goToPage(pageNumber: number) {
-    await this.paginationContainer.locator(`button[aria-label="Go to page ${pageNumber}"]`).click()
+    await this.paginationContainer.locator(`[data-testid="games-list-page-${pageNumber}"]`).click()
     // Wait for the page to update
     await this.page.waitForLoadState('networkidle')
   }
@@ -156,7 +158,7 @@ export class GamesListComponent {
    * Go to the next page
    */
   async goToNextPage() {
-    await this.paginationContainer.locator('button[aria-label="Go to next page"]').click()
+    await this.paginationContainer.locator('[data-testid="games-list-next-page"]').click()
     // Wait for the page to update
     await this.page.waitForLoadState('networkidle')
   }
@@ -165,7 +167,25 @@ export class GamesListComponent {
    * Go to the previous page
    */
   async goToPreviousPage() {
-    await this.paginationContainer.locator('button[aria-label="Go to previous page"]').click()
+    await this.paginationContainer.locator('[data-testid="games-list-previous-page"]').click()
+    // Wait for the page to update
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  /**
+   * Go to the first page
+   */
+  async goToFirstPage() {
+    await this.paginationContainer.locator('[data-testid="games-list-first-page"]').click()
+    // Wait for the page to update
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  /**
+   * Go to the last page
+   */
+  async goToLastPage() {
+    await this.paginationContainer.locator('[data-testid="games-list-last-page"]').click()
     // Wait for the page to update
     await this.page.waitForLoadState('networkidle')
   }

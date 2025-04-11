@@ -117,37 +117,35 @@ test.describe('Games Functionality', () => {
 
     // Check for pagination if more than 5 games
     const hasPagination = await gamesListComponent.hasPagination()
+    expect(hasPagination).toBeTruthy()
+    // Get current page
+    const currentPage = await gamesListComponent.getCurrentPage()
+    expect(currentPage).toBe(1)
 
-    if (hasPagination) {
-      // Get current page
-      const currentPage = await gamesListComponent.getCurrentPage()
-      expect(currentPage).toBe(1)
+    // Navigate to next page
+    await gamesListComponent.goToNextPage()
 
-      // Navigate to next page
-      await gamesListComponent.goToNextPage()
+    // Verify we're on page 2
+    const newPage = await gamesListComponent.getCurrentPage()
+    expect(newPage).toBe(2)
 
-      // Verify we're on page 2
-      const newPage = await gamesListComponent.getCurrentPage()
-      expect(newPage).toBe(2)
+    // Verify different games are shown
+    const firstPageGames = new Set<string>(gameNames.slice(0, 5))
 
-      // Verify different games are shown
-      const firstPageGames = new Set<string>(gameNames.slice(0, 5))
+    // Get all game cards on the second page
+    const gameCards = await gamesListComponent.getAllGameCards()
 
-      // Get all game cards on the second page
-      const gameCards = await gamesListComponent.getAllGameCards()
-
-      // At least one game on the second page should be different
-      let foundDifferentGame = false
-      for (const gameCard of gameCards) {
-        const name = await gameCard.getGameName()
-        if (name && !firstPageGames.has(name)) {
-          foundDifferentGame = true
-          break
-        }
+    // At least one game on the second page should be different
+    let foundDifferentGame = false
+    for (const gameCard of gameCards) {
+      const name = await gameCard.getGameName()
+      if (name && !firstPageGames.has(name)) {
+        foundDifferentGame = true
+        break
       }
-
-      expect(foundDifferentGame).toBeTruthy()
     }
+
+    expect(foundDifferentGame).toBeTruthy()
   })
 
   test('should update game status', async ({ page }) => {
@@ -198,7 +196,7 @@ test.describe('Games Functionality', () => {
     await gamesListComponent.waitForList()
 
     // Check the status value
-    const statusValue = await page.locator('[data-testid="game-card-status-select"]').inputValue()
+    const statusValue = await page.locator('[data-testid="game-card-status-select"] input').inputValue()
     expect(statusValue).toBe('I Love playing this')
   })
 

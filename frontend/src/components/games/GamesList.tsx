@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Grid, Typography, Pagination } from '@mui/material'
+import { Box, CircularProgress, Grid, Typography, Pagination, PaginationItem } from '@mui/material'
 import { useGetGamesQuery } from '../../store/api/gamesApi'
 import { EmptyState, GameCard } from '../../components'
 import { ReactNode, useState, useEffect } from 'react'
@@ -186,6 +186,29 @@ export const GamesList = ({
             color="primary"
             showFirstButton
             showLastButton
+            renderItem={(item) => {
+              // Add data-testid attributes to each pagination button
+              let testId = ''
+
+              if (item.type === 'page') {
+                testId = `games-list-page-${item.page}`
+              } else if (item.type === 'next') {
+                testId = 'games-list-next-page'
+              } else if (item.type === 'previous') {
+                testId = 'games-list-previous-page'
+              } else if (item.type === 'first') {
+                testId = 'games-list-first-page'
+              } else if (item.type === 'last') {
+                testId = 'games-list-last-page'
+              }
+
+              return (
+                <div data-testid={testId} data-current={item.selected ? 'true' : 'false'}>
+                  {item.page && <div data-page-number={item.page} style={{ display: 'none' }}></div>}
+                  <PaginationItem {...item} />
+                </div>
+              )
+            }}
           />
         </Box>
       )}

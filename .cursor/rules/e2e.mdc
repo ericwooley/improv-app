@@ -12,7 +12,11 @@ EVERY TEST SHOULD BE COMPLETELY SELF CONTAINED.
 
 Do not use beforeall to create a user and run all the rest of the tests on that one user. This creates tests that fail when they run individually. Instead create setup functions for common things, and set each test up so that it runs completely on it's own and will fail or succeed by it's own, no matter what the other tests do.
 
-All selectors should be testid. Do not use text matching or xpaths or anything else fancy, add the testid to the component or place in the code. 
+All selectors should be testid. Do not use text matching or xpaths or anything else fancy, add the testid to the component or place in the code.
+
+Never put selectors in the test. Always put selectors in page objects exclusively. All selectors should be data-testid or id or data-<wahtever>=whatever. Never based on text or any other matchers. Update the tsx files as needed when making page objects, so that page objects have clear selectors.
+
+
 # End-to-End Testing Documentation
 
 ## Overview
