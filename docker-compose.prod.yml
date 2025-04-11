@@ -1,7 +1,7 @@
 services:
 
   improv-app:
-    image: ghcr.io/ericwooley/improv-app:main
+    image: ghcr.io/ericwooley/improv-app:latest
     restart: always
     ports:
       - "127.0.0.1:4080:4080"
@@ -10,6 +10,17 @@ services:
     command: doppler run --/app/improv-app
     volumes:
       - ./docker-data:/app/data
+  duplicati:
+    image: duplicati/duplicati:latest
+    volumes:
+      - ./:/data
+    env_file:
+      - .secrets/duplicati.env
+    # Add the following environment variables to the duplicati container in the duplicati.env file
+    # SETTINGS_ENCRYPTION_KEY: "<real encryption key>"
+    # DUPLICATI__WEBSERVICE_PASSWORD: "<ui password>"
+
+    # this secret is in bitwarden.
   watchtower:
     image: containrrr/watchtower
     volumes:
