@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFetchAllowedTagsQuery } from '../../store/api/gamesApi'
 import {
-  TextField,
-  Button,
   Stack,
   Alert,
   CircularProgress,
@@ -12,7 +10,12 @@ import {
   Chip,
   Autocomplete,
   Box,
+  TextField,
 } from '@mui/material'
+import InputField from '../InputField'
+import TextareaField from '../TextareaField'
+import ActionButton from '../ActionButton'
+import FormActions from '../FormActions'
 
 export interface GameFormData {
   name: string
@@ -64,7 +67,9 @@ const GameForm = ({
     await onSubmit(formData)
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>
+  ) => {
     const { name, value, checked } = e.target as HTMLInputElement
     setFormData((prev) => ({
       ...prev,
@@ -81,7 +86,7 @@ const GameForm = ({
 
   return (
     <form onSubmit={handleSubmit} data-testid="game-form">
-      <Stack spacing={3}>
+      <Stack spacing={3} data-testid="game-form-stack">
         {error ? (
           <Alert severity="error" data-testid="game-form-error-alert">
             {error instanceof Error
@@ -94,49 +99,56 @@ const GameForm = ({
           ''
         )}
 
-        <TextField
-          required
+        <InputField
+          id="name"
           label="Game Name"
-          name="name"
           value={formData.name}
-          onChange={handleChange}
-          fullWidth
-          data-testid="game-form-name-input"
-        />
-
-        <TextField
           required
-          label="Description"
-          name="description"
-          value={formData.description}
           onChange={handleChange}
-          multiline
-          rows={4}
-          fullWidth
-          data-testid="game-form-description-input"
+          testId="game-form-name-input"
         />
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            required
+        <TextareaField
+          id="description"
+          label="Description"
+          value={formData.description}
+          rows={4}
+          required
+          onChange={handleChange}
+          testId="game-form-description-input"
+        />
+
+        <Box sx={{ display: 'flex', gap: 2 }} data-testid="game-form-players-container">
+          <InputField
+            id="minPlayers"
             label="Minimum Players"
-            name="minPlayers"
+            value={formData.minPlayers.toString()}
             type="number"
-            value={formData.minPlayers}
-            onChange={handleChange}
-            inputProps={{ min: 1 }}
-            data-testid="game-form-min-players-input"
+            required
+            onChange={(e) => {
+              const newValue = parseInt(e.target.value)
+              setFormData((prev) => ({
+                ...prev,
+                minPlayers: isNaN(newValue) ? 1 : newValue,
+              }))
+            }}
+            testId="game-form-min-players-input"
           />
 
-          <TextField
-            required
+          <InputField
+            id="maxPlayers"
             label="Maximum Players"
-            name="maxPlayers"
+            value={formData.maxPlayers.toString()}
             type="number"
-            value={formData.maxPlayers}
-            onChange={handleChange}
-            inputProps={{ min: formData.minPlayers }}
-            data-testid="game-form-max-players-input"
+            required
+            onChange={(e) => {
+              const newValue = parseInt(e.target.value)
+              setFormData((prev) => ({
+                ...prev,
+                maxPlayers: isNaN(newValue) ? formData.minPlayers : newValue,
+              }))
+            }}
+            testId="game-form-max-players-input"
           />
         </Box>
 
@@ -151,7 +163,15 @@ const GameForm = ({
             value.map((option, index) => {
               const tagProps = getTagProps({ index })
               const { key, ...chipProps } = tagProps
-              return <Chip key={key} variant="outlined" label={option} {...chipProps} />
+              return (
+                <Chip
+                  key={key}
+                  variant="outlined"
+                  label={option}
+                  {...chipProps}
+                  data-testid={`game-form-tag-chip-${option.toLowerCase().replace(/\s+/g, '-')}`}
+                />
+              )
             })
           }
           renderInput={(params) => (
@@ -160,11 +180,14 @@ const GameForm = ({
               label="Tags"
               helperText="Select tags to categorize your game"
               fullWidth
+              data-testid="game-form-tags-textfield"
               InputProps={{
                 ...params.InputProps,
                 endAdornment: (
                   <>
-                    {tagsLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                    {tagsLoading ? (
+                      <CircularProgress color="inherit" size={20} data-testid="game-form-tags-loading" />
+                    ) : null}
                     {params.InputProps.endAdornment}
                   </>
                 ),
@@ -184,36 +207,40 @@ const GameForm = ({
             />
           }
           label={
-            <Box>
-              <Box component="span" sx={{ fontWeight: 'medium' }}>
+            <Box data-testid="game-form-public-label">
+              <Box component="span" sx={{ fontWeight: 'medium' }} data-testid="game-form-public-status">
                 {formData.public ? 'Public' : 'Private'}
               </Box>
-              <Box component="span" sx={{ display: 'block', fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+              <Box
+                component="span"
+                sx={{ display: 'block', fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}
+                data-testid="game-form-public-description">
                 {formData.public
                   ? 'Game will appear in search results for all users'
                   : 'Game will only be visible to your group members'}
               </Box>
             </Box>
           }
+          data-testid="game-form-public-control"
         />
 
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-          <Button
+        <FormActions>
+          <ActionButton
+            text="Cancel"
             variant="outlined"
             onClick={() => navigate(cancelUrl)}
             disabled={isLoading}
-            data-testid="game-form-cancel-button">
-            Cancel
-          </Button>
-          <Button
+            testId="game-form-cancel-button"
+          />
+          <ActionButton
+            text={submitButtonText}
             type="submit"
             variant="contained"
             disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} /> : null}
-            data-testid="game-form-submit-button">
-            {submitButtonText}
-          </Button>
-        </Box>
+            icon={isLoading ? <CircularProgress size={20} data-testid="game-form-submit-loading" /> : undefined}
+            testId="game-form-submit-button"
+          />
+        </FormActions>
       </Stack>
     </form>
   )

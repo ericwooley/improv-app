@@ -14,15 +14,15 @@ export class GameFormComponent {
 
   constructor(page: Page) {
     this.page = page
-    this.nameInput = page.locator('input[name="name"]')
-    this.descriptionTextarea = page.locator('textarea[name="description"]')
-    this.minPlayersInput = page.locator('input[name="minPlayers"]')
-    this.maxPlayersInput = page.locator('input[name="maxPlayers"]')
-    this.tagsInput = page.locator('div[role="combobox"]')
-    this.publicSwitch = page.locator('input[name="public"]')
-    this.submitButton = page.locator(`button:has-text("${page.locator('button[type="submit"]').textContent()}")`)
-    this.cancelButton = page.locator('button:has-text("Cancel")')
-    this.errorAlert = page.locator('div.MuiAlert-standardError')
+    this.nameInput = page.locator('input[id="name"]')
+    this.descriptionTextarea = page.locator('textarea[id="description"]')
+    this.minPlayersInput = page.locator('input[id="minPlayers"]')
+    this.maxPlayersInput = page.locator('input[id="maxPlayers"]')
+    this.tagsInput = page.locator('input[id="tags"]')
+    this.publicSwitch = page.locator('[data-testid="game-form-public-switch"]')
+    this.submitButton = page.locator('[data-testid="game-form-submit-button"]')
+    this.cancelButton = page.locator('[data-testid="game-form-cancel-button"]')
+    this.errorAlert = page.locator('[data-testid="game-form-error-alert"]')
   }
 
   /**
@@ -154,6 +154,7 @@ export class GameFormComponent {
    * Wait for the form to load
    */
   async waitForForm() {
+    await this.page.locator('[data-testid="game-form"]').waitFor({ state: 'visible' })
     await this.nameInput.waitFor({ state: 'visible' })
     await this.descriptionTextarea.waitFor({ state: 'visible' })
   }

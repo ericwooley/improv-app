@@ -87,7 +87,7 @@ export const GamesList = ({
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }} data-testid="games-list-loading">
         <CircularProgress />
       </Box>
     )
@@ -95,7 +95,7 @@ export const GamesList = ({
 
   if (error) {
     return (
-      <Box sx={{ my: 4 }}>
+      <Box sx={{ my: 4 }} data-testid="games-list-error">
         <Typography color="error">Failed to load games. Please try again later.</Typography>
       </Box>
     )
@@ -103,7 +103,7 @@ export const GamesList = ({
 
   if (games.length === 0) {
     if (customEmptyState) {
-      return <>{customEmptyState}</>
+      return <Box data-testid="games-list-custom-empty-state">{customEmptyState}</Box>
     }
 
     let message = 'No games have been added yet.'
@@ -135,15 +135,15 @@ export const GamesList = ({
   }
 
   return (
-    <>
+    <Box data-testid="games-list-container">
       {/* Loading indicator that appears at the top when changing pages */}
       {isLoading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }} data-testid="games-list-page-loading">
           <CircularProgress size={30} />
         </Box>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={3} data-testid="games-list-grid">
         <AnimatePresence mode="popLayout">
           {games.map((game, index) => (
             <Grid
@@ -162,7 +162,8 @@ export const GamesList = ({
                 damping: 20,
                 stiffness: 300,
               }}
-              key={game.id}>
+              key={game.id}
+              data-testid={`games-list-item-${game.id}`}>
               <GameCard
                 game={game}
                 showViewButton={showViewButton}
@@ -177,7 +178,7 @@ export const GamesList = ({
 
       {/* Pagination controls */}
       {pagination && pagination.totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }} data-testid="games-list-pagination">
           <Pagination
             count={pagination.totalPages}
             page={page}
@@ -188,6 +189,6 @@ export const GamesList = ({
           />
         </Box>
       )}
-    </>
+    </Box>
   )
 }

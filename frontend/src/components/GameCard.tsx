@@ -201,7 +201,8 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
         type: 'spring',
         stiffness: 300,
         damping: 30,
-      }}>
+      }}
+      data-testid={`game-card-${game.id}`}>
       {onAddGame && (
         <IconButton
           size="small"
@@ -222,7 +223,8 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
             e.stopPropagation()
             onAddGame()
           }}
-          aria-label="add game to event">
+          aria-label="add game to event"
+          data-testid="game-card-add-button">
           <AddIcon />
         </IconButton>
       )}
@@ -235,23 +237,24 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
             fontWeight: 600,
           },
         }}
+        data-testid="game-card-header"
       />
       <Divider />
-      <CardContent sx={{ flexGrow: 1, pt: 2 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <CardContent sx={{ flexGrow: 1, pt: 2 }} data-testid="game-card-content">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-testid="game-card-description">
           {game.description}
         </Typography>
 
         <Box sx={{ mt: 2 }}>
           <InfoItem icon={<PeopleIcon />}>
-            <Typography variant="body2">
+            <Typography variant="body2" data-testid="game-card-players">
               {game.minPlayers}-{game.maxPlayers} players
             </Typography>
           </InfoItem>
 
           {game.public && (
             <InfoItem icon={<PublicIcon />}>
-              <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
+              <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }} data-testid="game-card-public">
                 Public
               </Typography>
             </InfoItem>
@@ -259,7 +262,7 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
 
           {game.ownedByGroup && (
             <InfoItem icon={<CheckCircleIcon />}>
-              <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
+              <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }} data-testid="game-card-owned">
                 Owned by Group
               </Typography>
             </InfoItem>
@@ -276,7 +279,7 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
                 size="small"
                 fullWidth
                 onClick={(e) => e.stopPropagation()} // Prevent card click when using dropdown
-              >
+                data-testid="game-card-status-control">
                 <Select
                   value={currentStatus}
                   onChange={handleStatusChange}
@@ -284,6 +287,7 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
                   disabled={isStatusDisabled}
                   variant="outlined"
                   size="small"
+                  data-testid="game-card-status-select"
                   sx={{
                     minWidth: 220,
                     ...(currentStatus && { '& .MuiOutlinedInput-notchedOutline': { borderColor: statusColor } }),
@@ -291,13 +295,16 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
                       borderColor: currentStatus ? statusColor : 'inherit',
                     },
                   }}>
-                  <MenuItem value="">
+                  <MenuItem value="" data-testid="game-card-status-default">
                     <em>How do you feel about this game?</em>
                   </MenuItem>
                   {statusOptions
                     .filter((option) => option !== '')
                     .map((statusOption) => (
-                      <MenuItem key={statusOption} value={statusOption}>
+                      <MenuItem
+                        key={statusOption}
+                        value={statusOption}
+                        data-testid={`game-card-status-option-${statusOption.toLowerCase().replace(/\s+/g, '-')}`}>
                         {statusOption}
                       </MenuItem>
                     ))}
@@ -308,7 +315,7 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
         </Box>
 
         {game.tags && game.tags.length > 0 && (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 2 }} data-testid="game-card-tags">
             <TagList tags={game.tags} />
           </Box>
         )}
@@ -316,7 +323,7 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
       {showViewButton && (
         <Box sx={{ mt: 'auto' }}>
           <Divider />
-          <CardActions sx={{ justifyContent: 'flex-end', py: 1 }}>
+          <CardActions sx={{ justifyContent: 'flex-end', py: 1 }} data-testid="game-card-actions">
             <Button
               component={Link}
               to={`/games/${game.id}`}
@@ -324,7 +331,8 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
               size="small"
               variant="contained"
               endIcon={<ArrowForwardIcon />}
-              onClick={(e) => e.stopPropagation()}>
+              onClick={(e) => e.stopPropagation()}
+              data-testid="game-card-view-button">
               View
             </Button>
           </CardActions>

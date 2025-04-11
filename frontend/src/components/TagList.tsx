@@ -12,9 +12,16 @@ const TagList: React.FC<TagListProps> = ({ tags, variant = 'info', size = 'small
   if (!tags || tags.length === 0) return null
 
   return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, ...sx }}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, ...sx }} data-testid="tag-list">
       {tags.map((tag, index) => (
-        <Chip key={index} label={tag} color={variant} size={size} variant="outlined" />
+        <Chip
+          key={index}
+          label={tag}
+          color={variant}
+          size={size}
+          variant="outlined"
+          data-testid={`tag-list-item-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+        />
       ))}
     </Box>
   )

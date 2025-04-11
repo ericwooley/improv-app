@@ -15,16 +15,18 @@ const InfoItem: React.FC<InfoItemProps> = ({ icon, children, className }) => {
         alignItems: 'center',
         mb: 3,
         ...(className && { className }),
-      }}>
+      }}
+      data-testid="info-item">
       <Box
         sx={{
           color: 'info.main',
           mr: 2,
           display: 'flex',
-        }}>
+        }}
+        data-testid="info-item-icon">
         {React.cloneElement(icon, { color: 'info' })}
       </Box>
-      {children}
+      <Box data-testid="info-item-content">{children}</Box>
     </Box>
   )
 }

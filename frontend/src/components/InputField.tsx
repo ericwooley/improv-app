@@ -42,6 +42,7 @@ const InputField: React.FC<InputFieldProps> = ({
       sx={{ mb: last ? 0 : 2 }}
       InputProps={{
         startAdornment: icon ? <i className={icon} style={{ marginRight: 8, color: 'rgba(0, 0, 0, 0.54)' }} /> : null,
+
       }}
       data-testid={testId || `input-field-${id}`}
     />
