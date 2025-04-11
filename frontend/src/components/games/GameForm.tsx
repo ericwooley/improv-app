@@ -11,6 +11,8 @@ import {
   Autocomplete,
   Box,
   TextField,
+  Typography,
+  Link,
 } from '@mui/material'
 import InputField from '../InputField'
 import TextareaField from '../TextareaField'
@@ -137,6 +139,19 @@ const GameForm = ({
           onChange={handleChange}
           testId="game-form-description-input"
         />
+
+        <Box sx={{ mt: -2, mb: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            Description supports{' '}
+            <Link
+              href="https://www.markdownguide.org/basic-syntax/"
+              target="_blank"
+              rel="noopener"
+              data-testid="game-form-markdown-guide-link">
+              Markdown formatting
+            </Link>
+          </Typography>
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }} data-testid="game-form-players-container">
           <InputField

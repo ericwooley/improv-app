@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material'
 import { useSetGameStatusMutation, useGetGameStatusQuery } from '../store/api/gamesApi'
 import { useEffect, useRef, useState } from 'react'
+import Markdown from 'react-markdown'
 
 export interface Game {
   id: string
@@ -241,9 +242,9 @@ const GameCard = React.memo(({ game, showViewButton = true, onClick, isSelected,
       />
       <Divider />
       <CardContent sx={{ flexGrow: 1, pt: 2 }} data-testid="game-card-content">
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-testid="game-card-description">
-          {game.description}
-        </Typography>
+        <Box sx={{ mb: 2 }} data-testid="game-card-description">
+          <Markdown>{game.description}</Markdown>
+        </Box>
 
         <Box sx={{ mt: 2 }}>
           <InfoItem icon={<PeopleIcon />}>

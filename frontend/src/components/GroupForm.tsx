@@ -1,4 +1,5 @@
 import { FormContainer, InputField, TextareaField, FormActions, ActionButton } from './index'
+import { Link, Typography, Box } from '@mui/material'
 
 export interface GroupFormData {
   name: string
@@ -59,6 +60,19 @@ export const GroupForm = ({
         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
         disabled={isLoading}
       />
+
+      <Box sx={{ mt: 1, mb: 2 }}>
+        <Typography variant="caption" color="text.secondary">
+          Description supports{' '}
+          <Link
+            href="https://www.markdownguide.org/basic-syntax/"
+            target="_blank"
+            rel="noopener"
+            data-testid="markdown-guide-link">
+            Markdown formatting
+          </Link>
+        </Typography>
+      </Box>
 
       <FormActions>
         <ActionButton
