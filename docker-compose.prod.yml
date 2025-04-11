@@ -12,6 +12,8 @@ services:
       - ./docker-data:/app/data
   duplicati:
     image: duplicati/duplicati:latest
+    ports:
+      - "127.0.0.1:8200:8200"
     volumes:
       - ./:/data
     env_file:
