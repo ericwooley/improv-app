@@ -45,7 +45,8 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 		session, _ := config.Store.Get(r, "session")
 		userID, ok := session.Values["user_id"].(string)
 		if !ok {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			fmt.Println("No user ID found in session")
+			RespondWithError(w, http.StatusUnauthorized, "Authentication required")
 			return
 		}
 
@@ -56,7 +57,8 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			WHERE id = $1
 		`, userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
 		if err != nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			fmt.Println("Error querying user:", err)
+			RespondWithError(w, http.StatusUnauthorized, "Invalid user session")
 			return
 		}
 
@@ -69,8 +71,8 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
-			// Redirect to complete profile for all other pages
-			http.Redirect(w, r, "/profile", http.StatusSeeOther)
+			// Return error for incomplete profile
+			RespondWithError(w, http.StatusForbidden, "Profile incomplete")
 			return
 		}
 
