@@ -1,35 +1,3 @@
-services:
-
-  improv-app:
-    image: ghcr.io/ericwooley/improv-app:latest
-    restart: always
-    ports:
-      - "127.0.0.1:4080:4080"
-    env_file:
-      - .secrets/doppler.env  # <- Securely store your Doppler token here
-    command: doppler run --/app/improv-app
-    volumes:
-      - ./docker-data:/app/data
-  duplicati:
-    image: duplicati/duplicati:latest
-    ports:
-      - "127.0.0.1:8200:8200"
-    volumes:
-      - ./:/data
-    env_file:
-      - .secrets/duplicati.env
-    # Add the following environment variables to the duplicati container in the duplicati.env file
-    # SETTINGS_ENCRYPTION_KEY: "<real encryption key>"
-    # DUPLICATI__WEBSERVICE_PASSWORD: "<ui password>"
-
-    # this secret is in bitwarden.
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json
-    command: --interval 30
-    restart: always
 # To set up the .secrets directory:
 #
 # 1. Create the directory in your project root:
@@ -45,3 +13,51 @@ services:
 # Now when you run:
 #      docker compose up -d
 # The DOPPLER_TOKEN will be injected securely into your container
+
+services:
+  improv-app:
+    image: ghcr.io/ericwooley/improv-app:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4080:4080"
+    env_file:
+      - .secrets/doppler.env  # <- Securely store your Doppler token here
+    command: doppler run --/app/improv-app
+    volumes:
+      - ./docker-data:/app/data
+  duplicati:
+    image: duplicati/duplicati:latest
+    ports:
+      - "127.0.0.1:8200:8200"
+    volumes:
+      - ./docker-data:/data
+    env_file:
+      - .secrets/duplicati.env
+    # Add the following environment variables to the duplicati container in the duplicati.env file
+    # SETTINGS_ENCRYPTION_KEY: "<real encryption key>"
+    # DUPLICATI__WEBSERVICE_PASSWORD: "<ui password>"
+
+    # this secret is in bitwarden.
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json
+    command: --interval 30
+    restart: always
+
+  db-backup:
+    image: keinos/sqlite3
+    volumes:
+      - ./docker-data:/data
+    command: >
+      sh -c "
+        while true; do
+          timestamp=$$(date +%Y%m%d_%H%M%S);
+          sqlite3 /data/improv.db .dump > /data/improv_$$timestamp.sql;
+          ls -t /data/improv_*.sql | tail -n +4 | xargs -r rm;
+          sleep 3600;
+        done
+      "
+    restart: always
+
