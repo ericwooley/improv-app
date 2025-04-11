@@ -51,6 +51,6 @@ jobs:
           file: ./dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
