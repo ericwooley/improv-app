@@ -16,16 +16,23 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => 
         justifyContent: 'space-between',
         alignItems: { xs: 'flex-start', sm: 'center' },
         mb: 5,
-      }}>
+      }}
+      data-testid="page-header">
       <Box sx={{ mb: { xs: 2, sm: 0 } }}>
-        <Typography variant="h2">{title}</Typography>
+        <Typography variant="h2" data-testid="page-header-title">
+          {title}
+        </Typography>
         {subtitle && (
-          <Typography variant="h5" color="text.secondary">
+          <Typography variant="h5" color="text.secondary" data-testid="page-header-subtitle">
             {subtitle}
           </Typography>
         )}
       </Box>
-      {actions && <Box sx={{ mt: { xs: 2, sm: 0 } }}>{actions}</Box>}
+      {actions && (
+        <Box sx={{ mt: { xs: 2, sm: 0 } }} data-testid="page-header-actions">
+          {actions}
+        </Box>
+      )}
     </Box>
   )
 }

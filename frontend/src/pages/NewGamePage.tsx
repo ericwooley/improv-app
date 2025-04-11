@@ -36,7 +36,7 @@ const NewGamePage = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3 }} data-testid="new-game-page">
       <Breadcrumb
         items={[
           { label: 'Groups', to: '/groups' },
@@ -46,7 +46,7 @@ const NewGamePage = () => {
 
       <PageHeader title="Create New Game" subtitle="Add a new game to your group's library" />
 
-      <Card>
+      <Card data-testid="new-game-page-form-card">
         <CardContent>
           <GameForm
             initialData={initialData}

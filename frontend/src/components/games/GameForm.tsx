@@ -80,10 +80,10 @@ const GameForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} data-testid="game-form">
       <Stack spacing={3}>
         {error ? (
-          <Alert severity="error">
+          <Alert severity="error" data-testid="game-form-error-alert">
             {error instanceof Error
               ? error.message
               : typeof error === 'object' && error !== null && 'message' in error
@@ -94,7 +94,15 @@ const GameForm = ({
           ''
         )}
 
-        <TextField required label="Game Name" name="name" value={formData.name} onChange={handleChange} fullWidth />
+        <TextField
+          required
+          label="Game Name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          fullWidth
+          data-testid="game-form-name-input"
+        />
 
         <TextField
           required
@@ -105,6 +113,7 @@ const GameForm = ({
           multiline
           rows={4}
           fullWidth
+          data-testid="game-form-description-input"
         />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -116,6 +125,7 @@ const GameForm = ({
             value={formData.minPlayers}
             onChange={handleChange}
             inputProps={{ min: 1 }}
+            data-testid="game-form-min-players-input"
           />
 
           <TextField
@@ -126,6 +136,7 @@ const GameForm = ({
             value={formData.maxPlayers}
             onChange={handleChange}
             inputProps={{ min: formData.minPlayers }}
+            data-testid="game-form-max-players-input"
           />
         </Box>
 
@@ -135,6 +146,7 @@ const GameForm = ({
           loading={tagsLoading}
           value={formData.tags}
           onChange={handleTagsChange}
+          data-testid="game-form-tags-input"
           renderTags={(value, getTagProps) =>
             value.map((option, index) => {
               const tagProps = getTagProps({ index })
@@ -162,7 +174,15 @@ const GameForm = ({
         />
 
         <FormControlLabel
-          control={<Switch checked={formData.public} onChange={handleChange} name="public" color="primary" />}
+          control={
+            <Switch
+              checked={formData.public}
+              onChange={handleChange}
+              name="public"
+              color="primary"
+              data-testid="game-form-public-switch"
+            />
+          }
           label={
             <Box>
               <Box component="span" sx={{ fontWeight: 'medium' }}>
@@ -178,14 +198,19 @@ const GameForm = ({
         />
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-          <Button variant="outlined" onClick={() => navigate(cancelUrl)} disabled={isLoading}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(cancelUrl)}
+            disabled={isLoading}
+            data-testid="game-form-cancel-button">
             Cancel
           </Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} /> : null}>
+            startIcon={isLoading ? <CircularProgress size={20} /> : null}
+            data-testid="game-form-submit-button">
             {submitButtonText}
           </Button>
         </Box>
