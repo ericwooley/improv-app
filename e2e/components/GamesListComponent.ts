@@ -70,16 +70,6 @@ export class GamesListComponent {
    */
   async getGameCard(gameId: string) {
     await this.page.waitForLoadState('networkidle')
-    const gameLocator = this.page.locator(`[data-testid="game-card-${gameId}"]`)
-    try {
-      await gameLocator.scrollIntoViewIfNeeded()
-    } catch (error) {
-      // wait 500ms for animations and such
-      await this.page.waitForSelector('[data-testid="game-card-${gameId}"]', { timeout: 1000, state: 'visible' })
-      await gameLocator.scrollIntoViewIfNeeded()
-    }
-    // wait for network state
-    await this.page.waitForLoadState('networkidle')
     return new GameCardComponent(this.page, gameId)
   }
 
@@ -134,7 +124,6 @@ export class GamesListComponent {
    * Add a game to the event (if add button is present)
    */
   async addGameToEvent(gameId: string) {
-    const gameCard = await this.getGameCard(gameId)
     const addButton = this.page.locator(`[data-testid="game-card-${gameId}"] [data-testid="game-card-add-button"]`)
     await addButton.click()
   }
@@ -369,13 +358,10 @@ export class GamesListComponent {
    * Wait for the games list to load
    */
   async waitForList() {
+    await this.page.waitForLoadState('networkidle')
     await this.page.waitForSelector(
       '[data-testid="games-list-container"], [data-testid="games-list-loading"], [data-testid="empty-state"]'
     )
-
-    // Wait for any loading state to disappear
-    if (await this.isLoading()) {
-      await this.page.waitForSelector('[data-testid="games-list-loading"]', { state: 'hidden' })
-    }
+    await this.page.waitForTimeout(1000) // wait for animations to finish
   }
 }

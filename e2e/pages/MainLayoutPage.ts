@@ -8,6 +8,8 @@ export class MainLayoutPage extends BasePage {
   private readonly navMenuListSelector = '[data-testid="nav-menu-list"]'
   private readonly logoutButtonSelector = '[data-testid="logout-button"]'
   private readonly mobileMenuToggleSelector = '[data-testid="mobile-menu-toggle"]'
+  private readonly profileCompletionBannerSelector = '[data-testid="profile-completion-banner"]'
+  private readonly completeProfileButtonSelector = '[data-testid="complete-profile-button"]'
 
   // Get selector for a specific nav item
   private getNavItemSelector(itemName: string) {
@@ -61,6 +63,16 @@ export class MainLayoutPage extends BasePage {
     await this.page.waitForLoadState('networkidle')
   }
 
+  // Profile completion banner methods
+  async isProfileCompletionBannerVisible() {
+    return await this.isVisible(this.profileCompletionBannerSelector)
+  }
+
+  async clickCompleteProfileButton() {
+    await this.page.click(this.completeProfileButtonSelector)
+    await this.page.waitForURL(/profile/)
+  }
+
   // Logout
   async logout() {
     // Check if we can see the logout button directly (desktop)
@@ -91,6 +103,10 @@ export class MainLayoutPage extends BasePage {
     } catch (error) {
       return false
     }
+  }
+
+  async needsProfileCompletion() {
+    return await this.isVisible(this.profileCompletionBannerSelector)
   }
 
   async isNavMenuVisible() {

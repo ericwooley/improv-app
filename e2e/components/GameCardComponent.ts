@@ -11,6 +11,12 @@ export class GameCardComponent {
     this.gameId = gameId
     this.container = page.locator(`[data-testid="game-card-${this.gameId}"]`)
   }
+  async scrollIntoView() {
+    await this.page.waitForSelector(`[data-testid="game-card-${this.gameId}"]`, { timeout: 300, state: 'attached' })
+    await this.page.waitForLoadState('networkidle')
+    await this.container.scrollIntoViewIfNeeded()
+    await this.page.waitForLoadState('networkidle')
+  }
   async isVisible() {
     return await this.container.isVisible()
   }
@@ -37,7 +43,9 @@ export class GameCardComponent {
   }
 
   async clickViewButton() {
-    await this.container.locator('[data-testid="game-card-view-button"]').click()
+    const button = await this.container.locator('[data-testid="game-card-view-button"]')
+    await button.scrollIntoViewIfNeeded()
+    await button.click()
   }
 
   async setGameStatus(status: string) {

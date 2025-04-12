@@ -169,7 +169,9 @@ export async function createTestGame(
 
   // Submit the form
   await newGamePage.submitGameForm()
-
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(100) // redirects might take place here
+  await page.waitForLoadState('networkidle')
   // Extract the game ID from the URL
   const url = page.url()
   const match = url.match(/\/games\/(.*)/)

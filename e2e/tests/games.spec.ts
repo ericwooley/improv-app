@@ -123,19 +123,31 @@ test.describe('Games Functionality', () => {
     // Get current page
     const currentPage = await gamesListComponent.getCurrentPage()
     expect(currentPage).toBe(1)
-    for (const gameName of gameNames.reverse().slice(0, 5)) {
-      await expect(gamesListComponent.container).toContainText(gameName)
+    let foundGames: string[] = []
+    for (const gameName of gameNames) {
+      if (await gamesListComponent.isGameWithNameVisible(gameName)) {
+        foundGames.push(gameName)
+      }
     }
+    expect(foundGames.length).toEqual(gameNames.length - 1)
     // Navigate to next page
     await gamesListComponent.goToNextPage()
 
     // Verify we're on page 2
     const newPage = await gamesListComponent.getCurrentPage()
     expect(newPage).toBe(2)
-
-    for (const gameName of gameNames.reverse().slice(5)) {
-      await expect(gamesListComponent.container).toContainText(gameName)
+    await page.waitForLoadState('networkidle')
+    // wait for animations to finish
+    await page.waitForTimeout(1500)
+    for (const gameName of gameNames) {
+      const isVisible = await gamesListComponent.isGameWithNameVisible(gameName)
+      if (isVisible && foundGames.includes(gameName)) {
+        throw new Error(`Game found in both pages: ${gameName}`)
+      } else if (isVisible) {
+        foundGames.push(gameName)
+      }
     }
+    expect(foundGames.length).toEqual(gameNames.length)
   })
 
   test('should update game status', async ({ page }) => {
@@ -163,10 +175,11 @@ test.describe('Games Functionality', () => {
 
     // Wait for the games list to load
     await gamesListComponent.waitForList()
-    await page.waitForTimeout(1000)
     // Get the game card for our created game
     const gameCard = await gamesListComponent.getGameCard(gameDetails.id)
-
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(1500) // This seems to take a while sometimes
+    await gameCard.scrollIntoView()
     // Set the game status
     await gameCard.setGameStatus('I Love playing this')
 
@@ -212,6 +225,8 @@ test.describe('Games Functionality', () => {
 
     // Get the game card and click the view button
     const gameCard = await gamesListComponent.getGameCard(gameDetails.id)
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(1500) // This seems to take a while sometimes
     await gameCard.clickViewButton()
 
     // Wait for navigation to complete

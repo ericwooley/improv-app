@@ -118,7 +118,9 @@ test.describe('Login Page', () => {
     }
   })
 
-  test('should redirect to profile page on first login and home page on subsequent logins', async ({ page }) => {
+  test('should show profile completion banner on first login and the home page on subsequent logins', async ({
+    page,
+  }) => {
     // Create unique email for this test
     const uniqueEmail = generateUniqueEmail()
 
@@ -141,7 +143,18 @@ test.describe('Login Page', () => {
     // Click the magic link (first time login)
     await page.goto(magicLink)
 
-    // Should redirect to profile page for first-time login
+    // Should be redirected to home page with profile completion banner
+    await page.waitForLoadState('networkidle')
+    const mainLayoutPage = new MainLayoutPage(page)
+    await expect(page).toHaveURL('/')
+
+    // Verify profile completion banner is visible
+    expect(await mainLayoutPage.isProfileCompletionBannerVisible()).toBeTruthy()
+
+    // Click on the complete profile button
+    await mainLayoutPage.clickCompleteProfileButton()
+
+    // Should now be on profile page
     const profilePage = new ProfilePage(page)
     await expect(page).toHaveURL(/.*profile/)
 
@@ -150,7 +163,6 @@ test.describe('Login Page', () => {
     await profilePage.clickUpdate()
 
     // Log out using MainLayoutPage
-    const mainLayoutPage = new MainLayoutPage(page)
     await mainLayoutPage.logout()
 
     // Delete the first email message to ensure we don't pick it up in the next step
@@ -178,7 +190,6 @@ test.describe('Login Page', () => {
 
     // Add explicit waiting for navigation to complete and page to stabilize
     await page.waitForLoadState('networkidle')
-    // await page.waitForTimeout(1000) // Give the UI a moment to render
 
     // Should redirect to home page for returning user
     const homePage = new HomePage(page)
@@ -187,6 +198,9 @@ test.describe('Login Page', () => {
     // Verify we're on the home page using MainLayoutPage to check
     const mainLayoutForSecondLogin = new MainLayoutPage(page)
     expect(await mainLayoutForSecondLogin.isOnPage('home')).toBeTruthy()
+
+    // Profile completion banner should NOT be visible
+    expect(await mainLayoutForSecondLogin.isProfileCompletionBannerVisible()).toBeFalsy()
 
     // Add retry logic for authentication check to handle potential race conditions
     let isAuthenticated = false
