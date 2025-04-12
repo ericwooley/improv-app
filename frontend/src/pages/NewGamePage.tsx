@@ -28,8 +28,8 @@ const NewGamePage = () => {
         ...formData,
         tags: formData.tags.join(','),
       }
-      await createGame(payload).unwrap()
-      navigate(`/groups/${groupId}`)
+      const result = await createGame(payload).unwrap()
+      navigate(`/games/${result.data.id}`)
     } catch (err) {
       console.error('Failed to create game:', err)
     }

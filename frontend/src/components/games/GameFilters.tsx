@@ -20,7 +20,7 @@ export const GameFilters = ({ selectedTag, onTagChange }: GameFiltersProps) => {
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
+    <Paper variant="outlined" sx={{ p: 2, mb: 3 }} data-testid="game-filters-container">
       <FormControl fullWidth>
         <InputLabel id="tag-select-label">Filter by tag</InputLabel>
         <Select
@@ -28,9 +28,13 @@ export const GameFilters = ({ selectedTag, onTagChange }: GameFiltersProps) => {
           id="tag-select"
           value={selectedTag}
           label="Filter by tag"
-          onChange={handleTagChange}>
+          onChange={handleTagChange}
+          data-testid="game-filters-tag-select">
           {allTags.map((tag) => (
-            <MenuItem key={tag} value={tag}>
+            <MenuItem
+              key={tag}
+              value={tag}
+              data-testid={`game-filters-tag-option-${tag.toLowerCase().replace(/\s+/g, '-')}`}>
               {tag}
             </MenuItem>
           ))}

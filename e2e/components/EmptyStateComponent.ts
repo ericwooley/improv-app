@@ -1,55 +1,49 @@
-import { Page } from '@playwright/test'
+import { Page, Locator } from '@playwright/test'
 
 export class EmptyStateComponent {
   private page: Page
+  private container: Locator
 
   constructor(page: Page) {
     this.page = page
+    this.container = page.locator('[data-testid="empty-state"]')
   }
 
   /**
    * Check if the empty state is visible
    */
   async isVisible() {
-    const paper = this.page.locator('div[class*="MuiPaper-root"]').filter({
-      hasText: /You haven't created any|No items found/,
-    })
-    return await paper.isVisible()
+    return await this.container.isVisible()
   }
 
   /**
-   * Get the message displayed in the empty state
+   * Get the empty state message
    */
   async getMessage() {
-    const paper = this.page.locator('div[class*="MuiPaper-root"]').filter({
-      hasText: /You haven't created any|No items found/,
-    })
-
-    const message = await paper.locator('p').first().textContent()
-    return message
+    const messageElement = this.container.locator('[data-testid="empty-state-message"]')
+    return await messageElement.textContent()
   }
 
   /**
-   * Click the action button in the empty state
+   * Check if the empty state has an action button
    */
-  async clickActionButton() {
-    const paper = this.page.locator('div[class*="MuiPaper-root"]').filter({
-      hasText: /You haven't created any|No items found/,
-    })
-
-    await paper.locator('button').click()
+  async hasActionButton() {
+    return await this.container.locator('[data-testid="empty-state-action"]').isVisible()
   }
 
   /**
    * Get the action button text
    */
   async getActionButtonText() {
-    const paper = this.page.locator('div[class*="MuiPaper-root"]').filter({
-      hasText: /You haven't created any|No items found/,
-    })
+    const actionButton = this.container.locator('[data-testid="empty-state-action"]')
+    return await actionButton.textContent()
+  }
 
-    const buttonText = await paper.locator('button').textContent()
-    return buttonText
+  /**
+   * Click the action button
+   */
+  async clickActionButton() {
+    await this.container.locator('[data-testid="empty-state-action"]').click()
   }
 
   /**

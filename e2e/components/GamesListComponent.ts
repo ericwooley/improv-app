@@ -4,7 +4,7 @@ import { EmptyStateComponent } from './EmptyStateComponent'
 
 export class GamesListComponent {
   private page: Page
-  private container: Locator
+  public container: Locator
   private gridContainer: Locator
   private paginationContainer: Locator
 
@@ -68,23 +68,55 @@ export class GamesListComponent {
   /**
    * Get a game card by its ID
    */
-  getGameCard(gameId: string) {
+  async getGameCard(gameId: string) {
+    await this.page.waitForLoadState('networkidle')
     const gameLocator = this.page.locator(`[data-testid="game-card-${gameId}"]`)
-    return new GameCardComponent(this.page, gameLocator)
+    try {
+      await gameLocator.scrollIntoViewIfNeeded()
+    } catch (error) {
+      // wait 500ms for animations and such
+      await this.page.waitForTimeout(500)
+      await gameLocator.scrollIntoViewIfNeeded()
+    }
+    // wait for network state
+    await this.page.waitForLoadState('networkidle')
+    return new GameCardComponent(this.page, gameId)
+  }
+
+  /**
+   * Check if a game with the specific name is visible
+   */
+  async isGameWithNameVisible(name: string) {
+    // Look through all game cards to find one with this name
+    const gameCards = await this.getAllGameCards()
+    for (const card of gameCards) {
+      const gameName = await card.getGameName()
+      if (gameName === name) {
+        return true
+      }
+    }
+    return false
   }
 
   /**
    * Get all game cards
    */
   async getAllGameCards() {
-    const gameItems = await this.page.locator('[data-testid^="games-list-item-"]').all()
+    // First check how many game cards are on the page
+    const count = await this.page.locator('[data-testid^="games-list-item-"]').count()
     const gameCards: GameCardComponent[] = []
 
-    for (const item of gameItems) {
-      const gameId = await item.getAttribute('data-testid')
-      if (gameId) {
-        const id = gameId.replace('games-list-item-', '')
-        gameCards.push(this.getGameCard(id))
+    // Iterate through each index to get individual game cards
+    for (let i = 0; i < count; i++) {
+      // Get the game item at index i
+      const item = this.page.locator('[data-testid^="games-list-item-"]').nth(i)
+
+      // Get the testid attribute to extract the game ID
+      const testId = await item.getAttribute('data-testid')
+      if (testId) {
+        const gameId = testId.replace('games-list-item-', '')
+
+        gameCards.push(new GameCardComponent(this.page, gameId))
       }
     }
 
@@ -102,9 +134,152 @@ export class GamesListComponent {
    * Add a game to the event (if add button is present)
    */
   async addGameToEvent(gameId: string) {
-    const gameCard = this.getGameCard(gameId)
+    const gameCard = await this.getGameCard(gameId)
     const addButton = this.page.locator(`[data-testid="game-card-${gameId}"] [data-testid="game-card-add-button"]`)
     await addButton.click()
+  }
+
+  /**
+   * View a game's details by clicking the view button
+   */
+  async viewGame(gameId: string) {
+    const viewButton = this.page.locator(`[data-testid="game-card-${gameId}"] [data-testid="game-card-view-button"]`)
+    await viewButton.click()
+  }
+
+  /**
+   * Set a game's status
+   */
+  async setGameStatus(gameId: string, status: string) {
+    // Format the status for the selector
+    const formattedStatus = status.toLowerCase().replace(/\s+/g, '-')
+
+    // Click on the status dropdown for this game
+    await this.page.locator(`[data-testid="game-card-${gameId}"] [data-testid="game-card-status-select"]`).click()
+
+    // Select the specified status
+    await this.page.locator(`[data-testid="game-card-status-option-${formattedStatus}"]`).click()
+
+    // Wait for the change to be applied
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  /**
+   * Get a game's current status
+   */
+  async getGameStatus(gameId: string) {
+    const statusInput = this.page.locator(
+      `[data-testid="game-card-${gameId}"] [data-testid="game-card-status-select"] input`
+    )
+    return await statusInput.inputValue()
+  }
+
+  /**
+   * Select a tag filter
+   */
+  async selectTagFilter(tag: string) {
+    // Format tag for selectors
+    const formattedTag = tag.toLowerCase().replace(/\s+/g, '-')
+
+    try {
+      // Try multiple approaches to find the tag
+
+      // Method 1: Try with data-testid
+      const tagFilterTestId = `[data-testid="filter-tag-${formattedTag}"]`
+      const hasSpecificTestId = await this.page
+        .locator(tagFilterTestId)
+        .isVisible()
+        .catch(() => false)
+
+      if (hasSpecificTestId) {
+        // If found with test ID, click it
+        await this.page.locator(tagFilterTestId).click()
+      } else {
+        // Method 2: Try to find by its text content in a chip/tag component
+        const tagChip = this.page.locator('.MuiChip-root').filter({ hasText: tag }).first()
+
+        if (await tagChip.isVisible()) {
+          await tagChip.click()
+        } else {
+          // Method 3: Look for a filter dropdown if it exists
+          const filterDropdown = this.page
+            .locator('[data-testid="tag-filter-dropdown"], [aria-label="Filter by tag"]')
+            .first()
+
+          if (await filterDropdown.isVisible()) {
+            await filterDropdown.click()
+
+            // Wait for dropdown menu to appear
+            await this.page.waitForTimeout(300)
+
+            // Try to find and click the tag in the dropdown
+            const dropdownItem = this.page.locator('li').filter({ hasText: tag }).first()
+            if (await dropdownItem.isVisible()) {
+              await dropdownItem.click()
+            } else {
+              throw new Error(`Tag "${tag}" not found in filter dropdown`)
+            }
+          } else {
+            throw new Error(`Could not find tag filter for "${tag}"`)
+          }
+        }
+      }
+
+      // Wait for filter to be applied
+      await this.page.waitForLoadState('networkidle')
+
+      // Verify the filter was applied by checking for an active/selected state
+      const isFilterApplied = await this.verifyTagFilterApplied(tag, formattedTag)
+
+      if (!isFilterApplied) {
+        console.log(`Warning: Tag filter for "${tag}" might not have been applied successfully`)
+      }
+    } catch (error) {
+      console.error(`Error applying tag filter "${tag}": ${error}`)
+      throw new Error(`Failed to apply tag filter "${tag}": ${error}`)
+    }
+  }
+
+  /**
+   * Verify that a tag filter has been applied
+   */
+  private async verifyTagFilterApplied(tag: string, formattedTag: string): Promise<boolean> {
+    try {
+      // Try various methods to confirm the filter is active
+
+      // Method 1: Check for selected/active state in the tag filter element
+      const activeTagSelector = `[data-testid="filter-tag-${formattedTag}-active"], [data-testid="filter-tag-${formattedTag}"][data-selected="true"]`
+      const isActiveTagVisible = await this.page
+        .locator(activeTagSelector)
+        .isVisible()
+        .catch(() => false)
+
+      if (isActiveTagVisible) {
+        return true
+      }
+
+      // Method 2: Check URL parameters for tag filter
+      const url = this.page.url()
+      if (url.includes(`tag=${encodeURIComponent(tag)}`) || url.includes(`tag=${encodeURIComponent(formattedTag)}`)) {
+        return true
+      }
+
+      // Method 3: Check if any chip has a selected appearance
+      const selectedChip = this.page
+        .locator('.MuiChip-root.Mui-selected, .MuiChip-root[aria-selected="true"]')
+        .filter({ hasText: tag })
+        .first()
+
+      if (await selectedChip.isVisible()) {
+        return true
+      }
+
+      // If we can't positively verify the filter is applied, return false
+      return false
+    } catch (error) {
+      console.log(`Error verifying tag filter: ${error}`)
+      return false
+    }
   }
 
   /**

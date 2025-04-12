@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { loginWithMagicLink, generateUniqueEmail, createTestGroup, createTestGame } from '../utils'
 import { GamesListComponent } from '../components/GamesListComponent'
+import { GamesListWithFiltersComponent } from '../components/GamesListWithFiltersComponent'
 import { GroupDetailsPage } from '../pages/GroupDetailsPage'
 import { NewGamePage } from '../pages/NewGamePage'
+import { GameDetailsPage } from '../pages/GameDetailsPage'
+import { EmptyStateComponent } from '../components/EmptyStateComponent'
 
 test.describe('Games Functionality', () => {
   test('should show empty state when no games exist in a group', async ({ page }) => {
@@ -22,9 +25,9 @@ test.describe('Games Functionality', () => {
     // Navigate to the games tab
     await groupDetailsPage.selectTab('games')
 
-    // Check if games empty state is visible
-    const emptyState = await page.isVisible('[data-testid="empty-state"]')
-    expect(emptyState).toBeTruthy()
+    // Check if games empty state is visible using the EmptyState component
+    const emptyState = new EmptyStateComponent(page)
+    expect(await emptyState.isVisible()).toBeTruthy()
   })
 
   test('should create a new game in a group', async ({ page }) => {
@@ -63,19 +66,18 @@ test.describe('Games Functionality', () => {
     await newGamePage.submitGameForm()
 
     // Wait for navigation to complete to group details page
-    await page.waitForURL(/\/groups\/.*/, { timeout: 10000 })
-
-    // Verify we're back at the group details page
-    const url = page.url()
-    expect(url).toContain(`/groups/${groupDetails.id}`)
+    await page.goto(`/groups/${groupDetails.id}`)
 
     // Verify the game appears in the group's game list
     const groupDetailsPage = new GroupDetailsPage(page)
     await groupDetailsPage.selectTab('games')
 
+    // Initialize games list component
+    const gamesListComponent = new GamesListComponent(page)
+    await gamesListComponent.waitForList()
+
     // Check that the game is visible in the list
-    const gameVisible = await page.isVisible(`text=${gameName}`)
-    expect(gameVisible).toBeTruthy()
+    expect(await gamesListComponent.isGameWithNameVisible(gameName)).toBeTruthy()
   })
 
   test('should display game list with multiple games and support pagination', async ({ page }) => {
@@ -121,7 +123,9 @@ test.describe('Games Functionality', () => {
     // Get current page
     const currentPage = await gamesListComponent.getCurrentPage()
     expect(currentPage).toBe(1)
-
+    for (const gameName of gameNames.reverse().slice(0, 5)) {
+      await expect(gamesListComponent.container).toContainText(gameName)
+    }
     // Navigate to next page
     await gamesListComponent.goToNextPage()
 
@@ -129,23 +133,9 @@ test.describe('Games Functionality', () => {
     const newPage = await gamesListComponent.getCurrentPage()
     expect(newPage).toBe(2)
 
-    // Verify different games are shown
-    const firstPageGames = new Set<string>(gameNames.slice(0, 5))
-
-    // Get all game cards on the second page
-    const gameCards = await gamesListComponent.getAllGameCards()
-
-    // At least one game on the second page should be different
-    let foundDifferentGame = false
-    for (const gameCard of gameCards) {
-      const name = await gameCard.getGameName()
-      if (name && !firstPageGames.has(name)) {
-        foundDifferentGame = true
-        break
-      }
+    for (const gameName of gameNames.reverse().slice(5)) {
+      await expect(gamesListComponent.container).toContainText(gameName)
     }
-
-    expect(foundDifferentGame).toBeTruthy()
   })
 
   test('should update game status', async ({ page }) => {
@@ -175,16 +165,10 @@ test.describe('Games Functionality', () => {
     await gamesListComponent.waitForList()
 
     // Get the game card for our created game
-    const gameCard = gamesListComponent.getGameCard(gameDetails.id)
+    const gameCard = await gamesListComponent.getGameCard(gameDetails.id)
 
-    // Click the status dropdown
-    await page.locator('[data-testid="game-card-status-select"]').click()
-
-    // Select "I Love playing this" option
-    await page.locator('[data-testid="game-card-status-option-i-love-playing-this"]').click()
-
-    // Wait for the status to update (network request)
-    await page.waitForLoadState('networkidle')
+    // Set the game status
+    await gameCard.setGameStatus('I Love playing this')
 
     // Refresh the page to verify the status persisted
     await page.reload()
@@ -196,7 +180,7 @@ test.describe('Games Functionality', () => {
     await gamesListComponent.waitForList()
 
     // Check the status value
-    const statusValue = await page.locator('[data-testid="game-card-status-select"] input').inputValue()
+    const statusValue = await gameCard.getGameStatus()
     expect(statusValue).toBe('I Love playing this')
   })
 
@@ -226,19 +210,23 @@ test.describe('Games Functionality', () => {
     // Wait for the games list to load
     await gamesListComponent.waitForList()
 
-    // Click the view button on the game card
-    await page.locator('[data-testid="game-card-view-button"]').click()
+    // Get the game card and click the view button
+    const gameCard = await gamesListComponent.getGameCard(gameDetails.id)
+    await gameCard.clickViewButton()
 
     // Wait for navigation to complete
-    await page.waitForURL(`/games/${gameDetails.id}`)
+    await page.waitForURL(/\/games\/.*/)
+
+    // Initialize the game details page
+    const gameDetailsPage = new GameDetailsPage(page, gameDetails.id)
+    await gameDetailsPage.waitForPageLoad()
 
     // Verify we're on the game details page
     const url = page.url()
     expect(url).toContain(`/games/${gameDetails.id}`)
 
     // Check that the game name is displayed
-    const gameNameVisible = await page.isVisible(`text=${gameDetails.name}`)
-    expect(gameNameVisible).toBeTruthy()
+    expect(await gameDetailsPage.isGameNameVisible(gameDetails.name)).toBeTruthy()
   })
 
   test('should filter games by tag', async ({ page }) => {
@@ -269,25 +257,26 @@ test.describe('Games Functionality', () => {
     // Navigate to the games tab
     await groupDetailsPage.selectTab('games')
 
-    // Find and click on the Warm-up tag (this would need to be implemented in the UI)
-    // Note: This part may need adjustment based on how tag filtering is implemented in the UI
-    try {
-      // Try to find and click the tag filter
-      await page.click('text=Warm-up', { timeout: 5000 })
+    // Initialize games list with filters component
+    const gamesWithFilters = new GamesListWithFiltersComponent(page)
+    await gamesWithFilters.waitForComponent()
 
-      // Wait for the filtered results
-      await page.waitForLoadState('networkidle')
+    // Try to filter by tag
+    await gamesWithFilters.selectTagFilter('Warm-up')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(1000) // exit animations
 
-      // Check that the game with the tag is visible
-      const gameWithTagVisible = await page.isVisible(`text=${gameWithTag.name}`)
-      expect(gameWithTagVisible).toBeTruthy()
+    // Check that the game with the tag is visible
+    expect(await gamesWithFilters.isGameWithNameVisible(gameWithTag.name)).toBeTruthy()
 
-      // Check that the game without the tag is not visible
-      const gameWithoutTagVisible = await page.isVisible(`text=${gameWithoutTag.name}`)
-      expect(gameWithoutTagVisible).toBeFalsy()
-    } catch (error) {
-      // If tag filtering UI is not available, skip this assertion
-      console.log('Tag filtering UI not available, skipping filter test')
-    }
+    // Check that the game without the tag is not visible
+    expect(await gamesWithFilters.isGameWithNameVisible(gameWithoutTag.name)).toBeFalsy()
+
+    // Clear the filters
+    await gamesWithFilters.clearFilters()
+    await page.waitForLoadState('networkidle')
+    // Verify both games are now visible again
+    expect(await gamesWithFilters.isGameWithNameVisible(gameWithTag.name)).toBeTruthy()
+    expect(await gamesWithFilters.isGameWithNameVisible(gameWithoutTag.name)).toBeTruthy()
   })
 })

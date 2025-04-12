@@ -61,7 +61,10 @@ export class HomePage extends BasePage {
       for (let i = 0; i < gameElements.length; i++) {
         // Create a locator for each game card
         const gameLocator = this.page.locator('[data-unrated-games-list="true"] > div').nth(i)
-        this.unratedGamesList.push(new GameCardComponent(this.page, gameLocator))
+        const gameId = await gameLocator.getAttribute('data-testid')
+        if (gameId) {
+          this.unratedGamesList.push(new GameCardComponent(this.page, gameId))
+        }
       }
     }
     return this.unratedGamesList

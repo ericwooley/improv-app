@@ -161,9 +161,6 @@ export async function createTestGame(
   // Submit the form
   await newGamePage.submitGameForm()
 
-  // Wait for navigation to complete
-  await page.waitForURL(/\/groups\/.*/, { timeout: 10000 })
-
   // Extract the game ID from the URL
   const url = page.url()
   const match = url.match(/\/games\/(.*)/)
