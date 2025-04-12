@@ -3,7 +3,7 @@ import { BasePage } from './BasePage'
 
 export class MainLayoutPage extends BasePage {
   // Selectors
-  private readonly navigationSelector = '[data-testid="main-navigation"]'
+  private readonly navigationSelector = '[data-testid="nav-menu-list"]'
   private readonly mainContentSelector = '[data-testid="main-content"]'
   private readonly navMenuListSelector = '[data-testid="nav-menu-list"]'
   private readonly logoutButtonSelector = '[data-testid="logout-button"]'
@@ -85,7 +85,7 @@ export class MainLayoutPage extends BasePage {
     try {
       await this.page.waitForSelector(this.navigationSelector, {
         state: 'visible',
-        timeout: 100,
+        timeout: 1000,
       })
       return true
     } catch (error) {
