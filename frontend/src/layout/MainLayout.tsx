@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { clearCredentials } from '../store/slices/authSlice'
-import { useProfileCompletion } from '../hooks/useProfileCompletion'
+import { useIsAuthenticated } from '../hooks/useProfileCompletion'
 import { useLogoutMutation } from '../store/api/authApi'
 import {
   Box,
@@ -19,6 +19,7 @@ import {
   useTheme,
   useMediaQuery,
   Divider,
+  Paper,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
@@ -38,7 +39,7 @@ const drawerWidth = 250
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const { isAuthenticated, isLoading, needsToCompleteProfile } = useProfileCompletion()
+  const { isAuthenticated, isLoading, needsToCompleteProfile } = useIsAuthenticated()
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
@@ -120,13 +121,107 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // If user needs to complete profile, show profile page
   if (needsToCompleteProfile) {
-    // Simplified layout for incomplete profile
     return (
-      <Box sx={{ p: 3, maxWidth: 1200, margin: '0 auto', minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Typography variant="body1" sx={{ mb: 3 }}>
-          We need your first and last name to continue. Please update your profile.
-        </Typography>
-        {children}
+      <Box sx={{ display: 'flex', minHeight: '100vh' }} data-testid="main-navigation">
+        {isMobile && (
+          <AppBar
+            position="fixed"
+            sx={{
+              width: { md: `calc(100% - ${drawerWidth}px)` },
+              ml: { md: `${drawerWidth}px` },
+              bgcolor: 'secondary.main',
+            }}>
+            <Toolbar>
+              <IconButton
+                color="inherit"
+                edge="start"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                sx={{ mr: 2 }}
+                data-testid="mobile-menu-toggle">
+                <MenuIcon />
+              </IconButton>
+              <Box sx={{ flexGrow: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <img src="/logo.png" alt="ImprovHQ" style={{ width: 32, height: 32 }} />
+                <Typography variant="h6" noWrap component="div">
+                  ImprovHQ
+                </Typography>
+              </Box>
+            </Toolbar>
+          </AppBar>
+        )}
+
+        <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
+          {isMobile ? (
+            <Drawer
+              variant="temporary"
+              open={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              ModalProps={{
+                keepMounted: true, // Better open performance on mobile.
+              }}
+              sx={{
+                display: { xs: 'block', md: 'none' },
+                '& .MuiDrawer-paper': {
+                  boxSizing: 'border-box',
+                  width: drawerWidth,
+                  bgcolor: 'secondary.main',
+                },
+              }}>
+              {drawer}
+            </Drawer>
+          ) : (
+            <Drawer
+              variant="permanent"
+              sx={{
+                display: { xs: 'none', md: 'block' },
+                '& .MuiDrawer-paper': {
+                  boxSizing: 'border-box',
+                  width: drawerWidth,
+                  bgcolor: 'secondary.main',
+                },
+              }}
+              open>
+              {drawer}
+            </Drawer>
+          )}
+        </Box>
+
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            width: { md: `calc(100% - ${drawerWidth}px)` },
+            mt: { xs: '64px', md: 0 },
+            bgcolor: 'background.default',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          data-testid="main-content">
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              bgcolor: 'warning.light',
+              borderRadius: 0,
+            }}
+            data-testid="profile-completion-banner">
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="body1">
+                Please complete your profile with your first and last name to continue.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                component={Link}
+                to="/profile"
+                data-testid="complete-profile-button">
+                Complete Profile
+              </Button>
+            </Box>
+          </Paper>
+          <Box sx={{ p: 3 }}>{children}</Box>
+        </Box>
       </Box>
     )
   }

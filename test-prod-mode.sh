@@ -1,7 +1,7 @@
 docker compose up -d
 tag=$(git rev-parse --short HEAD)
 docker build . -t improv-app:${tag}
-docker run -p 4080:4080\
+docker run -p 4081:4080\
   --network=improv-hq_default \
   --volume $(pwd)/docker-data:/app/data \
   --rm \
@@ -16,6 +16,6 @@ docker run -p 4080:4080\
   -e SMTP_FROM_NAME=Test \
   -e SMTP_AUTH_METHOD=none \
   -e PORT=4080 \
-  -e FRONTEND_URL=http://127.0.0.1:4080 \
-  -e BASE_URL=http://127.0.0.1:4080 \
+  -e FRONTEND_URL=http://localhost:4081 \
+  -e BASE_URL=http://localhost:4081 \
   improv-app:${tag}

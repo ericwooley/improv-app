@@ -5,6 +5,7 @@ import sqlite3 from 'sqlite3'
 import path from 'path'
 import { NewGroupPage } from './pages/NewGroupPage'
 import { NewGamePage } from './pages/NewGamePage'
+import { ProfilePage } from './pages/ProfilePage'
 
 /**
  * Generates a unique email address for testing
@@ -43,18 +44,24 @@ export async function addProfileToDB(
   } = {}
 ): Promise<void> {
   const sqlClient = new sqlite3.Database(path.resolve(__dirname, process.env.DATABASE_URL || ''))
-  await new Promise((resolve, reject) =>
-    sqlClient.run(
-      `
+  try {
+    await new Promise((resolve, reject) =>
+      sqlClient.run(
+        `
     update users set first_name = ?, last_name = ? where email = ?
   `,
-      [firstName, lastName, email],
-      (err) => {
-        if (err) reject(err)
-        else resolve(true)
-      }
+        [firstName, lastName, email],
+        (err) => {
+          if (err) reject(err)
+          else resolve(true)
+        }
+      )
     )
-  )
+  } catch (e) {
+    console.error('Error adding profile to DB', e)
+  } finally {
+    sqlClient.close()
+  }
 }
 
 /**
@@ -81,11 +88,6 @@ export async function loginWithMagicLink(
   if (!emailMessage) {
     throw new Error('Login email not received')
   }
-
-  if (setupProfileWithSQL) {
-    await addProfileToDB(testEmail)
-  }
-
   // Extract and use the magic link
   const magicLink = await extractMagicLinkFromEmail(mailpitClient, emailMessage.ID)
   if (deleteEmail) {
@@ -93,6 +95,13 @@ export async function loginWithMagicLink(
   }
 
   await page.goto(magicLink)
+  await page.waitForLoadState('networkidle')
+  if (page.url().includes('/profile')) {
+    const profilePage = new ProfilePage(page)
+    const emailParts = testEmail.split(/@|\.|/)
+    await profilePage.fillForm(emailParts[0], emailParts[1])
+    await profilePage.clickUpdate()
+  }
 }
 
 /**

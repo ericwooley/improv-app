@@ -163,7 +163,7 @@ test.describe('Games Functionality', () => {
 
     // Wait for the games list to load
     await gamesListComponent.waitForList()
-
+    await page.waitForTimeout(1000)
     // Get the game card for our created game
     const gameCard = await gamesListComponent.getGameCard(gameDetails.id)
 

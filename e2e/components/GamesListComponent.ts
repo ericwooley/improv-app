@@ -75,7 +75,7 @@ export class GamesListComponent {
       await gameLocator.scrollIntoViewIfNeeded()
     } catch (error) {
       // wait 500ms for animations and such
-      await this.page.waitForTimeout(500)
+      await this.page.waitForSelector('[data-testid="game-card-${gameId}"]', { timeout: 1000, state: 'visible' })
       await gameLocator.scrollIntoViewIfNeeded()
     }
     // wait for network state

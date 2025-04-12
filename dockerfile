@@ -27,11 +27,16 @@ FROM oven/bun:1.2.4 AS js-builder
 WORKDIR /app
 
 # Copy frontend source
+COPY frontend/package.json ./frontend/
+COPY frontend/bun.lock ./frontend/
+WORKDIR /app/frontend
+RUN bun install
+WORKDIR /app
 COPY frontend/ ./frontend/
 
 # Install frontend dependencies and build
 WORKDIR /app/frontend
-RUN bun install && bun run build
+RUN bun run build
 
 # Final stage
 FROM alpine:3.19

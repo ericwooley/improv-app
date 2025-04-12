@@ -31,3 +31,4 @@ __debug*
 improv-app
 docker-data
 .secrets
+.vscode/chrome-debug-profile

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"improv-app/internal/config"
 	"improv-app/internal/models"
@@ -64,16 +63,19 @@ func RequireAuth(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 
 		// Check if profile is complete
 		if len(user.FirstName) < 2 || len(user.LastName) < 2 {
-			// Allow access to profile page
-			if strings.HasPrefix(r.URL.Path, "/profile") {
-				ctx := r.Context()
-				ctx = context.WithValue(ctx, UserContextKey, &user)
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
+			// Update user with anonymous name instead of denying access
+			user.FirstName = "anon"
+			user.LastName = "ymous"
+
+			_, err := db.Exec(`
+				UPDATE users
+				SET first_name = $1, last_name = $2
+				WHERE id = $3
+			`, user.FirstName, user.LastName, user.ID)
+
+			if err != nil {
+				fmt.Println("Error updating user name:", err)
 			}
-			// Return error for incomplete profile
-			RespondWithError(w, http.StatusForbidden, "Profile incomplete")
-			return
 		}
 
 		ctx := r.Context()
@@ -103,6 +105,23 @@ func RequireAuthAPI(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 			fmt.Println("Error querying user:", err)
 			RespondWithError(w, http.StatusUnauthorized, "Invalid user session")
 			return
+		}
+
+		// Check if profile is complete
+		if len(user.FirstName) < 2 || len(user.LastName) < 2 {
+			// Update user with anonymous name instead of denying access
+			user.FirstName = "anon"
+			user.LastName = "ymous"
+
+			_, err := db.Exec(`
+				UPDATE users
+				SET first_name = $1, last_name = $2
+				WHERE id = $3
+			`, user.FirstName, user.LastName, user.ID)
+
+			if err != nil {
+				fmt.Println("Error updating user name:", err)
+			}
 		}
 
 		ctx := r.Context()
