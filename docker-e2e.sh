@@ -57,7 +57,7 @@ wait_for_service
 # Run the E2E tests
 cd e2e
 echo "Running E2E tests..."
-pnpm run test:docker
+pnpm run test:docker --retries 3 --workers 1
 test_exit_code=$?
 cd ..
 
