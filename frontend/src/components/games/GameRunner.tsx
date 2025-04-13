@@ -30,6 +30,7 @@ import {
   useGetEventPlayerAssignmentsQuery,
   useAssignPlayerToGameMutation,
   useRemovePlayerFromGameMutation,
+  useGetNonRegisteredAttendeesQuery,
 } from '../../store/api/eventsApi'
 import {
   PersonAdd as AssignIcon,
@@ -94,6 +95,15 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
     skip: !eventId,
   })
 
+  // Fetch non-registered (walk-in) attendees
+  const {
+    data: nonRegisteredData,
+    isLoading: isLoadingNonRegistered,
+    error: nonRegisteredError,
+  } = useGetNonRegisteredAttendeesQuery(eventId || '', {
+    skip: !eventId,
+  })
+
   // Fetch player assignments
   const { data: assignmentsData, isLoading: isLoadingAssignments } = useGetEventPlayerAssignmentsQuery(eventId || '', {
     skip: !eventId,
@@ -129,11 +139,20 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
     return preferencesData?.data || []
   }, [preferencesData])
 
-  // Get attending users
+  // Get attending users (both registered and non-registered)
   const attendingUsers = useMemo(() => {
-    if (!eventData?.data?.rsvps) return []
-    return eventData.data.rsvps.filter((rsvp) => rsvp.status === 'attending')
-  }, [eventData])
+    const registeredAttendees = eventData?.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || []
+
+    // Convert non-registered attendees to the same format as RSVP
+    const walkInAttendees: RSVP[] = (nonRegisteredData?.data || []).map((attendee) => ({
+      userId: attendee.id, // Use the non-registered attendee's ID
+      firstName: attendee.firstName,
+      lastName: attendee.lastName,
+      status: 'attending', // Non-registered attendees are always "attending"
+    }))
+
+    return [...registeredAttendees, ...walkInAttendees]
+  }, [eventData, nonRegisteredData])
 
   // Get players assigned to a specific game
   const getPlayersForGame = (gameId: string) => {
@@ -150,9 +169,24 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
     return attendingUsers.filter((user) => !assignedUserIds.includes(user.userId))
   }
 
-  // Get player preference for a specific game
+  // Get player preference for a specific game (handle non-registered attendees)
   const getPlayerPreference = (userId: string, gameId: string) => {
-    return gamePreferences.find((pref) => pref.userId === userId && pref.gameId === gameId)
+    // First check if this is a registered user with preferences
+    const regUserPref = gamePreferences.find((pref) => pref.userId === userId && pref.gameId === gameId)
+    if (regUserPref) return regUserPref
+
+    // Check if this is a non-registered attendee
+    const isWalkIn = nonRegisteredData?.data?.some((attendee) => attendee.id === userId)
+    if (isWalkIn) {
+      // Return a default preference object for walk-ins
+      return {
+        userId,
+        gameId,
+        status: 'No preference data (walk-in)',
+      }
+    }
+
+    return undefined
   }
 
   // Handle assigning a player to a game
@@ -205,7 +239,7 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
 
   // Handle auto-optimization of player assignments
   const handleAutoOptimize = async () => {
-    if (!eventId || !gamesData?.data?.games || !eventData?.data?.rsvps) return
+    if (!eventId || !gamesData?.data?.games) return
 
     // Close the confirmation dialog
     setConfirmDialogOpen(false)
@@ -215,7 +249,7 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
       // Create GameData object for optimization
       const gameData: GameData = {
         games: gamesData?.data?.games || [],
-        players: eventData?.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || [],
+        players: attendingUsers, // This now includes both registered and walk-in attendees
         assignments: playerAssignments,
         preferences: gamePreferences,
       }
@@ -303,7 +337,7 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
   }
 
   // Render loading state
-  if (isLoadingGames || isLoadingEvent || isLoadingAssignments || isLoadingPreferences) {
+  if (isLoadingGames || isLoadingEvent || isLoadingAssignments || isLoadingPreferences || isLoadingNonRegistered) {
     return (
       <Paper sx={{ p: 3, mb: 3, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
@@ -312,7 +346,7 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
   }
 
   // Render error state
-  if (gamesError || eventError) {
+  if (gamesError || eventError || nonRegisteredError) {
     return (
       <Paper sx={{ p: 3, mb: 3 }}>
         <Alert severity="error">Error loading game runner data. Please try again.</Alert>

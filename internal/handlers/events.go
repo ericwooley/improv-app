@@ -1114,7 +1114,17 @@ func (h *EventHandler) GetEventPlayers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all player assignments for this event
+	type PlayerAssignment struct {
+		UserID    string `json:"userId"`
+		GameID    string `json:"gameId"`
+		EventID   string `json:"eventId"`
+		Name      string `json:"name"`
+		IsWalkIn  bool   `json:"isWalkIn"`
+	}
+
+	var assignments []PlayerAssignment
+
+	// Get all player assignments for registered users
 	rows, err := h.db.Query(`
 		SELECT p.user_id, p.game_id, p.event_id, u.first_name, u.last_name
 		FROM event_player_assignments p
@@ -1128,14 +1138,6 @@ func (h *EventHandler) GetEventPlayers(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	type PlayerAssignment struct {
-		UserID    string `json:"userId"`
-		GameID    string `json:"gameId"`
-		EventID   string `json:"eventId"`
-		Name      string `json:"name"`
-	}
-
-	var assignments []PlayerAssignment
 	for rows.Next() {
 		var assignment PlayerAssignment
 		var firstName, lastName string
@@ -1153,6 +1155,42 @@ func (h *EventHandler) GetEventPlayers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		assignment.Name = firstName + " " + lastName
+		assignment.IsWalkIn = false
+		assignments = append(assignments, assignment)
+	}
+
+	// Get all player assignments for non-registered (walk-in) attendees
+	walkInRows, err := h.db.Query(`
+		SELECT p.user_id, p.game_id, p.event_id, n.first_name, n.last_name
+		FROM event_player_assignments p
+		JOIN non_registered_attendees n ON p.user_id = n.id
+		WHERE p.event_id = $1
+	`, eventID)
+	if err != nil {
+		log.Printf("Error fetching walk-in player assignments for event %s: %v", eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching walk-in player assignments")
+		return
+	}
+	defer walkInRows.Close()
+
+	for walkInRows.Next() {
+		var assignment PlayerAssignment
+		var firstName, lastName string
+		err := walkInRows.Scan(
+			&assignment.UserID,
+			&assignment.GameID,
+			&assignment.EventID,
+			&firstName,
+			&lastName,
+		)
+		if err != nil {
+			log.Printf("Error scanning walk-in player assignment row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning walk-in player assignments")
+			return
+		}
+
+		assignment.Name = firstName + " " + lastName
+		assignment.IsWalkIn = true
 		assignments = append(assignments, assignment)
 	}
 
@@ -1241,45 +1279,6 @@ func (h *EventHandler) AssignPlayerToGame(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Verify the user being assigned is a group member
-	var isTargetUserMember bool
-	err = h.db.QueryRow(`
-		SELECT EXISTS(
-			SELECT 1 FROM group_members
-			WHERE group_id = $1 AND user_id = $2
-		)
-	`, groupID, request.UserID).Scan(&isTargetUserMember)
-	if err != nil {
-		log.Printf("Error checking if user %s is a member of group %s: %v", request.UserID, groupID, err)
-		RespondWithError(w, http.StatusInternalServerError, "Error checking user membership")
-		return
-	}
-
-	if !isTargetUserMember {
-		log.Printf("User %s is not a member of group %s", request.UserID, groupID)
-		RespondWithError(w, http.StatusBadRequest, "User is not a member of this group")
-		return
-	}
-
-	// Verify the user is attending the event
-	var isAttending bool
-	err = h.db.QueryRow(`
-		SELECT status = 'attending'
-		FROM event_rsvps
-		WHERE event_id = $1 AND user_id = $2
-	`, eventID, request.UserID).Scan(&isAttending)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Error checking if user %s is attending event %s: %v", request.UserID, eventID, err)
-		RespondWithError(w, http.StatusInternalServerError, "Error checking attendance status")
-		return
-	}
-
-	if !isAttending {
-		log.Printf("User %s is not attending event %s", request.UserID, eventID)
-		RespondWithError(w, http.StatusBadRequest, "User is not marked as attending this event")
-		return
-	}
-
 	// Check if player is already assigned to this game
 	var isAlreadyAssigned bool
 	err = h.db.QueryRow(`
@@ -1298,6 +1297,87 @@ func (h *EventHandler) AssignPlayerToGame(w http.ResponseWriter, r *http.Request
 		log.Printf("User %s is already assigned to game %s in event %s", request.UserID, gameID, eventID)
 		RespondWithError(w, http.StatusBadRequest, "Player is already assigned to this game")
 		return
+	}
+
+	// Check if the user is a registered user or a walk-in attendee
+	var isRegisteredUser bool
+	var isWalkInAttendee bool
+
+	// Check if it's a registered user
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM users
+			WHERE id = $1
+		)
+	`, request.UserID).Scan(&isRegisteredUser)
+	if err != nil {
+		log.Printf("Error checking if user exists: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking user existence")
+		return
+	}
+
+	// If not a registered user, check if it's a walk-in attendee
+	if !isRegisteredUser {
+		err = h.db.QueryRow(`
+			SELECT EXISTS(
+				SELECT 1 FROM non_registered_attendees
+				WHERE id = $1 AND event_id = $2
+			)
+		`, request.UserID, eventID).Scan(&isWalkInAttendee)
+		if err != nil {
+			log.Printf("Error checking if walk-in attendee exists: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking walk-in attendee existence")
+			return
+		}
+	}
+
+	// If neither registered user nor walk-in attendee, return error
+	if !isRegisteredUser && !isWalkInAttendee {
+		log.Printf("User/attendee %s not found", request.UserID)
+		RespondWithError(w, http.StatusBadRequest, "User or walk-in attendee not found")
+		return
+	}
+
+	// For registered users, verify they're attending the event
+	if isRegisteredUser {
+		// Verify the user is a group member
+		var isTargetUserMember bool
+		err = h.db.QueryRow(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_members
+				WHERE group_id = $1 AND user_id = $2
+			)
+		`, groupID, request.UserID).Scan(&isTargetUserMember)
+		if err != nil {
+			log.Printf("Error checking if user %s is a member of group %s: %v", request.UserID, groupID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking user membership")
+			return
+		}
+
+		if !isTargetUserMember {
+			log.Printf("User %s is not a member of group %s", request.UserID, groupID)
+			RespondWithError(w, http.StatusBadRequest, "User is not a member of this group")
+			return
+		}
+
+		// Verify the user is attending the event
+		var isAttending bool
+		err = h.db.QueryRow(`
+			SELECT status = 'attending'
+			FROM event_rsvps
+			WHERE event_id = $1 AND user_id = $2
+		`, eventID, request.UserID).Scan(&isAttending)
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("Error checking if user %s is attending event %s: %v", request.UserID, eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking attendance status")
+			return
+		}
+
+		if !isAttending {
+			log.Printf("User %s is not attending event %s", request.UserID, eventID)
+			RespondWithError(w, http.StatusBadRequest, "User is not marked as attending this event")
+			return
+		}
 	}
 
 	// Assign player to the game
@@ -1363,6 +1443,45 @@ func (h *EventHandler) RemovePlayerFromGame(w http.ResponseWriter, r *http.Reque
 	if !isAuthorized {
 		log.Printf("User %s is not authorized to remove players for event %s", user.ID, eventID)
 		RespondWithError(w, http.StatusForbidden, "Only the event MC or group organizers can remove players")
+		return
+	}
+
+	// Check if the player is a registered user or a walk-in attendee
+	var isRegisteredUser bool
+	var isWalkInAttendee bool
+
+	// Check if it's a registered user
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM users
+			WHERE id = $1
+		)
+	`, targetUserID).Scan(&isRegisteredUser)
+	if err != nil {
+		log.Printf("Error checking if user exists: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking user existence")
+		return
+	}
+
+	// If not a registered user, check if it's a walk-in attendee
+	if !isRegisteredUser {
+		err = h.db.QueryRow(`
+			SELECT EXISTS(
+				SELECT 1 FROM non_registered_attendees
+				WHERE id = $1 AND event_id = $2
+			)
+		`, targetUserID, eventID).Scan(&isWalkInAttendee)
+		if err != nil {
+			log.Printf("Error checking if walk-in attendee exists: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error checking walk-in attendee existence")
+			return
+		}
+	}
+
+	// If neither registered user nor walk-in attendee, return error
+	if !isRegisteredUser && !isWalkInAttendee {
+		log.Printf("User/attendee %s not found", targetUserID)
+		RespondWithError(w, http.StatusBadRequest, "User or walk-in attendee not found")
 		return
 	}
 
