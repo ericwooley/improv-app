@@ -2,6 +2,53 @@
 
 A web application for organizing and managing improv activities, built with Go and modern web technologies.
 
+## Project Note
+
+This project was created as an experiment to try out "vibe coding" and Go, which resulted in functional but not particularly high-quality code. Feel free to open an issue or create a PR if you'd like to contribute or suggest improvements. The e2e tests are also quite flakey.
+
+## Quickstart
+
+### Backend
+```bash
+# Install Go if you haven't already
+# https://golang.org/doc/install
+
+# Install Air for hot-reloading
+go install # this also installs the latest version of Air
+
+# Start the database
+docker compose up -d
+
+# Run the backend server with hot-reloading
+air
+```
+
+### Frontend
+```bash
+# Navigate to the frontend directory
+cd frontend
+
+# Install dependencies
+bun install
+
+# Start the development server
+bun run dev
+```
+
+### E2E Tests
+Option 1: Using Docker script
+```bash
+./docker-e2e.sh
+```
+
+Option 2: Manual setup
+```bash
+cd e2e
+pnpm install
+pnpm run test:local
+```
+Note: When running tests manually, make sure the backend and frontend services are already running.
+
 ## Features
 
 - User authentication and authorization
