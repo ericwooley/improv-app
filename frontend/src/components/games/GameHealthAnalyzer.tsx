@@ -13,7 +13,12 @@ import {
   Alert,
   Divider,
 } from '@mui/material'
-import { CheckCircle as CheckCircleIcon, Warning as WarningIcon, Error as ErrorIcon } from '@mui/icons-material'
+import {
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  Person as PersonIcon,
+} from '@mui/icons-material'
 import {
   analyzeGameHealth,
   calculateOverallHealthScore,
@@ -52,6 +57,19 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
     }
   }
 
+  // Group players by type (registered users vs walk-ins)
+  const walkInPlayers = playerProblems.filter((player) => {
+    const playerId = player.userId
+    const isWalkIn = gameData.players.find((p) => p.userId === playerId)?.isWalkIn || false
+    return isWalkIn
+  })
+
+  const registeredPlayers = playerProblems.filter((player) => {
+    const playerId = player.userId
+    const isWalkIn = gameData.players.find((p) => p.userId === playerId)?.isWalkIn || false
+    return !isWalkIn
+  })
+
   return (
     <Box>
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -72,7 +90,6 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
             </Box>
             <Typography variant="h4" color={`${scoreColor}.main`} fontWeight="bold">
               {healthScore.toFixed(0)}
-
             </Typography>
           </Box>
 
@@ -106,55 +123,118 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
           </Box>
         )}
 
-        {/* Player Problems */}
+        {/* Player Analysis */}
         <Typography variant="h6" gutterBottom>
           Player Analysis
         </Typography>
-        <Grid container spacing={2}>
-          {playerProblems.map((player) => (
-            <Grid size={6} key={player.userId}>
-              <Card variant="outlined" sx={{ mb: 2, height: '100%' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {player.playerName}
-                    </Typography>
-                    <Chip
-                      label={`Happiness: ${player.happinessScore}`}
-                      color={player.happinessScore > 0 ? 'success' : player.happinessScore < 0 ? 'error' : 'default'}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </Box>
 
-                  {player.problems.length === 0 ? (
-                    <Alert icon={<CheckCircleIcon />} severity="success" sx={{ mt: 1 }}>
-                      No issues detected
-                    </Alert>
-                  ) : (
-                    <>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Issues found:
-                      </Typography>
-                      <List dense disablePadding>
-                        {player.problems.map((problem, index) => (
-                          <ListItem key={index} sx={{ py: 0.5, px: 0 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              {getSeverityIcon(problem.severity)}
-                              <Typography variant="body2" sx={{ ml: 1 }}>
-                                {problem.description}
-                              </Typography>
-                            </Box>
-                          </ListItem>
-                        ))}
-                      </List>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+        {/* Registered Players Section */}
+        {registeredPlayers.length > 0 && (
+          <>
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+              Registered Members
+            </Typography>
+            <Grid container spacing={2}>
+              {registeredPlayers.map((player) => (
+                <Grid size={6} key={player.userId}>
+                  <Card variant="outlined" sx={{ mb: 2, height: '100%' }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {player.playerName}
+                        </Typography>
+                        <Chip
+                          label={`Happiness: ${player.happinessScore}`}
+                          color={
+                            player.happinessScore > 0 ? 'success' : player.happinessScore < 0 ? 'error' : 'default'
+                          }
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
+
+                      {player.problems.length === 0 ? (
+                        <Alert icon={<CheckCircleIcon />} severity="success" sx={{ mt: 1 }}>
+                          No issues detected
+                        </Alert>
+                      ) : (
+                        <>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Issues found:
+                          </Typography>
+                          <List dense disablePadding>
+                            {player.problems.map((problem, index) => (
+                              <ListItem key={index} sx={{ py: 0.5, px: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  {getSeverityIcon(problem.severity)}
+                                  <Typography variant="body2" sx={{ ml: 1 }}>
+                                    {problem.description}
+                                  </Typography>
+                                </Box>
+                              </ListItem>
+                            ))}
+                          </List>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          </>
+        )}
+
+        {/* Walk-in Players Section */}
+        {walkInPlayers.length > 0 && (
+          <>
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
+              Walk-in Attendees
+            </Typography>
+            <Grid container spacing={2}>
+              {walkInPlayers.map((player) => (
+                <Grid size={6} key={player.userId}>
+                  <Card variant="outlined" sx={{ mb: 2, height: '100%' }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <PersonIcon fontSize="small" sx={{ mr: 1, color: 'secondary.main' }} />
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {player.playerName}
+                          </Typography>
+                        </Box>
+                        <Chip label="Walk-in" color="secondary" size="small" variant="outlined" />
+                      </Box>
+
+                      <Alert severity="info" sx={{ mt: 1 }}>
+                        Walk-in attendees have no preference data
+                      </Alert>
+
+                      {player.problems.length > 0 && (
+                        <>
+                          <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+                            Potential issues:
+                          </Typography>
+                          <List dense disablePadding>
+                            {player.problems.map((problem, index) => (
+                              <ListItem key={index} sx={{ py: 0.5, px: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  {getSeverityIcon(problem.severity)}
+                                  <Typography variant="body2" sx={{ ml: 1 }}>
+                                    {problem.description}
+                                  </Typography>
+                                </Box>
+                              </ListItem>
+                            ))}
+                          </List>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        )}
 
         {/* Game Analysis */}
         <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>

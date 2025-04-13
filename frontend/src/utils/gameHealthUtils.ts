@@ -10,9 +10,14 @@ export interface Game {
   tags: string[]
 }
 
+// Extend RSVP type to include isWalkIn property
+export interface ExtendedRSVP extends RSVP {
+  isWalkIn?: boolean
+}
+
 export interface GameData {
   games: Game[]
-  players: RSVP[]
+  players: ExtendedRSVP[]
   assignments: PlayerAssignment[]
   preferences: GamePreference[]
 }

@@ -249,7 +249,15 @@ const GameRunner = ({ eventId, isMC = false }: GameRunnerProps) => {
       // Create GameData object for optimization
       const gameData: GameData = {
         games: gamesData?.data?.games || [],
-        players: attendingUsers, // This now includes both registered and walk-in attendees
+        players: attendingUsers.map((user) => {
+          // Check if this is a walk-in attendee (a user that was originally from nonRegisteredData)
+          const isWalkIn = nonRegisteredData?.data?.some((walkIn) => walkIn.id === user.userId) || false
+
+          return {
+            ...user,
+            isWalkIn,
+          }
+        }),
         assignments: playerAssignments,
         preferences: gamePreferences,
       }
