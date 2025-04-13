@@ -207,42 +207,46 @@ const EventDetailsPage = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-        <PageHeader title={event.Title} subtitle="Event Details" />
-        {canManageEvent && (
-          <>
-            <IconButton onClick={handleMenuOpen}>
+      <PageHeader
+        title={event.Title}
+        subtitle="Event Details"
+        actions={
+          canManageEvent && (
+            <IconButton onClick={handleMenuOpen} data-testid="event-details-actions-button">
               <MoreVertIcon />
             </IconButton>
+          )
+        }
+      />
 
-            <Menu
-              anchorEl={menuAnchorEl}
-              open={Boolean(menuAnchorEl)}
-              onClose={handleMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}>
-              <MenuItem onClick={handleEditEvent}>
-                <ListItemIcon>
-                  <EditIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Edit Event</ListItemText>
-              </MenuItem>
-              <MenuItem onClick={handleDeleteEvent} disabled={isDeleting}>
-                <ListItemIcon>
-                  <DeleteIcon fontSize="small" color="error" />
-                </ListItemIcon>
-                <ListItemText sx={{ color: 'error.main' }}>Delete Event</ListItemText>
-              </MenuItem>
-            </Menu>
-          </>
-        )}
-      </Box>
+      {canManageEvent && (
+        <Menu
+          anchorEl={menuAnchorEl}
+          open={Boolean(menuAnchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          data-testid="event-details-actions-menu">
+          <MenuItem onClick={handleEditEvent} data-testid="event-details-edit-action">
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit Event</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleDeleteEvent} disabled={isDeleting} data-testid="event-details-delete-action">
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText sx={{ color: 'error.main' }}>Delete Event</ListItemText>
+          </MenuItem>
+        </Menu>
+      )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs
