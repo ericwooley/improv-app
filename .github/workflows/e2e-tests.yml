@@ -44,4 +44,4 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          sudo docker run --rm -v $(pwd):/app -w /app alpine sh -c "rm -rf improv.db docker-data"
+          docker run --rm -v $(pwd):/app -w /app alpine sh -c "rm -rf improv.db docker-data"
