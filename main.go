@@ -147,6 +147,12 @@ func main() {
 	api.HandleFunc("/events/{id}/rsvp/me", middleware.RequireAuthAPI(sqlDB, rsvpHandler.GetCurrentUserRSVP)).Methods("GET")
 	api.HandleFunc("/events/{id}/rsvp/{userId}", middleware.RequireAuthAPI(sqlDB, rsvpHandler.UpdateUserRSVP)).Methods("PUT")
 
+	// Non-registered attendees (walk-ins) routes
+	api.HandleFunc("/events/{id}/non-registered-attendees", middleware.RequireAuthAPI(sqlDB, eventHandler.GetNonRegisteredAttendees)).Methods("GET")
+	api.HandleFunc("/events/{id}/non-registered-attendees", middleware.RequireAuthAPI(sqlDB, eventHandler.AddNonRegisteredAttendee)).Methods("POST")
+	api.HandleFunc("/events/{id}/non-registered-attendees/{attendeeId}", middleware.RequireAuthAPI(sqlDB, eventHandler.UpdateNonRegisteredAttendee)).Methods("PUT")
+	api.HandleFunc("/events/{id}/non-registered-attendees/{attendeeId}", middleware.RequireAuthAPI(sqlDB, eventHandler.DeleteNonRegisteredAttendee)).Methods("DELETE")
+
 	// Game routes
 	api.HandleFunc("/games", gameHandler.List).Methods("GET")
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.Create)).Methods("POST")

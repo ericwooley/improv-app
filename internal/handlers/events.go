@@ -1514,3 +1514,411 @@ func (h *EventHandler) GetUserGamePreferences(w http.ResponseWriter, r *http.Req
 		Data:    preferences,
 	})
 }
+
+// GetNonRegisteredAttendees gets all non-registered (walk-in) attendees for an event
+func (h *EventHandler) GetNonRegisteredAttendees(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// Verify the event exists and get group ID
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT group_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user is a member of the group
+	var isMember bool
+	err = h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM group_members
+			WHERE group_id = $1 AND user_id = $2
+		)
+	`, groupID, user.ID).Scan(&isMember)
+	if err != nil {
+		log.Printf("Error checking group membership: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking group membership")
+		return
+	}
+
+	if !isMember {
+		log.Printf("User %s is not a member of group %s", user.ID, groupID)
+		RespondWithError(w, http.StatusForbidden, "You are not a member of this group")
+		return
+	}
+
+	// Get all non-registered attendees for this event
+	rows, err := h.db.Query(`
+		SELECT id, event_id, first_name, last_name, email, created_at
+		FROM non_registered_attendees
+		WHERE event_id = $1
+		ORDER BY created_at DESC
+	`, eventID)
+	if err != nil {
+		log.Printf("Error fetching non-registered attendees for event %s: %v", eventID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching non-registered attendees")
+		return
+	}
+	defer rows.Close()
+
+	type NonRegisteredAttendee struct {
+		ID        string    `json:"id"`
+		EventID   string    `json:"eventId"`
+		FirstName string    `json:"firstName"`
+		LastName  string    `json:"lastName"`
+		Email     *string   `json:"email,omitempty"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+
+	var attendees []NonRegisteredAttendee
+	for rows.Next() {
+		var attendee NonRegisteredAttendee
+		var email sql.NullString
+		err := rows.Scan(
+			&attendee.ID,
+			&attendee.EventID,
+			&attendee.FirstName,
+			&attendee.LastName,
+			&email,
+			&attendee.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning non-registered attendee row: %v", err)
+			RespondWithError(w, http.StatusInternalServerError, "Error scanning non-registered attendees")
+			return
+		}
+
+		if email.Valid {
+			attendee.Email = &email.String
+		}
+
+		attendees = append(attendees, attendee)
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Data:    attendees,
+	})
+}
+
+// AddNonRegisteredAttendee adds a new non-registered (walk-in) attendee to an event
+func (h *EventHandler) AddNonRegisteredAttendee(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// Parse JSON request
+	var attendeeRequest struct {
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Email     string `json:"email,omitempty"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&attendeeRequest); err != nil {
+		log.Printf("Error decoding non-registered attendee request: %v", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate required fields
+	if attendeeRequest.FirstName == "" || attendeeRequest.LastName == "" {
+		RespondWithError(w, http.StatusBadRequest, "First name and last name are required")
+		return
+	}
+
+	// Verify the event exists and get group ID
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT group_id FROM events
+		WHERE id = $1
+	`, eventID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Event not found: %s", eventID)
+			RespondWithError(w, http.StatusNotFound, "Event not found")
+		} else {
+			log.Printf("Error fetching event %s: %v", eventID, err)
+			RespondWithError(w, http.StatusInternalServerError, "Error fetching event")
+		}
+		return
+	}
+
+	// Check if user is an admin or organizer of the group
+	var role string
+	err = h.db.QueryRow(`
+		SELECT role FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil || (role != auth.RoleAdmin && role != auth.RoleOrganizer) {
+		log.Printf("User %s not authorized to add attendees to event %s (role: %s, error: %v)", user.ID, eventID, role, err)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can add non-registered attendees")
+		return
+	}
+
+	// Create a new ID for the attendee
+	attendeeID := uuid.New().String()
+
+	// Add nullable handling for email
+	var email interface{} = nil
+	if attendeeRequest.Email != "" {
+		email = attendeeRequest.Email
+	}
+
+	// Create the non-registered attendee
+	_, err = h.db.Exec(`
+		INSERT INTO non_registered_attendees (id, event_id, first_name, last_name, email)
+		VALUES ($1, $2, $3, $4, $5)
+	`, attendeeID, eventID, attendeeRequest.FirstName, attendeeRequest.LastName, email)
+	if err != nil {
+		log.Printf("Error creating non-registered attendee: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error creating non-registered attendee")
+		return
+	}
+
+	// Fetch the newly created attendee
+	var attendee struct {
+		ID        string    `json:"id"`
+		EventID   string    `json:"eventId"`
+		FirstName string    `json:"firstName"`
+		LastName  string    `json:"lastName"`
+		Email     *string   `json:"email,omitempty"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+
+	var emailValue sql.NullString
+	err = h.db.QueryRow(`
+		SELECT id, event_id, first_name, last_name, email, created_at
+		FROM non_registered_attendees
+		WHERE id = $1
+	`, attendeeID).Scan(
+		&attendee.ID,
+		&attendee.EventID,
+		&attendee.FirstName,
+		&attendee.LastName,
+		&emailValue,
+		&attendee.CreatedAt,
+	)
+	if err != nil {
+		log.Printf("Error fetching created attendee %s: %v", attendeeID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching created attendee")
+		return
+	}
+
+	if emailValue.Valid {
+		attendee.Email = &emailValue.String
+	}
+
+	RespondWithJSON(w, http.StatusCreated, ApiResponse{
+		Success: true,
+		Message: "Non-registered attendee added successfully",
+		Data:    attendee,
+	})
+}
+
+// UpdateNonRegisteredAttendee updates an existing non-registered attendee
+func (h *EventHandler) UpdateNonRegisteredAttendee(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "PUT" {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+	attendeeID := vars["attendeeId"]
+
+	// Parse JSON request
+	var attendeeRequest struct {
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Email     string `json:"email,omitempty"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&attendeeRequest); err != nil {
+		log.Printf("Error decoding update request: %v", err)
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	// Validate required fields
+	if attendeeRequest.FirstName == "" || attendeeRequest.LastName == "" {
+		RespondWithError(w, http.StatusBadRequest, "First name and last name are required")
+		return
+	}
+
+	// First, check if the attendee exists and belongs to the specified event
+	var exists bool
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM non_registered_attendees
+			WHERE id = $1 AND event_id = $2
+		), e.group_id
+		FROM events e
+		WHERE e.id = $2
+	`, attendeeID, eventID).Scan(&exists, &groupID)
+	if err != nil {
+		log.Printf("Error checking attendee existence: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking attendee")
+		return
+	}
+
+	if !exists {
+		log.Printf("Attendee %s not found for event %s", attendeeID, eventID)
+		RespondWithError(w, http.StatusNotFound, "Attendee not found")
+		return
+	}
+
+	// Check if user is an admin or organizer of the group
+	var role string
+	err = h.db.QueryRow(`
+		SELECT role FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil || (role != auth.RoleAdmin && role != auth.RoleOrganizer) {
+		log.Printf("User %s not authorized to update attendees for event %s (role: %s, error: %v)", user.ID, eventID, role, err)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can update non-registered attendees")
+		return
+	}
+
+	// Add nullable handling for email
+	var email interface{} = nil
+	if attendeeRequest.Email != "" {
+		email = attendeeRequest.Email
+	}
+
+	// Update the attendee
+	_, err = h.db.Exec(`
+		UPDATE non_registered_attendees
+		SET first_name = $1, last_name = $2, email = $3
+		WHERE id = $4 AND event_id = $5
+	`, attendeeRequest.FirstName, attendeeRequest.LastName, email, attendeeID, eventID)
+	if err != nil {
+		log.Printf("Error updating attendee %s: %v", attendeeID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error updating attendee")
+		return
+	}
+
+	// Fetch the updated attendee
+	var attendee struct {
+		ID        string    `json:"id"`
+		EventID   string    `json:"eventId"`
+		FirstName string    `json:"firstName"`
+		LastName  string    `json:"lastName"`
+		Email     *string   `json:"email,omitempty"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+
+	var emailValue sql.NullString
+	err = h.db.QueryRow(`
+		SELECT id, event_id, first_name, last_name, email, created_at
+		FROM non_registered_attendees
+		WHERE id = $1
+	`, attendeeID).Scan(
+		&attendee.ID,
+		&attendee.EventID,
+		&attendee.FirstName,
+		&attendee.LastName,
+		&emailValue,
+		&attendee.CreatedAt,
+	)
+	if err != nil {
+		log.Printf("Error fetching updated attendee %s: %v", attendeeID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error fetching updated attendee")
+		return
+	}
+
+	if emailValue.Valid {
+		attendee.Email = &emailValue.String
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Non-registered attendee updated successfully",
+		Data:    attendee,
+	})
+}
+
+// DeleteNonRegisteredAttendee deletes a non-registered attendee
+func (h *EventHandler) DeleteNonRegisteredAttendee(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "DELETE" {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+	attendeeID := vars["attendeeId"]
+
+	// First, check if the attendee exists and belongs to the specified event
+	var exists bool
+	var groupID string
+	err := h.db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1 FROM non_registered_attendees
+			WHERE id = $1 AND event_id = $2
+		), e.group_id
+		FROM events e
+		WHERE e.id = $2
+	`, attendeeID, eventID).Scan(&exists, &groupID)
+	if err != nil {
+		log.Printf("Error checking attendee existence: %v", err)
+		RespondWithError(w, http.StatusInternalServerError, "Error checking attendee")
+		return
+	}
+
+	if !exists {
+		log.Printf("Attendee %s not found for event %s", attendeeID, eventID)
+		RespondWithError(w, http.StatusNotFound, "Attendee not found")
+		return
+	}
+
+	// Check if user is an admin or organizer of the group
+	var role string
+	err = h.db.QueryRow(`
+		SELECT role FROM group_members
+		WHERE group_id = $1 AND user_id = $2
+	`, groupID, user.ID).Scan(&role)
+	if err != nil || (role != auth.RoleAdmin && role != auth.RoleOrganizer) {
+		log.Printf("User %s not authorized to delete attendees for event %s (role: %s, error: %v)", user.ID, eventID, role, err)
+		RespondWithError(w, http.StatusForbidden, "Only admins and organizers can delete non-registered attendees")
+		return
+	}
+
+	// Delete the attendee
+	_, err = h.db.Exec(`
+		DELETE FROM non_registered_attendees
+		WHERE id = $1 AND event_id = $2
+	`, attendeeID, eventID)
+	if err != nil {
+		log.Printf("Error deleting attendee %s: %v", attendeeID, err)
+		RespondWithError(w, http.StatusInternalServerError, "Error deleting attendee")
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, ApiResponse{
+		Success: true,
+		Message: "Non-registered attendee deleted successfully",
+	})
+}
