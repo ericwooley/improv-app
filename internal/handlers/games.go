@@ -84,11 +84,12 @@ func (h *GameHandler) searchGames(w http.ResponseWriter, r *http.Request, userID
 	libraryFilter := query.Get("library")
 	ownedByGroupFilter := query.Get("ownedByGroup")
 
-	// Add wildcard for partial word matching
+	// Add wildcard for partial word matching - different approach for SQLite
+	// The "*" needs to be at the end to match prefixes in SQLite FTS
 	searchTermWithWildcard := searchQuery + "*"
 	likePattern := "%" + searchQuery + "%"
 
-	// Build base query for searching
+	// Build base query for searching - improve FTS integration
 	queryStr := `
 		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
 			GROUP_CONCAT(DISTINCT t.name) as tags,
@@ -99,21 +100,28 @@ func (h *GameHandler) searchGames(w http.ResponseWriter, r *http.Request, userID
 			END) AS relevance_score,
 			COUNT(DISTINCT eg.event_id) AS event_count
 		FROM games g
+		JOIN games_fts ON games_fts.docid = g.rowid
 		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
 		LEFT JOIN game_tags t ON gta.tag_id = t.id
 		LEFT JOIN event_games eg ON g.id = eg.game_id
-		WHERE g.id IN (
-			SELECT docid FROM games_fts WHERE games_fts MATCH ?
-		)
+		WHERE games_fts MATCH ?
 	`
 
 	countQueryStr := `
 		SELECT COUNT(DISTINCT g.id)
 		FROM games g
-		WHERE g.id IN (
-			SELECT docid FROM games_fts WHERE games_fts MATCH ?
-		)
+		JOIN games_fts ON games_fts.docid = g.rowid
+		WHERE games_fts MATCH ?
 	`
+
+	// For debugging - log the games_fts content
+	var ftsCount int
+	err := h.db.QueryRow("SELECT COUNT(*) FROM games_fts").Scan(&ftsCount)
+	if err != nil {
+		log.Printf("Error counting FTS entries: %v", err)
+	} else {
+		log.Printf("FTS table has %d entries", ftsCount)
+	}
 
 	params := []interface{}{likePattern, likePattern, searchTermWithWildcard}
 	countParams := []interface{}{searchTermWithWildcard}
@@ -129,6 +137,12 @@ func (h *GameHandler) searchGames(w http.ResponseWriter, r *http.Request, userID
 		GROUP BY g.id
 		ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
 	`
+
+	// Log the final query and parameters for debugging
+	log.Printf("Search query: %s", queryStr)
+	log.Printf("Search params: %v", params)
+	log.Printf("Count query: %s", countQueryStr)
+	log.Printf("Count params: %v", countParams)
 
 	// Execute the queries and build response
 	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, true)
