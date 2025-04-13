@@ -15,12 +15,17 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => 
     <Box
       sx={{
         display: 'flex',
-        flexDirection: { xs: 'column', sm: 'row' },
-        justifyContent: 'space-between',
-        alignItems: { xs: 'flex-start', sm: 'center' },
+        flexDirection: 'row',
+        // justifyContent: 'space-between',
+        alignItems: { xs: 'flex-start' },
         mb: 5,
       }}
       data-testid="page-header">
+      {actions && (
+        <Box sx={{ flex: 0 }} data-testid="page-header-actions">
+          {actions}
+        </Box>
+      )}
       <Box sx={{ mb: { xs: 2, sm: 0 } }}>
         <Typography variant="h2" data-testid={`${titleSlug}-page-title`}>
           {title}
@@ -31,11 +36,6 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => 
           </Typography>
         )}
       </Box>
-      {actions && (
-        <Box sx={{ mt: { xs: 2, sm: 0 } }} data-testid="page-header-actions">
-          {actions}
-        </Box>
-      )}
     </Box>
   )
 }

@@ -11,7 +11,6 @@ import {
 import { useGetEventsByGroupQuery } from '../store/api/eventsApi'
 import {
   PageHeader,
-  Breadcrumb,
   GroupInfoTab,
   GroupMembersTab,
   GroupGamesTab,
@@ -38,6 +37,7 @@ import {
   DialogContentText,
   DialogActions,
   Button,
+  useMediaQuery,
 } from '@mui/material'
 import {
   Info as InfoIcon,
@@ -52,6 +52,7 @@ import {
 } from '@mui/icons-material'
 import { useState, useEffect, useMemo } from 'react'
 import { ROLE_ADMIN, ROLE_ORGANIZER } from '../constants/roles'
+import { theme } from '../theme'
 
 const GroupDetailsPage = () => {
   const { groupId } = useParams<{ groupId: string }>()
@@ -121,6 +122,7 @@ const GroupDetailsPage = () => {
       setMainTabValue(0)
     }
   }, [mainTabValue, tabConfig.tabs.length])
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   // Sync URL when tab changes
   useEffect(() => {
@@ -210,14 +212,7 @@ const GroupDetailsPage = () => {
   const inviteLinks = inviteLinksResponse?.data || []
 
   return (
-    <Box sx={{ p: 3 }} data-testid="group-details-page">
-      <Breadcrumb
-        items={[
-          { label: 'Groups', to: '/groups' },
-          { label: group.Name, active: true },
-        ]}
-      />
-
+    <Box data-testid="group-details-page">
       <PageHeader
         title={group.Name}
         actions={
@@ -317,13 +312,14 @@ const GroupDetailsPage = () => {
       </Dialog>
 
       {/* Main tabs */}
-      <Box sx={{ width: '100%', mt: 3 }} data-testid="group-details-tabs-container">
+      <Box data-testid="group-details-tabs-container">
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
             value={mainTabValue}
+            scrollButtons
             onChange={handleMainTabChange}
             aria-label="group details tabs"
-            variant="fullWidth"
+            variant={isMobile ? 'scrollable' : 'fullWidth'}
             data-testid="group-details-tabs">
             {tabConfig.tabs.map((tab, index) => (
               <Tab

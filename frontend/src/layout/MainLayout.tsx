@@ -296,10 +296,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 1, lg: 2 },
           width: { md: `calc(100% - ${drawerWidth}px)` },
           mt: { xs: '64px', md: 0 },
           bgcolor: 'background.default',
+          maxWidth: { xs: '100vw', md: '100%' },
         }}
         data-testid="main-content">
         {children}
