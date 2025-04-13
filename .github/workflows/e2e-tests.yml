@@ -40,3 +40,8 @@ jobs:
         run: |
           chmod +x ./docker-e2e.sh
           ./docker-e2e.sh
+
+      - name: Cleanup
+        if: always()
+        run: |
+          sudo docker run --rm -v $(pwd):/app -w /app alpine sh -c "rm -rf improv.db docker-data"
