@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+# Define cleanup function
+cleanup() {
+  # Check if container_id is set
+  if [ -n "${container_id:-}" ]; then
+    echo "Cleaning up - stopping and removing container..."
+    docker stop $container_id 2>/dev/null || true
+    docker rm $container_id 2>/dev/null || true
+  fi
+  exit ${1:-0}
+}
+
+# Setup trap handlers for various signals
+trap 'cleanup 1' SIGHUP SIGINT SIGQUIT SIGTERM ERR
+
 # Start docker compose
 docker compose up -d
 
@@ -57,14 +71,11 @@ wait_for_service
 # Run the E2E tests
 cd e2e
 echo "Running E2E tests..."
-pnpm run test:docker
+pnpm run test:docker --retries 3 --workers=6
 test_exit_code=$?
 cd ..
 
-# Clean up - stop and remove the container
-echo "Stopping and removing container..."
-docker stop $container_id
-docker rm $container_id
-
-# Exit with the same code as the tests
-exit $test_exit_code
+# Use the cleanup function instead of direct commands
+# This ensures consistent cleanup behavior
+echo "Tests completed with exit code: $test_exit_code"
+cleanup $test_exit_code

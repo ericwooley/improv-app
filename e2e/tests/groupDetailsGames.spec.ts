@@ -6,6 +6,7 @@ import { GroupDetailsPage } from '../pages/GroupDetailsPage'
 import { NewGamePage } from '../pages/NewGamePage'
 import { GameDetailsPage } from '../pages/GameDetailsPage'
 import { EmptyStateComponent } from '../components/EmptyStateComponent'
+import { GamesPage } from '../pages/GamesPage'
 
 test.describe('Games Functionality', () => {
   test('should show empty state when no games exist in a group', async ({ page }) => {

@@ -6,17 +6,11 @@ on:
 
 jobs:
   e2e-tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'pnpm'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -24,10 +18,20 @@ jobs:
           version: 8
           run_install: false
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
       - name: Install dependencies in e2e directory
         run: |
           cd e2e
           pnpm install
+
+      - name: Run pnpm exec playwright install
+        run: |
+          cd e2e
+          pnpm exec playwright install
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -36,3 +40,8 @@ jobs:
         run: |
           chmod +x ./docker-e2e.sh
           ./docker-e2e.sh
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker run --rm -v $(pwd):/app -w /app alpine sh -c "rm -rf improv.db docker-data"

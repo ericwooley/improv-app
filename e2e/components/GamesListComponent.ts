@@ -362,6 +362,6 @@ export class GamesListComponent {
     await this.page.waitForSelector(
       '[data-testid="games-list-container"], [data-testid="games-list-loading"], [data-testid="empty-state"]'
     )
-    await this.page.waitForTimeout(1000) // wait for animations to finish
+    await this.page.waitForTimeout(1000)
   }
 }

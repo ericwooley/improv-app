@@ -147,7 +147,8 @@ test.describe('Login Page', () => {
     await page.waitForLoadState('networkidle')
     const mainLayoutPage = new MainLayoutPage(page)
     await expect(page).toHaveURL('/')
-
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(100)
     // Verify profile completion banner is visible
     expect(await mainLayoutPage.isProfileCompletionBannerVisible()).toBeTruthy()
 

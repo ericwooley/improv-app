@@ -8,6 +8,9 @@ interface PageHeaderProps {
 }
 
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => {
+  // Create a slug from the title for the test ID
+  const titleSlug = title.toLowerCase().replace(/\s+/g, '-')
+
   return (
     <Box
       sx={{
@@ -19,7 +22,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => 
       }}
       data-testid="page-header">
       <Box sx={{ mb: { xs: 2, sm: 0 } }}>
-        <Typography variant="h2" data-testid="page-header-title">
+        <Typography variant="h2" data-testid={`${titleSlug}-page-title`}>
           {title}
         </Typography>
         {subtitle && (

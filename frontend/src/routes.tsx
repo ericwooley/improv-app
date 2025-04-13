@@ -26,6 +26,7 @@ import JoinGroupPage from './pages/JoinGroupPage'
 import NotFoundPage from './pages/NotFoundPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import LogoutPage from './pages/LogoutPage'
 
 // Public routes that don't require authentication
 const PublicRoutes = () => {
@@ -62,6 +63,7 @@ const PrivateRoutes = () => {
         <Route path="/events/:eventId" element={<EventDetailsPage />} />
         <Route path="/events/:eventId/edit" element={<EditEventPage />} />
         <Route path="/join/:code" element={<JoinGroupPage />} />
+        <Route path="/logout" element={<LogoutPage />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
