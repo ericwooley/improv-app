@@ -136,7 +136,7 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
             </Typography>
             <Grid container spacing={2}>
               {registeredPlayers.map((player) => (
-                <Grid size={6} key={player.userId}>
+                <Grid size={{ xs: 12, lg: 6 }} key={player.userId}>
                   <Card variant="outlined" sx={{ mb: 2, height: '100%' }}>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -192,7 +192,7 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
             </Typography>
             <Grid container spacing={2}>
               {walkInPlayers.map((player) => (
-                <Grid size={6} key={player.userId}>
+                <Grid size={{ xs: 12, lg: 6 }} key={player.userId}>
                   <Card variant="outlined" sx={{ mb: 2, height: '100%' }}>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -248,7 +248,7 @@ const GameHealthAnalyzer: React.FC<GameHealthAnalyzerProps> = ({ gameData }) => 
             const hasTooManyPlayers = playerCount > game.maxPlayers
 
             return (
-              <Grid size={4} key={game.id}>
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={game.id}>
                 <Card variant="outlined" sx={{ mb: 2, height: '100%' }}>
                   <CardContent>
                     <Typography variant="subtitle1" fontWeight="bold" gutterBottom>

@@ -85,7 +85,17 @@ export const analyzeGameHealth = (data: GameData): PlayerProblem[] => {
 
     // Check number of assignments
     const assignmentCount = assignmentCounts[player.userId] || 0
-    if (assignmentCount < averageAssignments - 0.5) {
+
+    // Check for too few games compared to average
+    if (assignmentCount === 0) {
+      // Special case: player has no games at all
+      playerProblems.push({
+        type: 'too-few-games',
+        severity: 'high',
+        description: `Not assigned to any games`,
+        score: -20, // Higher penalty for no games at all
+      })
+    } else if (players.length > 1 && assignmentCount < averageAssignments - 0.5) {
       const gap = averageAssignments - assignmentCount
       const severity = gap > 1.5 ? 'high' : gap > 0.75 ? 'medium' : 'low'
       playerProblems.push({
@@ -96,7 +106,7 @@ export const analyzeGameHealth = (data: GameData): PlayerProblem[] => {
         )}`,
         score: -Math.round(gap * 10),
       })
-    } else if (assignmentCount > averageAssignments + 0.5) {
+    } else if (players.length > 1 && assignmentCount > averageAssignments + 0.5) {
       const gap = assignmentCount - averageAssignments
       const severity = gap > 1.5 ? 'high' : gap > 0.75 ? 'medium' : 'low'
       playerProblems.push({
