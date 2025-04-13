@@ -11,15 +11,22 @@ import {
   CircularProgress,
   Alert,
   Link as MuiLink,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   People as PeopleIcon,
   LocationOn as LocationIcon,
   CalendarToday as CalendarIcon,
   AccessTime as ClockIcon,
   Add as AddIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material'
+import { useState } from 'react'
 import { useGetEventsQuery, Event as ApiEvent } from '../store/api/eventsApi'
 
 interface Event {
@@ -38,7 +45,22 @@ const createGoogleMapsLink = (location: string) => {
 }
 
 const EventsPage = () => {
+  const navigate = useNavigate()
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const { data: eventsResponse, isLoading, error } = useGetEventsQuery()
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleMenuClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleCreateEvent = () => {
+    navigate('/events/new')
+    handleMenuClose()
+  }
 
   // Format events from API response
   const formatEvents = (events: ApiEvent[]): Event[] => {
@@ -69,12 +91,24 @@ const EventsPage = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <PageHeader title="Improv Events" subtitle="View upcoming improv events" />
-        <Button component={Link} to="/events/new" variant="contained" color="primary" startIcon={<AddIcon />}>
-          Create Event
-        </Button>
-      </Box>
+      <PageHeader
+        title="Improv Events"
+        subtitle="View upcoming improv events"
+        actions={
+          <IconButton onClick={handleMenuOpen} aria-label="event actions" data-testid="events-actions-button">
+            <MoreVertIcon />
+          </IconButton>
+        }
+      />
+
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} data-testid="events-actions-menu">
+        <MenuItem onClick={handleCreateEvent} data-testid="create-event-button">
+          <ListItemIcon>
+            <AddIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Create Event</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {events.length > 0 ? (
         <Grid container spacing={3}>

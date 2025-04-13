@@ -148,7 +148,7 @@ const GroupLibraryManager = ({ gameId }: { gameId: string }) => {
   if (!adminGroups.length) return null
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box>
       <Typography variant="h6" sx={{ mb: 2 }}>
         Manage Group Libraries
       </Typography>

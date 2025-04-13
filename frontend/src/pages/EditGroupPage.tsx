@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGetGroupQuery, useUpdateGroupMutation } from '../store/api/groupsApi'
-import { PageHeader, Breadcrumb } from '../components'
+import { PageHeader } from '../components'
 import { GroupForm, GroupFormData } from '../components/GroupForm'
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
@@ -66,13 +66,7 @@ const EditGroupPage = () => {
 
   return (
     <div className="content-wrapper">
-      <Breadcrumb
-        items={[
-          { label: 'Groups', to: '/groups' },
-          { label: group.Name, to: `/groups/${group.ID}` },
-          { label: 'Edit Group', active: true },
-        ]}
-      />
+
 
       <PageHeader title="Edit Group" subtitle="Update your group's information" />
 

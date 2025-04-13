@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetGameQuery, useUpdateGameMutation } from '../store/api/gamesApi'
-import { PageHeader, Breadcrumb, GameForm } from '../components'
+import { PageHeader, GameForm } from '../components'
 import { Box, Card, CardContent, CircularProgress, Alert } from '@mui/material'
 import { GameFormData } from '../components/games/GameForm'
 
@@ -66,15 +66,7 @@ const EditGamePage = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Breadcrumb
-        items={[
-          { label: 'Games', to: '/games' },
-          { label: initialData.name, to: `/games/${gameId}` },
-          { label: 'Edit', active: true },
-        ]}
-      />
-
+    <>
       <PageHeader title="Edit Game" subtitle="Update game details" />
 
       <Card>
@@ -89,7 +81,7 @@ const EditGamePage = () => {
           />
         </CardContent>
       </Card>
-    </Box>
+    </>
   )
 }
 

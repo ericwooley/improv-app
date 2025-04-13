@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useCreateGameMutation } from '../store/api/gamesApi'
-import { PageHeader, Breadcrumb, GameForm } from '../components'
+import { PageHeader, GameForm } from '../components'
 import { Box, Card, CardContent } from '@mui/material'
 import { GameFormData } from '../components/games/GameForm'
 
@@ -36,14 +36,7 @@ const NewGamePage = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }} data-testid="new-game-page">
-      <Breadcrumb
-        items={[
-          { label: 'Groups', to: '/groups' },
-          { label: 'Create Game', active: true },
-        ]}
-      />
-
+    <Box data-testid="new-game-page">
       <PageHeader title="Create New Game" subtitle="Add a new game to your group's library" />
 
       <Card data-testid="new-game-page-form-card">

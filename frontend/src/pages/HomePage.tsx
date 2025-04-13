@@ -58,7 +58,7 @@ const HomePage = () => {
   const showUnratedGamesSection = unratedGames.length > 0
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 2 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
       {isAuthenticated && user ? (
         <>
           <Typography variant="h4" sx={{ mb: 4 }}>

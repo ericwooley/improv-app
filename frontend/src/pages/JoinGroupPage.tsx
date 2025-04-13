@@ -112,7 +112,7 @@ const JoinGroupPage = () => {
   const groupInfo = inviteData.data
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
+    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
       <Card>
         <CardHeader
           title="Group Invitation"

@@ -1,15 +1,9 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { PageHeader, Breadcrumb, EventForm } from '../components'
+import { PageHeader, EventForm } from '../components'
 import { useGetGroupsQuery } from '../store/api/groupsApi'
 import { useCreateEventMutation } from '../store/api/eventsApi'
 import { EventFormData } from '../components/events/EventForm'
 import { Box, CircularProgress, Alert } from '@mui/material'
-
-interface Group {
-  ID: string
-  Name: string
-}
-
 
 const NewEventPage = () => {
   const navigate = useNavigate()
@@ -69,20 +63,8 @@ const NewEventPage = () => {
     )
   }
 
-  // Get the group name for the breadcrumb if groupId is provided
-  const selectedGroup = groupsResponse.data.find((g: Group) => g.ID === groupIdFromUrl)
-  const groupName = selectedGroup?.Name || ''
-
   return (
     <div className="content-wrapper">
-      <Breadcrumb
-        items={[
-          { label: 'Groups', to: '/groups' },
-          ...(groupName ? [{ label: groupName, to: `/groups/${groupIdFromUrl}` }] : []),
-          { label: 'Create New Event', active: true },
-        ]}
-      />
-
       <PageHeader title="Create New Event" subtitle="Schedule a new improv event" />
 
       <EventForm

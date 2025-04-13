@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateGroupMutation } from '../store/api/groupsApi'
-import { PageHeader, Breadcrumb } from '../components'
+import { PageHeader } from '../components'
 import { GroupForm, GroupFormData } from '../components/GroupForm'
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
@@ -29,13 +29,6 @@ const NewGroupPage = () => {
 
   return (
     <div className="content-wrapper">
-      <Breadcrumb
-        items={[
-          { label: 'Groups', to: '/groups' },
-          { label: 'Create New Group', active: true },
-        ]}
-      />
-
       <PageHeader title="Create New Group" subtitle="Set up a new improv group" />
 
       <GroupForm

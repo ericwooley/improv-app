@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { PageHeader, Breadcrumb, EventForm } from '../components'
+import { PageHeader, EventForm } from '../components'
 import { useGetEventQuery, useUpdateEventMutation } from '../store/api/eventsApi'
 import { EventFormData } from '../components/events/EventForm'
 import { Box, CircularProgress, Alert } from '@mui/material'
@@ -86,22 +86,9 @@ const EditEventPage = () => {
     )
   }
 
-  const event = eventResponse.data.event
-  const groupName = eventResponse.data.groupName || ''
-
   return (
     <div className="content-wrapper">
-      <Breadcrumb
-        items={[
-          { label: 'Events', to: '/events' },
-          ...(groupName ? [{ label: groupName, to: `/groups/${event.GroupID}` }] : []),
-          { label: event.Title, to: `/events/${eventId}` },
-          { label: 'Edit', active: true },
-        ]}
-      />
-
       <PageHeader title="Edit Event" subtitle="Update event details" />
-
       <EventForm
         initialData={initialData}
         onSubmit={handleSubmit}

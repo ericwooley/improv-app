@@ -18,7 +18,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => 
         flexDirection: 'row',
         // justifyContent: 'space-between',
         alignItems: { xs: 'flex-start' },
-        mb: 5,
+        mb: 1,
       }}
       data-testid="page-header">
       {actions && (
@@ -26,7 +26,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions }) => 
           {actions}
         </Box>
       )}
-      <Box sx={{ mb: { xs: 2, sm: 0 } }}>
+      <Box>
         <Typography variant="h2" data-testid={`${titleSlug}-page-title`}>
           {title}
         </Typography>

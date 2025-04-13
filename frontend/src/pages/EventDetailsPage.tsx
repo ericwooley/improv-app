@@ -17,6 +17,7 @@ import {
   Tabs,
   Tab,
   Paper,
+  useMediaQuery,
 } from '@mui/material'
 import {
   Event as EventIcon,
@@ -34,7 +35,7 @@ import {
   Error as ErrorIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material'
-import { PageHeader, Breadcrumb, InfoItem, formatDate, formatTime } from '../components'
+import { PageHeader, InfoItem, formatDate, formatTime } from '../components'
 import TabPanel, { a11yProps } from '../components/TabPanel'
 import {
   useGetEventQuery,
@@ -51,6 +52,7 @@ import { RootState } from '../store'
 import AttendanceList from '../components/events/AttendanceList'
 import RSVPModal from '../components/events/RSVPModal'
 import { GameData, analyzeGameHealth, calculateOverallHealthScore } from '../utils/gameHealthUtils'
+import { theme } from '../theme'
 import GameHealthAnalyzer from '../components/games/GameHealthAnalyzer'
 
 // Helper function to create Google Maps link
@@ -162,7 +164,7 @@ const EventDetailsPage = () => {
     newParams.set('tab-game-management', newValue.toString())
     navigate(`${location.pathname}?${newParams.toString()}`, { replace: true })
   }
-
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   // Handle RSVP button click
   const handleRSVPClick = () => {
     setRsvpModalOpen(true)
@@ -205,16 +207,8 @@ const EventDetailsPage = () => {
 
   return (
     <Box>
-      <Breadcrumb
-        items={[
-          { label: 'Events', to: '/events' },
-          ...(groupName ? [{ label: groupName, to: `/groups/${event.GroupID}` }] : []),
-          { label: event.Title, active: true },
-        ]}
-      />
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
         <PageHeader title={event.Title} subtitle="Event Details" />
-
         {canManageEvent && (
           <>
             <IconButton onClick={handleMenuOpen}>
@@ -251,7 +245,11 @@ const EventDetailsPage = () => {
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="Event tabs" variant="fullWidth">
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="Event tabs"
+          variant={isMobile ? 'scrollable' : 'fullWidth'}>
           <Tab label="Event Details" icon={<InfoIcon />} iconPosition="start" {...a11yProps(0, 'event')} />
           <Tab label="Games" icon={<GamesIcon />} iconPosition="start" {...a11yProps(1, 'event')} />
           <Tab label="Attendance" icon={<GroupIcon />} iconPosition="start" {...a11yProps(2, 'event')} />
@@ -261,7 +259,11 @@ const EventDetailsPage = () => {
       <TabPanel value={tabValue} index={0} id="event">
         <Box sx={{ p: 3 }}>
           <Grid container spacing={3}>
-            <Grid size={8}>
+            <Grid
+              size={{
+                xs: 12,
+                md: 8,
+              }}>
               {event.Description && (
                 <Typography paragraph sx={{ mb: 3 }}>
                   {event.Description}
@@ -305,12 +307,12 @@ const EventDetailsPage = () => {
               </Box>
             </Grid>
 
-            <Grid size={4}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Actions
-                </Typography>
-
+            <Grid
+              size={{
+                xs: 12,
+                md: 4,
+              }}>
+              <Box>
                 <Button
                   variant="contained"
                   color="primary"
@@ -320,18 +322,6 @@ const EventDetailsPage = () => {
                   onClick={handleRSVPClick}>
                   {currentRSVPStatus ? `Update RSVP (${currentRSVPStatus})` : 'RSVP to Event'}
                 </Button>
-
-                {canManageEvent && (
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    fullWidth
-                    component={Link}
-                    to={`/events/${eventId}/edit`}
-                    startIcon={<EditIcon />}>
-                    Edit Event
-                  </Button>
-                )}
               </Box>
             </Grid>
           </Grid>
