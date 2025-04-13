@@ -63,7 +63,7 @@ export class GameFormComponent {
     // Click the tags input
     await this.tagsInput.click()
 
-    // Type the tag name
+    // Type the tag name to filter the dropdown
     await this.page.keyboard.type(tag)
 
     // Wait for suggestions to appear
@@ -84,37 +84,17 @@ export class GameFormComponent {
         if (await suggestion.isVisible()) {
           await suggestion.click()
         } else {
-          // If no suggestion is visible, try clicking away to commit the tag
-          // Then click back on the input to refocus
-          await this.descriptionTextarea.click()
-          await this.tagsInput.click()
-
-          // Try another way - click tab to select the highlighted item
-          await this.page.keyboard.press('Tab')
+          // If tag not found in dropdown, clear the input since we can only use predefined tags
+          await this.page.keyboard.press('Escape')
         }
       }
     } catch (error) {
-      console.log(`Error adding tag "${tag}": ${error}`)
-      // As a last resort, click away from the input
-      await this.descriptionTextarea.click()
+      // If error occurs, clear the input by pressing Escape
+      await this.page.keyboard.press('Escape')
     }
 
     // Wait for UI to update
-    await this.page.waitForTimeout(500)
-
-    // Verify the tag was added by checking for the chip
-    const tagChip = this.page.locator(`[data-testid="game-form-tag-chip-${formattedTag}"]`)
-    const isTagAdded = await tagChip.isVisible().catch(() => false)
-
-    if (!isTagAdded) {
-      console.log(`Warning: Tag "${tag}" might not have been added successfully. Trying fallback method.`)
-
-      // Try an alternative method as a fallback
-      await this.tagsInput.click()
-      await this.page.keyboard.type(tag)
-      await this.submitButton.focus() // Focus on submit button to commit the tag without submitting
-      await this.page.waitForTimeout(500)
-    }
+    await this.page.waitForTimeout(300)
   }
 
   /**
@@ -152,6 +132,7 @@ export class GameFormComponent {
     if (data.tags && data.tags.length > 0) {
       for (const tag of data.tags) {
         await this.addTag(tag)
+        await this.page.waitForTimeout(100)
       }
     }
 
