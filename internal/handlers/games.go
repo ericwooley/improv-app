@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -28,18 +29,29 @@ func NewGameHandler(db *sql.DB) *GameHandler {
 	}
 }
 
-// List handles GET and POST requests for games
+// List handles GET requests for games, routing to appropriate handler based on parameters
 func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*models.User)
 
 	// Parse query parameters for filtering
 	query := r.URL.Query()
-	tagFilter := query.Get("tag")
-	libraryFilter := query.Get("library")
-	ownedByGroupFilter := query.Get("ownedByGroup")
 	searchQuery := query.Get("search")
 
-	// Pagination parameters
+	// Parse pagination parameters
+	page, pageSize := h.parsePaginationParams(query)
+
+	// If search query is provided, use search function
+	if searchQuery != "" {
+		h.searchGames(w, r, user.ID, searchQuery, query, page, pageSize)
+		return
+	}
+
+	// Otherwise use basic listing function
+	h.listGamesBasic(w, r, user.ID, query, page, pageSize)
+}
+
+// parsePaginationParams extracts and validates pagination parameters
+func (h *GameHandler) parsePaginationParams(query url.Values) (int, int) {
 	pageStr := query.Get("page")
 	pageSizeStr := query.Get("pageSize")
 
@@ -62,62 +74,116 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var queryStr string
-	var countQueryStr string
-	var params []interface{}
-	var countParams []interface{}
+	return page, pageSize
+}
 
-	// If search query is provided, use FTS4
-	if searchQuery != "" {
-		// Add wildcard for partial word matching
-		searchTermWithWildcard := searchQuery + "*"
+// searchGames handles searching for games with the provided search term
+func (h *GameHandler) searchGames(w http.ResponseWriter, r *http.Request, userID string, searchQuery string, query url.Values, page int, pageSize int) {
+	// Extract filters
+	tagFilter := query.Get("tag")
+	libraryFilter := query.Get("library")
+	ownedByGroupFilter := query.Get("ownedByGroup")
 
-		queryStr = `
-			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-				   GROUP_CONCAT(DISTINCT t.name) as tags,
-				   (CASE
-					  WHEN g.name LIKE ? THEN 3
-					  WHEN g.description LIKE ? THEN 1
-					  ELSE 0
-				    END) AS relevance_score,
-				   COUNT(DISTINCT eg.event_id) AS event_count
-			FROM games g
-			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
-			LEFT JOIN game_tags t ON gta.tag_id = t.id
-			LEFT JOIN event_games eg ON g.id = eg.game_id
-			WHERE g.id IN (
-				SELECT docid FROM games_fts WHERE games_fts MATCH ?
-			)
-		`
-		countQueryStr = `
-			SELECT COUNT(DISTINCT g.id)
-			FROM games g
-			WHERE g.id IN (
-				SELECT docid FROM games_fts WHERE games_fts MATCH ?
-			)
-		`
-		likePattern := "%" + searchQuery + "%"
-		params = append(params, likePattern, likePattern, searchTermWithWildcard)
-		countParams = append(countParams, searchTermWithWildcard)
-	} else {
-		// Regular query without search
-		queryStr = `
-			SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
-				   GROUP_CONCAT(DISTINCT t.name) as tags,
-				   COUNT(DISTINCT eg.event_id) AS event_count
-			FROM games g
-			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
-			LEFT JOIN game_tags t ON gta.tag_id = t.id
-			LEFT JOIN event_games eg ON g.id = eg.game_id
-		`
-		countQueryStr = `
-			SELECT COUNT(DISTINCT g.id)
-			FROM games g
-			LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
-			LEFT JOIN game_tags t ON gta.tag_id = t.id
-		`
-	}
+	// Add wildcard for partial word matching
+	searchTermWithWildcard := searchQuery + "*"
+	likePattern := "%" + searchQuery + "%"
 
+	// Build base query for searching
+	queryStr := `
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+			GROUP_CONCAT(DISTINCT t.name) as tags,
+			(CASE
+				WHEN g.name LIKE ? THEN 3
+				WHEN g.description LIKE ? THEN 1
+				ELSE 0
+			END) AS relevance_score,
+			COUNT(DISTINCT eg.event_id) AS event_count
+		FROM games g
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		LEFT JOIN event_games eg ON g.id = eg.game_id
+		WHERE g.id IN (
+			SELECT docid FROM games_fts WHERE games_fts MATCH ?
+		)
+	`
+
+	countQueryStr := `
+		SELECT COUNT(DISTINCT g.id)
+		FROM games g
+		WHERE g.id IN (
+			SELECT docid FROM games_fts WHERE games_fts MATCH ?
+		)
+	`
+
+	params := []interface{}{likePattern, likePattern, searchTermWithWildcard}
+	countParams := []interface{}{searchTermWithWildcard}
+
+	// Apply additional filters
+	queryStr, countQueryStr, params, countParams = h.applyFilters(
+		queryStr, countQueryStr, params, countParams,
+		userID, tagFilter, libraryFilter, ownedByGroupFilter,
+	)
+
+	// Add grouping and ordering
+	queryStr += `
+		GROUP BY g.id
+		ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
+	`
+
+	// Execute the queries and build response
+	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, true)
+}
+
+// listGamesBasic handles listing games with optional filters but no search term
+func (h *GameHandler) listGamesBasic(w http.ResponseWriter, r *http.Request, userID string, query url.Values, page int, pageSize int) {
+	// Extract filters
+	tagFilter := query.Get("tag")
+	libraryFilter := query.Get("library")
+	ownedByGroupFilter := query.Get("ownedByGroup")
+
+	// Build base query for listing
+	queryStr := `
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+			GROUP_CONCAT(DISTINCT t.name) as tags,
+			COUNT(DISTINCT eg.event_id) AS event_count
+		FROM games g
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		LEFT JOIN event_games eg ON g.id = eg.game_id
+	`
+
+	countQueryStr := `
+		SELECT COUNT(DISTINCT g.id)
+		FROM games g
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+	`
+
+	params := []interface{}{}
+	countParams := []interface{}{}
+
+	// Apply filters to the basic listing
+	queryStr, countQueryStr, params, countParams = h.applyFilters(
+		queryStr, countQueryStr, params, countParams,
+		userID, tagFilter, libraryFilter, ownedByGroupFilter,
+	)
+
+	// Add grouping and ordering
+	queryStr += `
+		GROUP BY g.id
+		ORDER BY event_count DESC, g.created_at DESC
+	`
+
+	// Execute the queries and build response
+	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, false)
+}
+
+// applyFilters adds WHERE clauses for various filters to both query and count query
+func (h *GameHandler) applyFilters(
+	queryStr string, countQueryStr string,
+	params []interface{}, countParams []interface{},
+	userID string, tagFilter string, libraryFilter string, ownedByGroupFilter string,
+) (string, string, []interface{}, []interface{}) {
 	// Apply library filter if provided
 	if libraryFilter != "" {
 		if len(params) > 0 {
@@ -163,8 +229,8 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 			   OR g.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?))
 		`
 	}
-	params = append(params, user.ID)
-	countParams = append(countParams, user.ID)
+	params = append(params, userID)
+	countParams = append(countParams, userID)
 
 	// Apply tag filter if provided
 	if tagFilter != "" {
@@ -198,21 +264,17 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		countParams = append(countParams, ownedByGroupFilter)
 	}
 
-	queryStr += `
-		GROUP BY g.id
-	`
+	return queryStr, countQueryStr, params, countParams
+}
 
-	// Add ORDER BY relevance for search queries, otherwise by event count
-	if searchQuery != "" {
-		queryStr += `
-			ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
-		`
-	} else {
-		queryStr += `
-			ORDER BY event_count DESC, g.created_at DESC
-		`
-	}
-
+// executeQueryAndRespond runs the query, processes results, and sends the response
+func (h *GameHandler) executeQueryAndRespond(
+	w http.ResponseWriter,
+	queryStr string, countQueryStr string,
+	params []interface{}, countParams []interface{},
+	page int, pageSize int,
+	isSearch bool,
+) {
 	// Get total count for pagination
 	var totalCount int
 	err := h.db.QueryRow(countQueryStr, countParams...).Scan(&totalCount)
@@ -245,7 +307,7 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 		var tagsStr sql.NullString
 		var eventCount int
 
-		if searchQuery != "" {
+		if isSearch {
 			var relevanceScore int
 			err := rows.Scan(&game.ID, &game.Name, &game.Description, &game.MinPlayers, &game.MaxPlayers, &game.CreatedAt, &game.CreatedBy, &game.GroupID, &game.Public, &tagsStr, &relevanceScore, &eventCount)
 			if err != nil {
