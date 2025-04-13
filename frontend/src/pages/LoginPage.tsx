@@ -169,6 +169,16 @@ const LoginPage = () => {
               </Button>
             </form>
           </Paper>
+
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Not ready to create an account yet?{' '}
+              <Link to="/games" style={{ textDecoration: 'none' }} data-testid="browse-games-link">
+                Browse our public games
+              </Link>{' '}
+              without signing in.
+            </Typography>
+          </Box>
         </Paper>
       </Box>
     </Container>
