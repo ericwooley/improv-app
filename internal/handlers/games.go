@@ -138,12 +138,6 @@ func (h *GameHandler) searchGames(w http.ResponseWriter, r *http.Request, userID
 		ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
 	`
 
-	// Log the final query and parameters for debugging
-	log.Printf("Search query: %s", queryStr)
-	log.Printf("Search params: %v", params)
-	log.Printf("Count query: %s", countQueryStr)
-	log.Printf("Count params: %v", countParams)
-
 	// Execute the queries and build response
 	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, true)
 }
