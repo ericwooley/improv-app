@@ -10,6 +10,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import GamesPage from './pages/GamesPage'
+import PublicGamesPage from './pages/PublicGamesPage'
 import GroupsPage from './pages/GroupsPage'
 import NewGroupPage from './pages/NewGroupPage'
 import GroupDetailsPage from './pages/GroupDetailsPage'
@@ -34,6 +35,7 @@ const PublicRoutes = () => {
     <PublicLayout>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/games" element={<PublicGamesPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />

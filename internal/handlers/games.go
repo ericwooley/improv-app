@@ -31,7 +31,11 @@ func NewGameHandler(db *sql.DB) *GameHandler {
 
 // List handles GET requests for games, routing to appropriate handler based on parameters
 func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(middleware.UserContextKey).(*models.User)
+	var user *models.User
+	contextUser := r.Context().Value(middleware.UserContextKey)
+	if contextUser != nil {
+		user = contextUser.(*models.User)
+	}
 
 	// Parse query parameters for filtering
 	query := r.URL.Query()
@@ -42,12 +46,20 @@ func (h *GameHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	// If search query is provided, use search function
 	if searchQuery != "" {
-		h.searchGames(w, r, user.ID, searchQuery, query, page, pageSize)
+		if user != nil {
+			h.searchGames(w, r, user.ID, searchQuery, query, page, pageSize)
+		} else {
+			h.searchPublicGames(w, r, searchQuery, query, page, pageSize)
+		}
 		return
 	}
 
 	// Otherwise use basic listing function
-	h.listGamesBasic(w, r, user.ID, query, page, pageSize)
+	if user != nil {
+		h.listGamesBasic(w, r, user.ID, query, page, pageSize)
+	} else {
+		h.listPublicGamesBasic(w, r, query, page, pageSize)
+	}
 }
 
 // parsePaginationParams extracts and validates pagination parameters
@@ -142,6 +154,74 @@ func (h *GameHandler) searchGames(w http.ResponseWriter, r *http.Request, userID
 	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, true)
 }
 
+// searchPublicGames handles searching for public games without authentication
+func (h *GameHandler) searchPublicGames(w http.ResponseWriter, r *http.Request, searchQuery string, query url.Values, page int, pageSize int) {
+	// Extract filters
+	tagFilter := query.Get("tag")
+
+	// Add wildcard for partial word matching - different approach for SQLite
+	// The "*" needs to be at the end to match prefixes in SQLite FTS
+	searchTermWithWildcard := searchQuery + "*"
+	likePattern := "%" + searchQuery + "%"
+
+	// Build base query for searching - improve FTS integration
+	queryStr := `
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+			GROUP_CONCAT(DISTINCT t.name) as tags,
+			(CASE
+				WHEN g.name LIKE ? THEN 3
+				WHEN g.description LIKE ? THEN 1
+				ELSE 0
+			END) AS relevance_score,
+			COUNT(DISTINCT eg.event_id) AS event_count
+		FROM games g
+		JOIN games_fts ON games_fts.docid = g.rowid
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		LEFT JOIN event_games eg ON g.id = eg.game_id
+		WHERE games_fts MATCH ? AND g.public = TRUE
+	`
+
+	countQueryStr := `
+		SELECT COUNT(DISTINCT g.id)
+		FROM games g
+		JOIN games_fts ON games_fts.docid = g.rowid
+		WHERE games_fts MATCH ? AND g.public = TRUE
+	`
+
+	params := []interface{}{likePattern, likePattern, searchTermWithWildcard}
+	countParams := []interface{}{searchTermWithWildcard}
+
+	// Apply tag filter if provided
+	if tagFilter != "" {
+		queryStr += `
+			AND g.id IN (
+				SELECT game_id FROM game_tag_associations gta
+				JOIN game_tags t ON gta.tag_id = t.id
+				WHERE t.name = ?
+			)
+		`
+		countQueryStr += `
+			AND g.id IN (
+				SELECT game_id FROM game_tag_associations gta
+				JOIN game_tags t ON gta.tag_id = t.id
+				WHERE t.name = ?
+			)
+		`
+		params = append(params, tagFilter)
+		countParams = append(countParams, tagFilter)
+	}
+
+	// Add grouping and ordering
+	queryStr += `
+		GROUP BY g.id
+		ORDER BY relevance_score DESC, event_count DESC, g.created_at DESC
+	`
+
+	// Execute the queries and build response
+	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, true)
+}
+
 // listGamesBasic handles listing games with optional filters but no search term
 func (h *GameHandler) listGamesBasic(w http.ResponseWriter, r *http.Request, userID string, query url.Values, page int, pageSize int) {
 	// Extract filters
@@ -175,6 +255,62 @@ func (h *GameHandler) listGamesBasic(w http.ResponseWriter, r *http.Request, use
 		queryStr, countQueryStr, params, countParams,
 		userID, tagFilter, libraryFilter, ownedByGroupFilter,
 	)
+
+	// Add grouping and ordering
+	queryStr += `
+		GROUP BY g.id
+		ORDER BY event_count DESC, g.created_at DESC
+	`
+
+	// Execute the queries and build response
+	h.executeQueryAndRespond(w, queryStr, countQueryStr, params, countParams, page, pageSize, false)
+}
+
+// listPublicGamesBasic handles listing public games without authentication
+func (h *GameHandler) listPublicGamesBasic(w http.ResponseWriter, r *http.Request, query url.Values, page int, pageSize int) {
+	// Extract filters
+	tagFilter := query.Get("tag")
+
+	// Build base query for listing
+	queryStr := `
+		SELECT g.id, g.name, g.description, g.min_players, g.max_players, g.created_at, g.created_by, g.group_id, g.public,
+			GROUP_CONCAT(DISTINCT t.name) as tags,
+			COUNT(DISTINCT eg.event_id) AS event_count
+		FROM games g
+		LEFT JOIN game_tag_associations gta ON g.id = gta.game_id
+		LEFT JOIN game_tags t ON gta.tag_id = t.id
+		LEFT JOIN event_games eg ON g.id = eg.game_id
+		WHERE g.public = TRUE
+	`
+
+	countQueryStr := `
+		SELECT COUNT(DISTINCT g.id)
+		FROM games g
+		WHERE g.public = TRUE
+	`
+
+	params := []interface{}{}
+	countParams := []interface{}{}
+
+	// Apply tag filter if provided
+	if tagFilter != "" {
+		queryStr += `
+			AND g.id IN (
+				SELECT game_id FROM game_tag_associations gta
+				JOIN game_tags t ON gta.tag_id = t.id
+				WHERE t.name = ?
+			)
+		`
+		countQueryStr += `
+			AND g.id IN (
+				SELECT game_id FROM game_tag_associations gta
+				JOIN game_tags t ON gta.tag_id = t.id
+				WHERE t.name = ?
+			)
+		`
+		params = append(params, tagFilter)
+		countParams = append(countParams, tagFilter)
+	}
 
 	// Add grouping and ordering
 	queryStr += `

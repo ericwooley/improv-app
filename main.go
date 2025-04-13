@@ -148,7 +148,7 @@ func main() {
 	api.HandleFunc("/events/{id}/rsvp/{userId}", middleware.RequireAuthAPI(sqlDB, rsvpHandler.UpdateUserRSVP)).Methods("PUT")
 
 	// Game routes
-	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.List)).Methods("GET")
+	api.HandleFunc("/games", gameHandler.List).Methods("GET")
 	api.HandleFunc("/games", middleware.RequireAuthAPI(sqlDB, gameHandler.Create)).Methods("POST")
 	api.HandleFunc("/games/tags", middleware.RequireAuthAPI(sqlDB, gameHandler.GetAllowedTags)).Methods("GET")
 	api.HandleFunc("/games/unrated", middleware.RequireAuthAPI(sqlDB, gameHandler.GetUnratedGames)).Methods("GET")
