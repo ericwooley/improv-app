@@ -2,6 +2,11 @@
 
 A web application for organizing and managing improv activities, built with Go and modern web technologies.
 
+## TODO
+
+- [ ] Allow access of the games list without an account.
+- [ ] Allow arbitrary extra members to events, who don't have accounts.
+ 
 ## Project Note
 
 This project was created as an experiment to try out "vibe coding" and Go, which resulted in functional but not particularly high-quality code. Feel free to open an issue or create a PR if you'd like to contribute or suggest improvements. The e2e tests are also quite flakey.
