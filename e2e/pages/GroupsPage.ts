@@ -87,4 +87,29 @@ export class GroupsPage extends BasePage {
   async clickEmptyStateAction() {
     await this.groupsList.clickEmptyStateAction()
   }
+
+  /**
+   * Navigate to create group page, works whether in empty state or with existing groups
+   */
+  async navigateToCreateGroup() {
+    // First check if the main create button exists
+    const mainButtonExists = await this.page.isVisible('[data-testid="create-group-button"]')
+
+    if (mainButtonExists) {
+      // Click the main create button if it exists
+      await this.page.click('[data-testid="create-group-button"]')
+    } else {
+      // Fallback to empty state button if it exists
+      const emptyStateButtonExists = await this.page.isVisible('[data-testid="empty-state-action-button"]')
+      if (emptyStateButtonExists) {
+        await this.clickEmptyStateAction()
+      } else {
+        // As a last resort, just navigate directly to the create group page
+        await this.page.goto('/groups/new')
+      }
+    }
+
+    // Wait for navigation to complete
+    await this.page.waitForURL(/.*\/groups\/new.*/, { timeout: 5000 })
+  }
 }

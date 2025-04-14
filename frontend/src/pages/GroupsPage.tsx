@@ -31,7 +31,7 @@ const GroupsPage = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box>
       <PageHeader
         title="Improv Groups"
         subtitle="Manage and explore your improv groups"
