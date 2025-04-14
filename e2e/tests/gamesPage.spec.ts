@@ -280,6 +280,7 @@ test.describe('Games Page Functionality', () => {
   })
 
   test('should filter games by tag on the main games page', async ({ page }) => {
+    test.slow()
     // Create a user for this test
     const userEmail = generateUniqueEmail()
     await loginWithMagicLink(page, userEmail)

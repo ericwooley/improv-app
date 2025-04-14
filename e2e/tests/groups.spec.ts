@@ -89,17 +89,11 @@ test.describe('Groups Page', () => {
     // Go back to groups page
     await page.goto('/groups')
 
-    // Look for either the regular create button or the empty state create button
-    try {
-      // Try the regular create button first
-      await page.click('[data-testid="create-group-button"]')
-    } catch (error) {
-      // If that fails, try the empty state button
-      await page.click('button:has-text("Create Your First Group")')
-    }
+    // Initialize the groups page
+    groupsPage = new GroupsPage(page)
 
-    // Wait for navigation to complete
-    await page.waitForURL(/.*\/groups\/new.*/, { timeout: 5000 })
+    // Use the reliable method to navigate to create group page
+    await groupsPage.navigateToCreateGroup()
 
     // Verify we're on the create group page
     const url = page.url()

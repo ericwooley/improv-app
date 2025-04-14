@@ -7,8 +7,6 @@ export const useIsAuthenticated = () => {
   // Only check profile status when user data is loaded
   const needsToCompleteProfile =
     !isLoading && isAuthenticated && user && user.firstName == 'anon' && user.lastName == 'ymous'
-  console.log('needsToCompleteProfile', needsToCompleteProfile)
-  console.log('user', user, isLoading, isAuthenticated)
   return {
     isLoading,
     isAuthenticated,

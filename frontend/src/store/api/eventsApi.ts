@@ -61,12 +61,27 @@ export interface RSVP {
   status: 'attending' | 'maybe' | 'declined' | 'awaiting-response'
 }
 
+export interface NonRegisteredAttendee {
+  id: string
+  eventId: string
+  firstName: string
+  lastName: string
+  email?: string
+  createdAt: string
+}
+
 export interface CreateEventRequest {
   title: string
   description: string
   location: string
   startTime: string
   groupId: string
+}
+
+export interface CreateNonRegisteredAttendeeRequest {
+  firstName: string
+  lastName: string
+  email?: string
 }
 
 // Game preferences and player assignments
@@ -219,7 +234,7 @@ export const eventsApi = apiSlice.injectEndpoints({
         return url
       },
       providesTags: (result, error, { eventId }) =>
-        result
+        result?.data
           ? [
               ...result.data.map(({ gameId, userId }) => ({
                 type: 'GamePreferences' as const,
@@ -269,6 +284,63 @@ export const eventsApi = apiSlice.injectEndpoints({
             ]
           : [{ type: 'PlayerAssignments', id: eventId }],
     }),
+
+    // Non-registered attendees endpoints
+    getNonRegisteredAttendees: builder.query<APIResponse<NonRegisteredAttendee[]>, string>({
+      query: (eventId) => `/events/${eventId}/non-registered-attendees`,
+      providesTags: (result, error, eventId) => {
+        return result?.data
+          ? [
+              ...result.data.map(({ id }) => ({
+                type: 'Event' as const,
+                id: `${eventId}-non-reg-${id}`,
+              })),
+              { type: 'Event', id: eventId },
+            ]
+          : [{ type: 'Event', id: eventId }]
+      },
+    }),
+
+    addNonRegisteredAttendee: builder.mutation<
+      APIResponse<NonRegisteredAttendee>,
+      { eventId: string; attendee: CreateNonRegisteredAttendeeRequest }
+    >({
+      query: ({ eventId, attendee }) => ({
+        url: `/events/${eventId}/non-registered-attendees`,
+        method: 'POST',
+        body: attendee,
+      }),
+      invalidatesTags: (result, error, { eventId }) => [
+        { type: 'Event', id: `${eventId}-non-registered` },
+        { type: 'Event', id: eventId },
+      ],
+    }),
+
+    updateNonRegisteredAttendee: builder.mutation<
+      APIResponse<NonRegisteredAttendee>,
+      { eventId: string; attendeeId: string; attendee: Partial<CreateNonRegisteredAttendeeRequest> }
+    >({
+      query: ({ eventId, attendeeId, attendee }) => ({
+        url: `/events/${eventId}/non-registered-attendees/${attendeeId}`,
+        method: 'PUT',
+        body: attendee,
+      }),
+      invalidatesTags: (result, error, { eventId, attendeeId }) => [
+        { type: 'Event', id: `${eventId}-non-reg-${attendeeId}` },
+        { type: 'Event', id: eventId },
+      ],
+    }),
+
+    deleteNonRegisteredAttendee: builder.mutation<APIResponse<void>, { eventId: string; attendeeId: string }>({
+      query: ({ eventId, attendeeId }) => ({
+        url: `/events/${eventId}/non-registered-attendees/${attendeeId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { eventId }) => [
+        { type: 'Event', id: `${eventId}-non-registered` },
+        { type: 'Event', id: eventId },
+      ],
+    }),
   }),
 })
 
@@ -291,4 +363,8 @@ export const {
   useAssignPlayerToGameMutation,
   useRemovePlayerFromGameMutation,
   useGetEventPlayersQuery,
+  useGetNonRegisteredAttendeesQuery,
+  useAddNonRegisteredAttendeeMutation,
+  useUpdateNonRegisteredAttendeeMutation,
+  useDeleteNonRegisteredAttendeeMutation,
 } = eventsApi

@@ -236,6 +236,24 @@ func InitDB() *sql.DB {
 	`)
 	// Ignore error - it will fail if table already exists, which is fine
 
+	// Add non-registered attendees table for walk-ins
+	db.Exec(`
+		CREATE TABLE IF NOT EXISTS non_registered_attendees (
+			id TEXT PRIMARY KEY,
+			event_id TEXT NOT NULL,
+			first_name TEXT NOT NULL,
+			last_name TEXT NOT NULL,
+			email TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+		);
+	`)
+	// Ignore error - it will fail if table already exists, which is fine
+
+	// Create index for non_registered_attendees
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_non_registered_attendees_event_id ON non_registered_attendees(event_id);`)
+	// Ignore error - it will fail if index already exists, which is fine
+
 	// Resync games_fts table on startup to ensure FTS is up to date
 	db.Exec(`
 		-- Clear existing FTS entries

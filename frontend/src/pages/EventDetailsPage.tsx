@@ -44,6 +44,7 @@ import {
   useGetEventGamesQuery,
   useGetEventPlayerAssignmentsQuery,
   useGetUserGamePreferencesQuery,
+  useGetNonRegisteredAttendeesQuery,
 } from '../store/api/eventsApi'
 import { isAdminRole } from '../constants/roles'
 import { EventGamesManager } from '../components/events/EventGamesManager'
@@ -381,6 +382,14 @@ const GameDataView = ({ eventId }: { eventId?: string }) => {
     skip: !eventId,
   })
 
+  // Add query for non-registered attendees
+  const { data: nonRegisteredData, isLoading: isLoadingNonRegistered } = useGetNonRegisteredAttendeesQuery(
+    eventId || '',
+    {
+      skip: !eventId,
+    }
+  )
+
   const gameIds = gamesData?.data?.games?.map((game) => game.id) || []
 
   const { data: preferencesData, isLoading: isLoadingPreferences } = useGetUserGamePreferencesQuery(
@@ -393,7 +402,7 @@ const GameDataView = ({ eventId }: { eventId?: string }) => {
     }
   )
 
-  if (isLoadingGames || isLoadingEvent || isLoadingAssignments || isLoadingPreferences) {
+  if (isLoadingGames || isLoadingEvent || isLoadingAssignments || isLoadingPreferences || isLoadingNonRegistered) {
     return (
       <Paper sx={{ p: 3, mb: 3, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
@@ -401,9 +410,24 @@ const GameDataView = ({ eventId }: { eventId?: string }) => {
     )
   }
 
+  // Get registered attendees from RSVPs
+  const registeredAttendees = eventData?.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || []
+
+  // Convert non-registered attendees to compatible format with isWalkIn flag
+  const walkInAttendees = (nonRegisteredData?.data || []).map((attendee) => ({
+    userId: attendee.id,
+    firstName: attendee.firstName,
+    lastName: attendee.lastName,
+    status: 'attending' as const, // Explicitly type as "attending"
+    isWalkIn: true,
+  }))
+
+  // Combine both types of attendees
+  const allAttendees = [...registeredAttendees, ...walkInAttendees]
+
   const data: GameData = {
     games: gamesData?.data?.games || [],
-    players: eventData?.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || [],
+    players: allAttendees,
     assignments: assignmentsData?.data || [],
     preferences: preferencesData?.data || [],
   }
@@ -425,6 +449,7 @@ const HealthStatusTab = ({ eventId }: { eventId?: string }) => {
   const { data: gamesData } = useGetEventGamesQuery(eventId || '', { skip: !eventId })
   const { data: eventData } = useGetEventQuery(eventId || '', { skip: !eventId })
   const { data: assignmentsData } = useGetEventPlayerAssignmentsQuery(eventId || '', { skip: !eventId })
+  const { data: nonRegisteredData } = useGetNonRegisteredAttendeesQuery(eventId || '', { skip: !eventId })
 
   const gameIds = gamesData?.data?.games?.map((game) => game.id) || []
   const { data: preferencesData } = useGetUserGamePreferencesQuery(
@@ -434,10 +459,25 @@ const HealthStatusTab = ({ eventId }: { eventId?: string }) => {
 
   // Calculate health score when data is available
   useEffect(() => {
-    if (gamesData && eventData && assignmentsData && preferencesData) {
+    if (gamesData && eventData && assignmentsData && preferencesData && nonRegisteredData) {
+      // Get registered attendees
+      const registeredAttendees = eventData.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || []
+
+      // Convert non-registered attendees with isWalkIn flag
+      const walkInAttendees = (nonRegisteredData.data || []).map((attendee) => ({
+        userId: attendee.id,
+        firstName: attendee.firstName,
+        lastName: attendee.lastName,
+        status: 'attending' as const,
+        isWalkIn: true,
+      }))
+
+      // Combine both types of attendees
+      const allAttendees = [...registeredAttendees, ...walkInAttendees]
+
       const data = {
         games: gamesData.data?.games || [],
-        players: eventData.data?.rsvps?.filter((rsvp) => rsvp.status === 'attending') || [],
+        players: allAttendees,
         assignments: assignmentsData.data || [],
         preferences: preferencesData.data || [],
       }
@@ -449,7 +489,7 @@ const HealthStatusTab = ({ eventId }: { eventId?: string }) => {
       }
       setIsLoading(false)
     }
-  }, [gamesData, eventData, assignmentsData, preferencesData])
+  }, [gamesData, eventData, assignmentsData, preferencesData, nonRegisteredData])
 
   const getStatusIcon = () => {
     if (healthScore === null) return null
