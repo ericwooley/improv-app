@@ -126,18 +126,30 @@ This link will expire in 24 hours.
 
 func (s *EmailService) VerifyToken(token string) (*models.User, error) {
 	var user models.User
+	// Use a separate NullString for temporary scanning to avoid scan errors with NULL fields
+	var passwordNullString sql.NullString
+
 	err := s.db.QueryRow(`
-		SELECT u.id, u.email, u.first_name, u.last_name
+		SELECT u.id, u.email, u.first_name, u.last_name, u.password, u.email_verified
 		FROM users u
 		JOIN email_tokens t ON u.id = t.user_id
 		WHERE t.token = $1 AND t.used = false AND t.expires_at > $2
-	`, token, time.Now()).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
+	`, token, time.Now()).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &passwordNullString, &user.EmailVerified)
 	if err != nil {
 		return nil, err
 	}
 
-	// Mark token as used
+	// Assign the NullString to the user struct
+	user.Password = passwordNullString
+
+	// Mark token as used and set email as verified
 	_, err = s.db.Exec("UPDATE email_tokens SET used = true WHERE token = $1", token)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark email as verified
+	_, err = s.db.Exec("UPDATE users SET email_verified = true WHERE id = $1", user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -158,14 +170,51 @@ func (s *EmailService) UpdateUserProfile(userID string, firstName string, lastNa
 func (s *EmailService) GetUserByID(userID string) (*models.User, error) {
 	var user models.User
 	err := s.db.QueryRow(`
-		SELECT id, email, first_name, last_name
+		SELECT id, email, first_name, last_name, password, email_verified
 		FROM users
 		WHERE id = $1
-	`, userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName)
+	`, userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.EmailVerified)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// GetUserByEmail retrieves a user by their email address
+func (s *EmailService) GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	err := s.db.QueryRow(`
+		SELECT id, email, first_name, last_name, password, email_verified
+		FROM users
+		WHERE email = $1
+	`, email).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.Password, &user.EmailVerified)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// RegisterUserWithPassword creates a new user with a password
+func (s *EmailService) RegisterUserWithPassword(email string, hashedPassword string) (*models.User, error) {
+	// Create a new user with a password
+	userID := uuid.New().String()
+
+	// Set the password as a valid NullString
+	passwordNullString := sql.NullString{
+		String: hashedPassword,
+		Valid:  true,
+	}
+
+	_, err := s.db.Exec(`
+		INSERT INTO users (id, email, password, email_verified)
+		VALUES ($1, $2, $3, false)
+	`, userID, email, passwordNullString)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the newly created user
+	return s.GetUserByID(userID)
 }
 
 // SendGroupInvitation sends an email inviting a user to join a group

@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"improv-app/internal/config"
 	"improv-app/internal/services"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
@@ -52,7 +55,7 @@ func RespondWithError(w http.ResponseWriter, statusCode int, message string) {
 	})
 }
 
-// Login handles email login request
+// Login handles login request (email + magic link or password)
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -61,7 +64,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Parse JSON request
 	var loginRequest struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password,omitempty"`
+		Method   string `json:"method,omitempty"` // "password" or "magic-link"
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -72,6 +77,64 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	email := loginRequest.Email
+	method := loginRequest.Method
+
+	// Default to magic-link if method not specified
+	if method == "" {
+		method = "magic-link"
+	}
+
+	// Password login
+	if method == "password" {
+		if loginRequest.Password == "" {
+			RespondWithError(w, http.StatusBadRequest, "Password is required for password login")
+			return
+		}
+
+		user, err := h.emailService.GetUserByEmail(email)
+		if err != nil {
+			// Don't reveal whether the email exists
+			RespondWithError(w, http.StatusUnauthorized, "Invalid email or password")
+			return
+		}
+
+		// Check if user has a password set
+		if !user.Password.Valid || user.Password.String == "" {
+			RespondWithError(w, http.StatusUnauthorized, "Password login not available for this account")
+			return
+		}
+
+		// Compare password
+		err = bcrypt.CompareHashAndPassword([]byte(user.Password.String), []byte(loginRequest.Password))
+		if err != nil {
+			RespondWithError(w, http.StatusUnauthorized, "Invalid email or password")
+			return
+		}
+
+		// Create session
+		session, _ := config.Store.Get(r, "session")
+		session.Values["user_id"] = user.ID
+		session.Save(r, w)
+
+		// Return user data
+		userData := map[string]interface{}{
+			"id":        user.ID,
+			"email":     user.Email,
+			"firstName": user.FirstName,
+			"lastName":  user.LastName,
+		}
+
+		RespondWithJSON(w, http.StatusOK, ApiResponse{
+			Success: true,
+			Message: "Login successful",
+			Data: map[string]interface{}{
+				"user": userData,
+			},
+		})
+		return
+	}
+
+	// Magic link login
 	fmt.Println("Sending magic link to:", email)
 
 	err := h.emailService.SendMagicLink(email)
@@ -81,9 +144,94 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// For magic link, we return an "empty" user object with just the email
+	// The frontend can use this to show a message specific to the email
+	userData := map[string]interface{}{
+		"email": email,
+	}
+
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
 		Success: true,
 		Message: "Magic link sent! Check your email.",
+		Data: map[string]interface{}{
+			"user": userData,
+		},
+	})
+}
+
+// Register handles user registration
+func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Parse JSON request
+	var registerRequest struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&registerRequest); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	email := strings.TrimSpace(registerRequest.Email)
+	password := registerRequest.Password
+
+	// Validate input
+	if email == "" || password == "" {
+		RespondWithError(w, http.StatusBadRequest, "Email and password are required")
+		return
+	}
+
+	// Check password strength (simple validation)
+	if len(password) < 8 {
+		RespondWithError(w, http.StatusBadRequest, "Password must be at least 8 characters long")
+		return
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Error processing registration")
+		return
+	}
+
+	// Register user
+	user, err := h.emailService.RegisterUserWithPassword(email, string(hashedPassword))
+	if err != nil {
+		// Check if it's a duplicate email error
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			RespondWithError(w, http.StatusConflict, "Email already registered")
+			return
+		}
+		RespondWithError(w, http.StatusInternalServerError, "Error registering user")
+		return
+	}
+
+	// Create session
+	session, _ := config.Store.Get(r, "session")
+	session.Values["user_id"] = user.ID
+	session.Save(r, w)
+
+	// Return user data
+	userData := map[string]interface{}{
+		"id":        user.ID,
+		"email":     user.Email,
+		"firstName": user.FirstName,
+		"lastName":  user.LastName,
+	}
+
+	RespondWithJSON(w, http.StatusCreated, ApiResponse{
+		Success: true,
+		Message: "Registration successful",
+		Data: map[string]interface{}{
+			"user": userData,
+		},
 	})
 }
 

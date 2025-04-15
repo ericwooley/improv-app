@@ -92,6 +92,7 @@ func main() {
 
 	// Auth routes
 	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	api.HandleFunc("/auth/verify", authHandler.Verify).Methods("GET")
 	api.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
 	api.HandleFunc("/auth/me", middleware.RequireAuthAPI(sqlDB, authHandler.GetCurrentUser)).Methods("GET")

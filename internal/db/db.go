@@ -24,7 +24,12 @@ func InitDB() *sql.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// tables already exist in production. You can only create new tables from now
+	// on. If you need to add new columns to existing tables, you can do so by
+	// running the ALTER TABLE statements below.
 
+
+	// you can create new tables if you need to.
 	// Create tables if they don't exist
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS users (
@@ -211,6 +216,8 @@ func InitDB() *sql.DB {
 	db.Exec(`ALTER TABLE events ADD COLUMN mc_id TEXT REFERENCES users(id);`)
 	db.Exec(`ALTER TABLE user_game_preferences ADD COLUMN status TEXT;`)
 	db.Exec(`ALTER TABLE user_game_preferences DROP COLUMN rating;`)
+	db.Exec(`ALTER TABLE users ADD COLUMN password TEXT DEFAULT NULL;`)
+	db.Exec(`ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;`)
 	// Ignore error - it will fail if column already exists, which is fine
 
 	// Create indexes for player assignments if they don't exist

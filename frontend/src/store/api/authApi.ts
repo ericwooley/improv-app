@@ -3,10 +3,13 @@ import { apiSlice } from './apiSlice'
 
 export interface LoginRequest {
   email: string
+  password?: string
+  method?: 'password' | 'magic-link'
 }
 
 export interface RegisterRequest {
   email: string
+  password: string
 }
 
 export interface User {
