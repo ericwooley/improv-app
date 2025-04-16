@@ -23,6 +23,11 @@ func NewEmailService(db *sql.DB) *EmailService {
 	return &EmailService{db: db}
 }
 
+type UserNotFound struct{}
+
+func (e *UserNotFound) Error() string {
+	return "user not found"
+}
 func (s *EmailService) generateToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -31,12 +36,35 @@ func (s *EmailService) generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func (s *EmailService) SendMagicLink(email string) error {
-	token, err := s.generateToken()
+func (s *EmailService) SendVerificationEmail(email string) error {
+
+	link, err := s.CreateVerificationLink(&email)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Sending verification email to: %s", email)
+	s.SendEmail(email, "Verify your email", fmt.Sprintf(
+		`
+		Hello,
 
+		Please use this link to verify your email
+
+		Verification Link: %s
+
+		`, link,
+	))
+	return nil
+}
+
+func (s *EmailService) CreateVerificationLink(email *string) (string, error) {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		panic("BASE_URL is not set")
+	}
+	token, err := s.generateToken()
+	if err != nil {
+		return "", err
+	}
 	// Create or update user
 	var userID string
 	newId := uuid.New().String()
@@ -47,18 +75,22 @@ func (s *EmailService) SendMagicLink(email string) error {
 		RETURNING id
 	`, newId, email).Scan(&userID)
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	fmt.Println("Sending magic link to:", email, "User ID:", userID, newId, token)
 	// Create email token
 	_, err = s.db.Exec(`
 		INSERT INTO email_tokens (id, user_id, token, expires_at)
 		VALUES ($1, $2, $3, $4)
 	`, uuid.New().String(), userID, token, time.Now().Add(24*time.Hour))
 	if err != nil {
-		return err
+		return "", err
 	}
+
+	magicLink := fmt.Sprintf("%s/api/auth/verify?token=%s", baseURL, token)
+	return magicLink, nil
+}
+
+func (s *EmailService) SendEmail(email string, subject string, body string) error {
 
 	// Send email with magic link
 	from := os.Getenv("SMTP_FROM")
@@ -72,25 +104,10 @@ func (s *EmailService) SendMagicLink(email string) error {
 		to = email
 	}
 
-	subject := "Your Magic Link for Improv App"
-
 	baseURL := os.Getenv("BASE_URL")
 	if baseURL == "" {
 		panic("BASE_URL is not set")
 	}
-
-
-	magicLink := fmt.Sprintf("%s/api/auth/verify?token=%s", baseURL, token)
-
-	body := fmt.Sprintf(`
-Hello,
-
-Click the link below to sign in to your Improv App account:
-
-MAGIC_LINK: %s
-
-This link will expire in 24 hours.
-	`, magicLink)
 
 	// Set up email message
 	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+
@@ -114,13 +131,35 @@ This link will expire in 24 hours.
 		auth = smtp.PlainAuth("", username, password, host)
 	}
 
-	err = smtp.SendMail(addr, auth, from, []string{to}, msg)
+	err := smtp.SendMail(addr, auth, from, []string{to}, msg)
 	if err != nil {
 		log.Printf("Error sending email: %v", err)
 		return fmt.Errorf("failed to send email: %v", err)
 	}
+	return nil
+}
 
-	log.Printf("Magic link email sent to %s", email)
+func (s *EmailService) SendMagicLink(email string) error {
+
+	magicLink, err := s.CreateVerificationLink(&email)
+	if err != nil {
+		return err
+	}
+	subject := "Your Magic Link for Improv App"
+	body := fmt.Sprintf(`
+Hello,
+
+Click the link below to sign in to your Improv App account:
+
+MAGIC_LINK: %s
+
+This link will expire in 24 hours.
+	`, magicLink)
+
+	err = s.SendEmail(email, subject, body)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -317,12 +356,12 @@ func (s *EmailService) VerifyGroupInvitation(invitationID string) (map[string]in
 	}
 
 	result := map[string]interface{}{
-		"id":         invitation.ID,
-		"groupId":    invitation.GroupID,
-		"groupName":  invitation.GroupName,
-		"email":      invitation.Email,
-		"role":       invitation.Role,
-		"status":     invitation.Status,
+		"id":        invitation.ID,
+		"groupId":   invitation.GroupID,
+		"groupName": invitation.GroupName,
+		"email":     invitation.Email,
+		"role":      invitation.Role,
+		"status":    invitation.Status,
 	}
 
 	return result, nil

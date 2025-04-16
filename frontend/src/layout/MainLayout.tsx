@@ -39,7 +39,7 @@ const drawerWidth = 250
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const { isAuthenticated, isLoading, needsToCompleteProfile } = useIsAuthenticated()
+  const { isAuthenticated, isLoading, needsToCompleteProfile, user } = useIsAuthenticated()
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
@@ -96,6 +96,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </List>
       <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
       <Box sx={{ p: 2 }}>
+        <center>
+          <Typography variant="h6" color="white">
+            {user && user.email}
+          </Typography>
+        </center>
         <Button
           variant="outlined"
           color="error"
