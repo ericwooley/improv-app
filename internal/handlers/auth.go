@@ -286,6 +286,7 @@ func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 		"email":     user.Email,
 		"firstName": user.FirstName,
 		"lastName":  user.LastName,
+		"emailVerified": user.EmailVerified,
 	}
 
 	RespondWithJSON(w, http.StatusOK, ApiResponse{
